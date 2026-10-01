@@ -1,6 +1,12 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ShadowBlip/InputPlumber/main/rootfs/usr/share/inputplumber/schema/composite_device_v1.json
 # SM8550 rsinput → virtual Steam Deck (deck-uhid) + keyboard (OSK haptic).
 #
+# AYN Odin 2 Portal has its own override: sm8550-overlay's
+# 03-ayn-odin-portal.yaml (+ ayn_portal_mcu capability map). Live evtest
+# capture showed the Portal's A/B are NOT swapped like the base Odin 2 this
+# file covers, so it needs a different map; untested here (Odin 2 / Mini /
+# Thor) whether they'd need the same split.
+#
 # Do not list USB/BT as ignore sources: deck-uhid is USB (VID 28de) and
 # matching it as a source restarts the composite in a loop (cursor, no Steam).
 # External HID is handled by sm8550-inputplumber-ext-hid (drop keyboard target).
@@ -14,11 +20,6 @@ matches:
       attributes:
         - name: model
           value: AYN Odin 2
-  - udev:
-      sys_path: /sys/firmware/devicetree/base
-      attributes:
-        - name: model
-          value: AYN Odin 2 Portal
   - udev:
       sys_path: /sys/firmware/devicetree/base
       attributes:
