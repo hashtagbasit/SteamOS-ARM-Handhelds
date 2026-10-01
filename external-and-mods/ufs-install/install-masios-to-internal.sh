@@ -174,7 +174,7 @@ if (( ! RESUME )); then
     || die "Android size must be ${P_ANDROID_MIN_GIB}..${P_ANDROID_MAX_GIB} GiB"
   PLAN="$("${PART[@]}" apply --disk "$DISK" --storage-gib "$STORAGE_GB" \
           --android-gib "$ANDROID_GB" --expect "$P_TABLE_FINGERPRINT" \
-          --backup-dir "$BACKUP_DIR" --dry-run | sed -n '1,4p')"
+          --backup-dir "$BACKUP_DIR" --dry-run | sed -n '1,5p')"
   home_size=$(awk '/^HOME/ {print $5}' <<<"$PLAN")
   home_size=$(( home_size * P_SECTOR_SIZE ))
 else
