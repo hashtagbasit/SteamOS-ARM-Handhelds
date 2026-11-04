@@ -1,0 +1,60 @@
+From: enij90 <226572015+enij90@users.noreply.github.com>
+Subject: [PATCH] soc: qcom: pmic_glink: run the altmode and UCSI work after resume
+
+On the TB321FU, plugging a charger while the tablet is in s2idle resets
+the SoC: the journal stops at "suspend entry", pstore stays empty and
+panic=0 rules out a kernel panic.
+
+The GLINK interrupt is registered with IRQF_NO_SUSPEND, so pmic_glink
+messages arrive while devices are suspended. pmic_glink_altmode and
+ucsi_glink queue their work on system_wq, which runs right away: the
+altmode worker drives the Type-C switch, mux and retimer, and the UCSI
+connector change (with 0841) moves the data lanes and the orientation,
+reaching PHYs and controllers that are already suspended. With
+/sys/power/pm_test, "freezer" (no device suspended) survives a charger
+plug, "devices" and "platform" reset like a real suspend.
+
+Queue both works on system_freezable_wq, so they wait until devices
+and tasks are back. This is the fix Abel Vesa proposed for
+pmic_glink_altmode (X Elite, PS8830 retimer over I2C), extended to the
+UCSI notification as the reviewers pointed out.
+
+Tested on the TB321FU: charger plugged in s2idle, with and without the
+G9 dock, no reset, the tablet stays asleep and charges, the G9 works
+after resume. Known gap: a UCSI change notified during suspend is not
+replayed on resume (no port0 partner until the next event); calling
+ucsi_resume() from the driver's resume hung the tablet on resume.
+
+Link: https://lore.kernel.org/all/20250110-soc-qcom-pmic-glink-fix-device-access-on-worker-while-suspended-v1-1-e32fd6bf322e@linaro.org/
+---
+--- a/drivers/soc/qcom/pmic_glink_altmode.c
++++ b/drivers/soc/qcom/pmic_glink_altmode.c
+@@ -451,7 +451,7 @@
+ 	alt_port->mode = mode;
+ 	alt_port->hpd_state = hpd_state;
+ 	alt_port->hpd_irq = hpd_irq;
+-	schedule_work(&alt_port->work);
++	queue_work(system_freezable_wq, &alt_port->work);
+ }
+ 
+ #define SC8280XP_DPAM_MASK	0x3f
+@@ -502,7 +502,7 @@
+ 		alt_port->tbt_data = *tbt;
+ 	}
+ 
+-	schedule_work(&alt_port->work);
++	queue_work(system_freezable_wq, &alt_port->work);
+ }
+ 
+ static void pmic_glink_altmode_callback(const void *data, size_t len, void *priv)
+--- a/drivers/usb/typec/ucsi/ucsi_glink.c
++++ b/drivers/usb/typec/ucsi/ucsi_glink.c
+@@ -506,7 +506,7 @@
+ 		pmic_glink_ucsi_write_ack(ucsi, data, len);
+ 		break;
+ 	case UC_UCSI_USBC_NOTIFY_IND:
+-		schedule_work(&ucsi->notify_work);
++		queue_work(system_freezable_wq, &ucsi->notify_work);
+ 		break;
+ 	}
+ }

@@ -1,0 +1,118 @@
+From: enij90 <226572015+enij90@users.noreply.github.com>
+Subject: [PATCH] usb: typec: ucsi: glink: switch the TB321FU data lanes like Lenovo's kernel
+
+The TB321FU has one USB controller and a C2 select line that hands its
+data lanes to the long-side (C1) or the short-side (C2) port. 0829 moved
+them on "connected", so a charger counted as a data partner: at boot the
+firmware reports C1 first, the charger took the lanes and a controller
+dock on C2 stayed without USB until the charger was unplugged.
+
+Lenovo's Android kernel for this board (legion_tab_y700(tb321fu)
+opensource 16.1.02.082, ucsi_glink.c, CONFIG_ARCH_KIRBY) counts only
+partners that exchange USB data (devices, hosts, hubs), not chargers,
+DisplayPort-only adapters or audio accessories, gives the lanes to C1
+when both ports have one and leaves them alone when neither has. Do the
+same, and start on C1 so a lone charger on the long side sees the state
+0829 already had there.
+---
+--- a/drivers/usb/typec/ucsi/ucsi_glink.c
++++ b/drivers/usb/typec/ucsi/ucsi_glink.c
+@@ -283,28 +283,79 @@
+ 	con->typec_cap.orientation_aware = true;
+ }
+ 
++/*
++ * Whether a partner exchanges USB data, classified like Lenovo's Android
++ * kernel for this board: 1 for a USB device, host or hub, 0 for a charger,
++ * a DisplayPort-only adapter, an audio accessory or an empty port, -1 when
++ * the status does not tell (keep the previous answer).
++ */
++static int pmic_glink_ucsi_data_partner(struct ucsi_connector *con)
++{
++	unsigned long type = UCSI_CONSTAT(con, PARTNER_TYPE);
++	unsigned long opmode = UCSI_CONSTAT(con, PWR_OPMODE);
++	bool pd = opmode == UCSI_CONSTAT_PWR_OPMODE_PD;
++	bool typec = opmode == UCSI_CONSTAT_PWR_OPMODE_DEFAULT ||
++		     opmode == UCSI_CONSTAT_PWR_OPMODE_TYPEC1_5 ||
++		     opmode == UCSI_CONSTAT_PWR_OPMODE_TYPEC3_0;
++
++	if (!UCSI_CONSTAT(con, CONNECTED))
++		return 0;
++
++	if (type == UCSI_CONSTAT_PARTNER_TYPE_AUDIO)
++		return 0;
++
++	if (!UCSI_CONSTAT(con, PARTNER_FLAG_USB)) {
++		/* chargers and DisplayPort-only adapters */
++		if (pd && (type == UCSI_CONSTAT_PARTNER_TYPE_DFP ||
++			   type == UCSI_CONSTAT_PARTNER_TYPE_UFP ||
++			   type == UCSI_CONSTAT_PARTNER_TYPE_CABLE_AND_UFP))
++			return 0;
++		return -1;
++	}
++
++	if ((type == UCSI_CONSTAT_PARTNER_TYPE_DFP ||
++	     type == UCSI_CONSTAT_PARTNER_TYPE_UFP) && typec)
++		return 1;
++	if ((type == UCSI_CONSTAT_PARTNER_TYPE_DFP && pd) || (type == 0 && typec))
++		return 1;
++	if (type == UCSI_CONSTAT_PARTNER_TYPE_CABLE_AND_UFP &&
++	    opmode != UCSI_CONSTAT_PWR_OPMODE_NONE &&
++	    opmode != UCSI_CONSTAT_PWR_OPMODE_BC)
++		return 1;
++	if (type == UCSI_CONSTAT_PARTNER_TYPE_UFP && pd)
++		return 0;	/* DisplayPort sink */
++
++	return -1;
++}
++
+ static void pmic_glink_ucsi_connector_status(struct ucsi_connector *con)
+ {
+ 	struct pmic_glink_ucsi *ucsi = ucsi_get_drvdata(con->ucsi);
+-	bool c1_connected, c2_connected, connected;
+-	int orientation;
++	bool c1_data, c2_data, connected;
++	int orientation, data;
+ 
+ 	if (con->num == 2)
+ 		pmic_glink_ucsi_force_secondary_audio(ucsi, con->status);
+ 
+ 	connected = UCSI_CONSTAT(con, CONNECTED);
+-	if (con->num <= PMIC_GLINK_MAX_PORTS)
+-		ucsi->connector_connected[con->num - 1] = connected;
+-
++	data = pmic_glink_ucsi_data_partner(con);
++	if (con->num <= PMIC_GLINK_MAX_PORTS && data >= 0)
++		ucsi->connector_connected[con->num - 1] = data;
++
++	/*
++	 * One USB controller for both ports: the data lanes go to the port
++	 * whose partner exchanges USB data, C1 when both do, and stay put
++	 * when neither does (Lenovo's policy). A charger on C1 then leaves
++	 * them to a controller dock on C2, whatever connects first.
++	 */
+ 	if (ucsi->c2_select) {
+-		c1_connected = ucsi->connector_connected[0];
+-		c2_connected = ucsi->connector_connected[1];
++		c1_data = ucsi->connector_connected[0];
++		c2_data = ucsi->connector_connected[1];
+ 
+-		if (c1_connected && !c2_connected) {
++		if (c1_data)
+ 			gpiod_set_value_cansleep(ucsi->c2_select, 0);
+-		} else if (!c1_connected && c2_connected) {
++		else if (c2_data)
+ 			gpiod_set_value_cansleep(ucsi->c2_select, 1);
+-		}
+ 	}
+ 
+ 	dev_dbg(ucsi->dev,
+@@ -539,7 +590,7 @@
+ 	ucsi_set_drvdata(ucsi->ucsi, ucsi);
+ 
+ 	ucsi->c2_select = devm_gpiod_get_optional(dev, "c2-select",
+-						  GPIOD_OUT_HIGH);
++						  GPIOD_OUT_LOW);
+ 	if (IS_ERR(ucsi->c2_select))
+ 		return dev_err_probe(dev, PTR_ERR(ucsi->c2_select),
+ 				     "unable to acquire C2 select gpio\n");
