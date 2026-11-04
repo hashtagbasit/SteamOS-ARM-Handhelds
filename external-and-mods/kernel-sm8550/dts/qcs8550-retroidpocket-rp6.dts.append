@@ -44,3 +44,9 @@
 	/delete-property/ qcom,use-erm;
 	qcom,vmax-mv = <1300>;
 };
+
+/* 3.5 mm jack: the ground switch is normally closed. Without it MBHC reads the
+ * plug with inverted polarity and the jack is never reported. */
+&wcd938x {
+	qcom,ground-jack-type-normally-closed;
+};
