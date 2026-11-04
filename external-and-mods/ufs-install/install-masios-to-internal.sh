@@ -410,6 +410,8 @@ esac
 log "installing KERNEL (root=PARTLABEL=STORAGE)"
 "${BOOTIMG[@]}" retarget /boot/KERNEL "$WORK/boot/KERNEL" --root PARTLABEL=STORAGE >/dev/null
 (cd "$WORK/boot" && md5sum KERNEL >KERNEL.md5)
+EFI_SYNC=/usr/lib/steamos-arm/kernel-efi-sync
+[[ -x "$EFI_SYNC" ]] && "$EFI_SYNC" --boot "$WORK/boot" --force >/dev/null || true
 if [[ -n "$TABLET" ]]; then
   install_tablet_boot
 fi

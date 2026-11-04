@@ -1,0 +1,13 @@
+[Unit]
+Description=Keep EFI boot files in step with KERNEL
+RequiresMountsFor=/boot
+ConditionPathExists=/boot/KERNEL
+
+[Service]
+Type=oneshot
+ExecStart=-/usr/lib/steamos-arm/kernel-efi-sync
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

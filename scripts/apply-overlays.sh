@@ -381,6 +381,13 @@ install_file "$OVL/etc/xdg/autostart/steamos-arm-desktop-portal-fix.desktop" \
 # that stages an update, the polkit rule letting the user start only that,
 # and the key update packages are signed with.
 install_file "$OVL/usr/lib/steamos-arm/update-agent" "$R/usr/lib/steamos-arm/update-agent" 0755
+# EFI boot files next to KERNEL, for OpenABL after 1.2.
+install_file "$OVL/usr/lib/steamos-arm/kernel-efi-sync" "$R/usr/lib/steamos-arm/kernel-efi-sync" 0755
+install_file "$OVL/usr/lib/systemd/system/steamos-arm-efi-sync.service" \
+  "$R/usr/lib/systemd/system/steamos-arm-efi-sync.service" 0644
+mkdir -p "$R/etc/systemd/system/multi-user.target.wants"
+ln -sfn /usr/lib/systemd/system/steamos-arm-efi-sync.service \
+  "$R/etc/systemd/system/multi-user.target.wants/steamos-arm-efi-sync.service"
 install_file "$OVL/usr/lib/systemd/system/steamos-arm-update.service" \
   "$R/usr/lib/systemd/system/steamos-arm-update.service" 0644
 install_file "$OVL/usr/lib/systemd/user/steamos-manager-session-cleanup.service.d/10-steamos-arm-timeout.conf" \

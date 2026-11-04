@@ -399,6 +399,9 @@ def install_kernel(src, boot):
     if digest(temp) != digest(src): raise ValueError('boot copy checksum mismatch')
     os.replace(temp, boot / 'KERNEL')
     (boot / 'KERNEL.md5').write_text(hashlib.md5((boot / 'KERNEL').read_bytes()).hexdigest() + '  KERNEL\n')
+    # EFI files for newer OpenABL. The boot service retries if this fails.
+    try: subprocess.run(['/usr/lib/steamos-arm/kernel-efi-sync', '--boot', str(boot), '--force'], check=False, timeout=120)
+    except (OSError, subprocess.TimeoutExpired): pass
     os.sync()
 
 

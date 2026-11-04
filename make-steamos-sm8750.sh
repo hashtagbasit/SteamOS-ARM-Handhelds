@@ -331,6 +331,7 @@ EOF
     repack_kernel_partuuid "${KOUT}/boot/KERNEL" "${MNT}/boot/KERNEL" "${disk_id}-02"
   sudo_run cp "${MNT}/boot/KERNEL" "${MNT}/boot/boot/KERNEL"
   sudo_run bash -c "cd '${MNT}/boot' && md5sum KERNEL | tee KERNEL.md5 boot/KERNEL.md5 >/dev/null"
+  sudo_run python3 "${ROOT}/steamos-overlay/usr/lib/steamos-arm/kernel-efi-sync" --boot "${MNT}/boot" --force
   if [[ -f "${MOD}/kernel-sm8750/post-flash.sh" ]]; then
     sed "s/@ROOT_UUID@/${root_uuid}/" "${MOD}/kernel-sm8750/post-flash.sh" \
       | sudo_run tee "${MNT}/boot/post-flash.sh" "${MNT}/boot/boot/post-flash.sh" >/dev/null

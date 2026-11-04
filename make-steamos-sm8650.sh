@@ -474,6 +474,7 @@ EOF
   # vfat cannot store Unix owner/mode — cp -a fails with EPERM
   sudo_run install -m0644 "${ktmp}" "${MNT}/boot/KERNEL"
   sudo_run bash -c "cd '${MNT}/boot' && md5sum KERNEL > KERNEL.md5"
+  sudo_run python3 "${ROOT}/steamos-overlay/usr/lib/steamos-arm/kernel-efi-sync" --boot "${MNT}/boot" --force
   # Optional second kernel on BOOT for testers to swap in by renaming
   # (TEST_KERNEL_OUT; its modules must be in KERNEL_OUT too). SM8550: our own
   # ROCKNIX build by default, so it gets the ROCKNIX cmdline; set

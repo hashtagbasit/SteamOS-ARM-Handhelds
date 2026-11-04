@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+"""Keep the EFI boot files next to /boot/KERNEL.
+
+ROCKNIX ABL and OpenABL up to 1.2 boot the Android boot image KERNEL. Newer
+OpenABL only boots EFI entries, so the same kernel, initrd, devicetrees and
+cmdline are also written as extlinux files. KERNEL stays the one source of
+truth: this runs after anything that writes it, and at boot in case something
+wrote it without us.
+
+  kernel-efi-sync [--boot DIR] [--force] [--check]
+"""
+import argparse
+import hashlib
+import os
+import shutil
+import struct
+import sys
+import zlib
+from pathlib import Path
+
+STAMP = '.kernel-efi-sync'
+PAGE_MIN_INITRD = 4096  # smaller is mkbootimg's dummy ramdisk (embedded initramfs)
+FDT_MAGIC = 0xd00dfeed
+
+
+def parse_bootimg(data):
+    if data[:8] != b'ANDROID!':
+        raise ValueError('not an Android boot image')
+    ksize, rsize = struct.unpack_from('<I', data, 8)[0], struct.unpack_from('<I', data, 16)[0]
+    page = struct.unpack_from('<I', data, 36)[0]
+    if page not in (2048, 4096):
+        raise ValueError(f'unsupported page size {page}')
+    cmdline = (data[64:576].split(b'\0')[0] + data[608:1632].split(b'\0')[0]).decode()
+    pad = lambda n: (n + page - 1) // page * page
+    kstart = page
+    rstart = kstart + pad(ksize)
+    if rstart + rsize > len(data):
+        raise ValueError('truncated boot image')
+    return data[kstart:kstart + ksize], data[rstart:rstart + rsize], cmdline
+
+
+def split_payload(payload):
+    """The KERNEL payload is a gzip Image with the DTBs appended."""
+    d = zlib.decompressobj(16 + zlib.MAX_WBITS)
+    pos = 0
+    while not d.eof:
+        chunk = payload[pos:pos + (1 << 20)]
+        if not chunk:
+            raise ValueError('kernel payload is not gzip')
+        d.decompress(chunk)
+        pos += len(chunk)
+    end = pos - len(d.unused_data)
+    gz = payload[:end]
+    rest = payload[end:]
+    dtbs = []
+    while len(rest) >= 8:
+        magic, size = struct.unpack_from('>II', rest)
+        if magic != FDT_MAGIC or size < 40 or size > len(rest):
+            raise ValueError('bad DTB after the kernel')
+        dtbs.append(rest[:size])
+        rest = rest[size:]
+    return gz, dtbs
+
+
+def compatible(dtb):
+    off_struct, off_strings = struct.unpack_from('>II', dtb, 8)
+    p = off_struct
+    depth = 0
+    while True:
+        token = struct.unpack_from('>I', dtb, p)[0]
+        p += 4
+        if token == 1:  # begin node
+            depth += 1
+            if depth > 1:
+                break
+            p = (dtb.index(b'\0', p) + 4) & ~3
+        elif token == 3:  # property
+            size, nameoff = struct.unpack_from('>II', dtb, p)
+            p += 8
+            name = dtb[off_strings + nameoff:dtb.index(b'\0', off_strings + nameoff)]
+            if name == b'compatible':
+                return dtb[p:p + size].split(b'\0')[0].decode()
+            p = (p + size + 3) & ~3
+        elif token == 4:  # nop
+            continue
+        else:
+            break
+    raise ValueError('DTB has no root compatible')
+
+
+def write_atomic(path, data):
+    tmp = path.with_name(path.name + '.new')
+    with tmp.open('wb') as f:
+        f.write(data)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
+def sync(boot, force=False):
+    kernel = boot / 'KERNEL'
+    if not kernel.is_file():
+        return False  # fastboot tablets have no KERNEL
+    data = kernel.read_bytes()
+    stamp = hashlib.sha256(data).hexdigest()
+    conf = boot / 'extlinux/extlinux.conf'
+    if not force and conf.is_file() and (boot / STAMP).is_file() \
+            and (boot / STAMP).read_text().strip() == stamp:
+        return False
+    payload, initrd, cmdline = parse_bootimg(data)
+    gz, dtbs = split_payload(payload)
+    if not dtbs:
+        raise ValueError('KERNEL has no DTBs')
+    named = {compatible(d).replace(',', '-') + '.dtb': d for d in dtbs}
+    need = len(gz) + len(initrd) + sum(map(len, named.values())) + (1 << 20)
+    if shutil.disk_usage(boot).free < need:
+        have = sum(p.stat().st_size for p in (boot / 'Image.gz', boot / 'initrd.img') if p.is_file())
+        if shutil.disk_usage(boot).free + have < need:
+            raise OSError(f'not enough room on {boot} for the EFI boot files')
+        (boot / 'Image.gz').unlink(missing_ok=True)
+        (boot / 'initrd.img').unlink(missing_ok=True)
+    (boot / STAMP).unlink(missing_ok=True)
+    write_atomic(boot / 'Image.gz', gz)
+    lines = ['# Written by kernel-efi-sync from KERNEL. Changes here are overwritten.',
+             'default steamos', 'timeout 0', 'label steamos', '    menu label SteamOS',
+             '    linux /Image.gz']
+    if len(initrd) >= PAGE_MIN_INITRD:
+        write_atomic(boot / 'initrd.img', initrd)
+        lines.append('    initrd /initrd.img')
+    else:
+        (boot / 'initrd.img').unlink(missing_ok=True)
+    (boot / 'dtbs').mkdir(exist_ok=True)
+    for old in (boot / 'dtbs').glob('*.dtb'):
+        if old.name not in named:
+            old.unlink()
+    for name, blob in named.items():
+        write_atomic(boot / 'dtbs' / name, blob)
+    lines += ['    fdtdir /dtbs', f'    append {cmdline}', '']
+    conf.parent.mkdir(exist_ok=True)
+    write_atomic(conf, '\n'.join(lines).encode())
+    write_atomic(boot / STAMP, (stamp + '\n').encode())
+    os.sync()
+    return True
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--boot', default='/boot', type=Path)
+    ap.add_argument('--force', action='store_true')
+    a = ap.parse_args()
+    try:
+        print('updated' if sync(a.boot, a.force) else 'up to date')
+    except (ValueError, OSError, struct.error) as e:
+        print(f'kernel-efi-sync: {e}', file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
