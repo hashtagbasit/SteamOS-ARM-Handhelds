@@ -47,7 +47,7 @@ mkdir -p "$out"
 install -m0644 "$elf" "$out/abl_signed-$soc.elf"
 echo "$want  abl_signed-$soc.elf" > "$out/abl_signed-$soc.elf.sha256"
 bytes=$(stat -c %s "$elf")
-fill() { sed -e "s|@ABL_SHA@|$want|g" -e "s|@ABL_BYTES@|$bytes|g" -e "s|@SOC@|$soc|g" -e "s|@PLATFORM@|$platform|g" -e "s|@MODELS@|$models|g" \
+fill() { sed -e "s|@ABL_SHA@|$want|g" -e "s|@ABL_BYTES@|$bytes|g" -e "s/@ABL_MATCH@/${models// /|}|$platform/g" -e "s|@SOC@|$soc|g" -e "s|@PLATFORM@|$platform|g" -e "s|@MODELS@|$models|g" \
              -e "s|@VERSION@|$ABL_VERSION|g" -e "s|@DEVICES@|$devices|g"; }
 for s in flash_abl backup_abl restore_abl; do
   fill < "$SRC/$s.sh" > "$out/$s.sh"

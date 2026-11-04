@@ -16,8 +16,6 @@
 #
 # The 3537:1134 profile's firmware-timing observations have not been verified
 # on the 3537:1136 G9 2026 and are not relied on here.
-#
-# Provenance: https://github.com/enij90/armada-tb321fu/tree/62076530bf1ff34295d671016658965e54e597f1
 version: 2
 kind: CapabilityMap
 name: Lenovo Legion G9 2026

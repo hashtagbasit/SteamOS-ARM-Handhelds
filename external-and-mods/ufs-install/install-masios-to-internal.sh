@@ -76,6 +76,8 @@ TABLET=""
 compat="$(tr '\0' '\n' </sys/firmware/devicetree/base/compatible)"
 grep -qx 'lenovo,tb321fu' <<<"$compat" && TABLET=tb321fu
 grep -qx 'lenovo,elden' <<<"$compat" && TABLET=elden
+grep -qx 'qcom,sm8250' <<<"$compat" \
+  && die "internal install isn't supported on Snapdragon 865 devices yet, keep running SteamOS from the microSD card"
 [[ -n "$TABLET" ]] || grep -qxE 'qcom,sm8650|qcom,sm8550|qcom,sm8750' <<<"$compat" \
   || die "this installer is for SM8650, SM8550 and SM8750 devices (KONKR Pocket FIT / Pocket FIT Elite, AYANEO Pocket S2, AYN Odin 2 / Odin 2 Mini / Odin 2 Portal / Odin 3) and the Lenovo Legion Y700 Gen 3 / Gen 4"
 MODEL="$(tr -d '\0' </sys/firmware/devicetree/base/model)"
@@ -395,7 +397,7 @@ case "$HOME_MODE" in
     mkdir -p "$WORK/home/steamos/.steam" "$WORK/home/steamos/.local/share/Steam/config"
     printf '%b\n' '"Registry"' '{' '\t"HKCU"' '\t{' '\t\t"Software"' '\t\t{' \
       '\t\t\t"Valve"' '\t\t\t{' '\t\t\t\t"Steam"' '\t\t\t\t{' \
-      '\t\t\t\t\t"CompletedOOBEStage1"\t\t"0"' '\t\t\t\t\t"CompletedOOBE"\t\t"0"' \
+      '\t\t\t\t\t"RunningAppID"\t\t"0"' \
       '\t\t\t\t}' '\t\t\t}' '\t\t}' '\t}' '}' >"$WORK/home/steamos/.steam/registry.vdf"
     printf '%b\n' '"InstallConfigStore"' '{' '\t"SteamOS"' '\t{' \
       '\t\t"WifiForceWPASupplicant"\t\t"1"' '\t}' '}' \
