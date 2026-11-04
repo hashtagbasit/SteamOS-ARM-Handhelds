@@ -112,8 +112,8 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-STEAMOS_BUILD="${STEAMOS_BUILD:-20261002.6232440}"
-STEAMOS_BUNDLE="deckard-${STEAMOS_BUILD}-${STEAMOS_VERSION:-0.5.3}"
+STEAMOS_BUILD="${STEAMOS_BUILD:-20261104.6131433}"
+STEAMOS_BUNDLE="deckard-${STEAMOS_BUILD}-${STEAMOS_VERSION:-0.6.0}"
 STEAMOS_URL="https://steamdeck-images.steamos.cloud/vr/${STEAMOS_BUILD}"
 
 ensure_official_rootfs() {
