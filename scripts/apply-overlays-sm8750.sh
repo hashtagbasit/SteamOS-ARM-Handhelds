@@ -418,7 +418,7 @@ if [[ "$KERNEL_HAS_TRACEFS" == 1 ]]; then
 fi
 
 # Our own Mesa (scripts/build-mesa.sh, MESA_STACK=/work/mesa/out): the same
-# 26.2.3 stack as the 8 Gen 2 image, with the Adreno 830 ids added (patches/
+# 26.2.6 stack as the 8 Gen 2 image, with the Adreno 830 ids added (patches/
 # 0003). Replaces Valve's whole Mesa natively, in the FEX guest and for
 # Lepton, so Turnip and zink always match. Goes after the overlay copy above,
 # which may carry a standalone Turnip .so.

@@ -988,7 +988,7 @@ cat >"$R/usr/share/steamos-sm8650/frame-turnip_icd.aarch64.json" <<'JSON'
 JSON
 chmod 0755 "$R/usr/lib/steamos-sm8650/bin/mangoapp" 2>/dev/null || true
 
-# 8 Gen 2 (Adreno 740): our own Mesa 26.2.3 stack with the A740 fixes
+# 8 Gen 2 (Adreno 740): our own Mesa 26.2.6 stack with the A740 fixes
 # (scripts/build-mesa.sh, external-and-mods/mesa/README.md) replaces Valve's
 # whole Mesa, native and in the FEX guest tree. Valve's files go by their
 # package file lists so nothing of the two builds mixes.
@@ -1030,7 +1030,7 @@ if [[ -n "${MESA_STACK:-}" ]]; then
   # mangoapp runs on the system Turnip (it matches our zink), no pin.
   rm -rf "$R/usr/lib/steamos-sm8650/frame-turnip" \
     "$R/usr/share/steamos-sm8650/frame-turnip_icd.aarch64.json"
-  # Our 26.2.3 has no msm DRI driver and, unlike Valve's 26.3-devel, doesn't
+  # Our 26.2.6 has no msm DRI driver and, unlike Valve's 26.3-devel, doesn't
   # fall back to zink on its own: Xwayland got "msm: driver missing", no GBM,
   # and Steam crash-looped behind a black screen (Odin 2 tester, beta 3).
   # environment.d reaches the whole user session (gamescope, Xwayland, Steam,

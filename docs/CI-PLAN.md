@@ -66,7 +66,7 @@ zero runtime overhead (`CONFIG_ENABLE_DEFAULT_TRACERS=y`).
 
 ## Workflow 2: `build-mesa-sm8750.yml`
 
-**Purpose:** Build the Mesa 26.2.3 graphics stack (Turnip Vulkan + Zink OpenGL)
+**Purpose:** Build the Mesa 26.2.6 graphics stack (Turnip Vulkan + Zink OpenGL)
 for Adreno 830, in four architecture slices.
 
 - **Runner:** `ubuntu-24.04-arm` (aarch64 build runs inside rootfs via bwrap)
