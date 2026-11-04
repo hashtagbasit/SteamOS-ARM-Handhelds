@@ -16,6 +16,13 @@
 /bin/busybox --install -s /bin
 export PATH=/bin
 mount -t devtmpfs dev /dev
+# An initramfs built into the kernel (EMBED_INITRAMFS) replaces the default
+# one that has /dev/console, so the kernel started us with no stdio
+# ("unable to open an initial console"). devtmpfs has it now.
+# A failed exec redirect would kill init, so try the open in a subshell first.
+if [ ! -t 1 ] && (: </dev/console >/dev/console) 2>/dev/null; then
+  exec </dev/console >/dev/console 2>&1
+fi
 mount -t proc proc /proc
 mount -t sysfs sys /sys
 mkdir -p /boot /newroot

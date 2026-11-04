@@ -1,0 +1,37 @@
+From: hashtagbasit
+Subject: arm64: dts: qcom: sm8650: enable UFS MCQ
+
+The controller supports MCQ, but without an "mcq" region ufs-qcom logs
+"MCQ resource not found in device tree" and falls back to one 32-slot
+doorbell queue. Add the MCQ region (UFS base + 0xe0 * 0x200, as
+ufs-qcom.h has it) and the ITS MSI parent for its per-queue interrupts.
+
+On a Pocket FIT this gives 8 I/O queues of 64 and cuts 4K random read
+latency at QD1 from 158 to 117 us. Throughput is unchanged.
+
+Same layout as Qualcomm's posted patch and eliza.dtsi.
+
+---
+--- a/arch/arm64/boot/dts/qcom/sm8650.dtsi
++++ b/arch/arm64/boot/dts/qcom/sm8650.dtsi
+@@ -3985,7 +3985,10 @@
+ 
+ 		ufs_mem_hc: ufshc@1d84000 {
+ 			compatible = "qcom,sm8650-ufshc", "qcom,ufshc", "jedec,ufs-2.0";
+-			reg = <0 0x01d84000 0 0x3000>;
++			reg = <0 0x01d84000 0 0x3000>,
++			      <0 0x01da0000 0 0x15000>;
++			reg-names = "std",
++				    "mcq";
+ 
+ 			interrupts = <GIC_SPI 265 IRQ_TYPE_LEVEL_HIGH 0>;
+ 
+@@ -4025,6 +4028,8 @@
+ 
+ 			dma-coherent;
+ 
++			msi-parent = <&gic_its 0x60>;
++
+ 			lanes-per-direction = <2>;
+ 			qcom,ice = <&ice>;
+ 
