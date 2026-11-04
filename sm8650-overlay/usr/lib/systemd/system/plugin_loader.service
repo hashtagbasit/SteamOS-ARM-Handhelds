@@ -1,9 +1,9 @@
 [Unit]
 Description=SteamDeck Plugin Loader
-After=network-online.target systemd-binfmt.service local-fs.target home.mount
+After=network-online.target local-fs.target home.mount
 # Wants too, or After alone doesn't wait: plugins that fetch at startup
 # (Animation Changer, SteamGridDB) failed with name resolution errors.
-Wants=network-online.target systemd-binfmt.service
+Wants=network-online.target
 
 [Service]
 Type=simple
@@ -12,8 +12,9 @@ Restart=always
 RestartSec=5
 KillMode=control-group
 TimeoutStopSec=8
-# Decky's PluginLoader is x86-64 only; Box64 runs it.
-ExecStart=/usr/bin/box64 /home/steamos/homebrew/services/PluginLoader
+# Native aarch64 build (Decky 3.3.0+). The x86 build under box64 can't load
+# Python 3.14's _ssl and crash-looped.
+ExecStart=/home/steamos/homebrew/services/PluginLoader
 WorkingDirectory=/home/steamos/homebrew/services
 Environment=UNPRIVILEGED_PATH=/home/steamos/homebrew
 Environment=PRIVILEGED_PATH=/home/steamos/homebrew
@@ -23,17 +24,6 @@ Environment=USER=steamos
 Environment=XDG_CONFIG_HOME=/home/steamos/.config
 Environment=XDG_DATA_HOME=/home/steamos/.local/share
 Environment=XDG_RUNTIME_DIR=/run/user/1000
-Environment=BOX64_NOBANNER=1
-# Runs as root with HOME=/home/steamos: keep box64's code cache out of
-# ~/.cache, or it creates ~/.cache root-owned before the first login and KDE
-# can't build its app list (empty Desktop Mode menu).
-Environment=BOX64_DYNACACHE_FOLDER=/var/cache/decky-box64
-CacheDirectory=decky-box64
-# Box64's native liblzma wrapper calls Python's x86 allocator callback
-# (PyLzma_Malloc) as ARM code: SIGILL. tarfile's "r:*" tries xz first, so
-# any archive read kills the plugin (decky-lsfg-vk Install did nothing) and
-# the loader then spins a core on the dead backend. Emulate liblzma instead.
-Environment=BOX64_EMULATED_LIBS=liblzma.so.5
 # Updating Decky from its settings would replace this unit with Decky's own,
 # which has none of the above; this tells the updater to keep ours.
 Environment=KEEP_SYSTEMD_SERVICE=1

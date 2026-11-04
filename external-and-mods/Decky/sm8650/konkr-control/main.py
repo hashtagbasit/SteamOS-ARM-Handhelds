@@ -322,12 +322,15 @@ class Plugin:
             "power_led": st["power_led"],
             "menu_clicks": st["menu_clicks"],
             "has_flip": tablet(),
+            # The Lenovo tablets have no fan: no Fan page, no fan choices per game.
+            "has_fan": not tablet(),
             "flip": os.path.exists(FLIP),
             # Tablets: SteamOS on the microSD card next to Android. Handhelds:
             # OpenABL / ROCKNIX ABL, whose menu picks Android or Linux.
-            "has_dualboot": not tablet() or subprocess.run(["sh", "-c", "findmnt -no SOURCE / | grep -q mmcblk"]).returncode == 0,
+            "has_dualboot": not tablet() or subprocess.run(["sh", "-c", "findmnt -no SOURCE / | grep -q mmcblk || "
+                                                            "[ \"$(lsblk -no PARTLABEL \"$(findmnt -no SOURCE /)\")\" = steamos ]"]).returncode == 0,
             "dualboot_label": ("Restart into ZUI" if gen5() else "Restart into ZUXOS") if tablet() else "Restart into Android",
-            "dualboot_text": ("SteamOS runs from the microSD card. This restarts into "
+            "dualboot_text": ("SteamOS runs next to Android. This restarts into "
                               + ("ZUI; to come back, use Switch to SteamOS in KernelSU" if gen5()
                                  else "ZUXOS; to come back, run fastboot set_active b")) if tablet() else
                              ("Restarts into the boot menu: choose Switch boot mode until it says Android, "

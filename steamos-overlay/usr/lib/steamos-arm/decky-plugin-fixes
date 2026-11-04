@@ -10,6 +10,15 @@ since it has already loaded the old code.
   the lookup (SteamGridDB/decky-steamgriddb#175, not released yet); this is
   the same check.
 
+- Decky loader: 3.3.0 bundles Python 3.14, whose _ssl box64 can't load, so the
+  x86-64 PluginLoader crash-looped (plugin_loader.service restarting every few
+  seconds, Decky gone from Quick Access). Decky now has a native aarch64 build,
+  which the image carries in /usr/share/steamos-arm/decky. If the installed
+  ~/homebrew/services/PluginLoader is still an x86-64 ELF it is swapped for
+  that build (plugins and settings stay), and any box64 ExecStart left in an
+  /etc unit or drop-in is rewritten to run it directly. Runs before Decky at
+  boot, so no restart is normally needed; idempotent.
+
 It also installs the plugins the image bundles in /usr/share/steamos-arm/
 decky-plugins, which updates can't put in the home folder themselves
 (updaters before 1.4 only carry two plugin folders). Each bundled version
@@ -19,9 +28,22 @@ comes with an update.
 import glob
 import json
 import os
+import re
 import shutil
 import subprocess
 
+LOADER = "/home/steamos/homebrew/services/PluginLoader"
+LOADER_VERSION = "/home/steamos/homebrew/services/.loader.version"
+NATIVE_LOADER = "/usr/share/steamos-arm/decky/PluginLoader-arm64"
+UNIT_FILES = [
+    "/etc/systemd/system/plugin_loader.service",
+    "/usr/lib/systemd/system/plugin_loader.service",
+]
+UNIT_DROPIN_DIRS = [
+    "/etc/systemd/system/plugin_loader.service.d",
+    "/usr/lib/systemd/system/plugin_loader.service.d",
+]
+EM_X86_64, EM_AARCH64 = 0x3E, 0xB7
 PLUGINS = "/home/steamos/homebrew/plugins"
 BUNDLED = "/usr/share/steamos-arm/decky-plugins"
 STATE = "/var/lib/steamos-arm/bundled-plugins.json"
@@ -42,6 +64,68 @@ def version(folder):
             return json.load(fh).get("version", "")
     except (OSError, ValueError):
         return ""
+
+
+def elf_machine(path):
+    """e_machine of an ELF file, or None if it is missing or not ELF."""
+    try:
+        with open(path, "rb") as fh:
+            head = fh.read(20)
+    except OSError:
+        return None
+    if len(head) < 20 or head[:4] != b"\x7fELF":
+        return None
+    return int.from_bytes(head[18:20], "little")
+
+
+def repair_loader():
+    """Swap an x86-64 PluginLoader for the native build; drop box64 from units.
+    Returns a list of what changed."""
+    changed = []
+    if elf_machine(LOADER) == EM_X86_64:
+        if elf_machine(NATIVE_LOADER) != EM_AARCH64:
+            print("decky-plugin-fixes: x86 PluginLoader found but no native build in the image")
+        else:
+            tmp = LOADER + ".new"
+            shutil.copyfile(NATIVE_LOADER, tmp)
+            os.chmod(tmp, 0o755)
+            subprocess.run(["chown", "1000:1000", tmp], check=False)
+            os.replace(tmp, LOADER)
+            try:
+                with open(NATIVE_LOADER + ".version", encoding="utf-8") as fh:
+                    ver = fh.read().strip()
+                with open(LOADER_VERSION, "w", encoding="utf-8") as fh:
+                    fh.write(ver + "\n")
+                subprocess.run(["chown", "1000:1000", LOADER_VERSION], check=False)
+            except OSError:
+                pass
+            changed.append("PluginLoader x86-64 -> native arm64")
+    # Only touch units once the binary is native, or they would stop starting it.
+    if elf_machine(LOADER) == EM_AARCH64:
+        files = list(UNIT_FILES)
+        for d in UNIT_DROPIN_DIRS:
+            files += glob.glob(os.path.join(d, "*.conf"))
+        for path in files:
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    text = fh.read()
+            except (OSError, UnicodeDecodeError):
+                continue
+            new = re.sub(r"^(ExecStart=)\S*box64\S*\s+(\S*PluginLoader\S*)\s*$",
+                         r"\1\2", text, flags=re.M)
+            if new == text:
+                continue
+            try:
+                with open(path + ".fix", "w", encoding="utf-8") as fh:
+                    fh.write(new)
+                os.replace(path + ".fix", path)
+            except OSError as e:  # overlay /etc can refuse; the /usr drop-in still wins
+                print(f"decky-plugin-fixes: could not rewrite {path}: {e}")
+                continue
+            changed.append(f"box64 removed from {path}")
+    if changed:
+        subprocess.run(["systemctl", "daemon-reload"], check=False)
+    return changed
 
 
 def install_bundled():
@@ -76,6 +160,7 @@ def install_bundled():
 
 def main() -> int:
     fixed = []
+    fixed += repair_loader()
     if os.path.isdir(PLUGINS):
         fixed += [f"installed {p}" for p in install_bundled()]
     for name, pattern, old, new in FIXES:

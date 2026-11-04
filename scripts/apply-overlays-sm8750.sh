@@ -432,7 +432,11 @@ if [[ -n "${MESA_STACK:-}" ]]; then
     || die "MESA_STACK Turnip doesn't know the Adreno 830"
   ANDROID_VENDOR="usr/share/guestos/android/vendor/lib64"
   PDB="$R/usr/lib/holo/pacmandb/local"
-  for pkg in deckard-mesa-linux-aarch64 deckard-mesa-linux-x86_64 deckard-mesa-android-aarch64; do
+  # KEEP_ANDROID_MESA=1 (tablets): Android keeps Valve's Mesa, as on the
+  # 8 Gen 3 where ours crashed its display service.
+  MESA_PKGS="deckard-mesa-linux-aarch64 deckard-mesa-linux-x86_64"
+  [[ "${KEEP_ANDROID_MESA:-0}" = 1 ]] || MESA_PKGS+=" deckard-mesa-android-aarch64"
+  for pkg in $MESA_PKGS; do
     list="$(ls -d "$PDB/${pkg}"-[0-9]*/files 2>/dev/null | head -1)"
     [[ -n "$list" ]] || continue
     grep -v -e '^%' -e '/$' "$list" | grep -E '(\.so[.0-9]*|\.json)$' \
@@ -457,7 +461,7 @@ if [[ -n "${MESA_STACK:-}" ]]; then
   # the wrapper leaves the system Turnip alone.
   rm -f "$R/usr/share/steamos-sm8650/frame-turnip_icd.aarch64.json"
   rm -rf "$R/usr/lib/steamos-sm8650/frame-turnip"
-  if [[ -f "$MESA_STACK/android/$ANDROID_VENDOR/hw/vulkan.freedreno.so" ]]; then
+  if [[ "${KEEP_ANDROID_MESA:-0}" != 1 && -f "$MESA_STACK/android/$ANDROID_VENDOR/hw/vulkan.freedreno.so" ]]; then
     mkdir -p "$R/$ANDROID_VENDOR"
     cp -a "$MESA_STACK/android/$ANDROID_VENDOR/." "$R/$ANDROID_VENDOR/"
     chown -R root:root "$R/$ANDROID_VENDOR"
@@ -565,32 +569,41 @@ log "== home/steamos setup"
 HOME_DST="${STEAMOS_HOME:-$R/home/steamos}"
 mkdir -p "$HOME_DST/.cache" "$HOME_DST/.config" "$HOME_DST/homebrew/services"
 
-# v3.2.9's bundled Python is missing http.server, socketserver and
-# configparser, so plugin backends that import them die at startup
-# (SteamGridDB). Fixed in v3.2.10 (decky-loader #968/#970).
-DECKY_VERSION=v3.2.10-pre1
-DECKY_LOADER="${MOD}/Decky/loader/PluginLoader-${DECKY_VERSION}"
+# Decky 3.3.0 bundles Python 3.14 and box64 cannot load its _ssl module, so the
+# x86 loader crash-loops. Decky now publishes a native aarch64 build: run that
+# directly, no box64. Pinned to a tested release and checked against the
+# sha256 GitHub publishes for the asset.
+DECKY_VERSION=v3.3.0
+DECKY_SHA256=8ef5dcf36cbbbb6e97201a6baed5d79c4cc44ec27789fc9af1c5b6ae8f0b25b6
+DECKY_LOADER="${MOD}/Decky/loader/PluginLoader-arm64-${DECKY_VERSION}"
+if [[ -s "$DECKY_LOADER" ]] && ! echo "${DECKY_SHA256}  ${DECKY_LOADER}" | sha256sum -c --status; then
+  rm -f "$DECKY_LOADER"
+fi
 if [[ ! -s "$DECKY_LOADER" ]]; then
   mkdir -p "${DECKY_LOADER%/*}"
   curl -fL -o "$DECKY_LOADER.part" \
-    "https://github.com/SteamDeckHomebrew/decky-loader/releases/download/${DECKY_VERSION}/PluginLoader" &&
+    "https://github.com/SteamDeckHomebrew/decky-loader/releases/download/${DECKY_VERSION}/PluginLoader-arm64" &&
     mv "$DECKY_LOADER.part" "$DECKY_LOADER"
 fi
-[[ -s "$DECKY_LOADER" ]] || die "Decky loader ${DECKY_VERSION} missing and download failed"
-# Decky's PluginLoader is x86-64, so the unit runs it through box64
-# (make-steamos-sm8750.sh builds it into the rootfs). Beta 2 only had the
-# wants link, pointing at a unit that was never installed: no Decky, so no
-# Handheld Control either.
-[[ -x "$R/usr/local/bin/box64" ]] || die "box64 missing from the rootfs (Decky needs it)"
+[[ -s "$DECKY_LOADER" ]] || die "Decky loader ${DECKY_VERSION} (arm64) missing and download failed"
+echo "${DECKY_SHA256}  ${DECKY_LOADER}" | sha256sum -c --status \
+  || die "Decky loader ${DECKY_VERSION} sha256 mismatch"
+# Beta 2 only had the wants link, pointing at a unit that was never
+# installed: no Decky, so no Handheld Control either.
 mkdir -p "$HOME_DST/homebrew/settings" "$HOME_DST/homebrew/data" "$HOME_DST/homebrew/logs"
 install -m0755 "$DECKY_LOADER" "$HOME_DST/homebrew/services/PluginLoader"
+# Same binary in /usr: decky-plugin-fixes uses it to repair installs whose
+# ~/homebrew still has the x86 loader (updates can't write the home folder).
+mkdir -p "$R/usr/share/steamos-arm/decky"
+install -m0755 "$DECKY_LOADER" "$R/usr/share/steamos-arm/decky/PluginLoader-arm64"
+printf '%s' "$DECKY_VERSION" >"$R/usr/share/steamos-arm/decky/PluginLoader-arm64.version"
 printf '%s' "$DECKY_VERSION" >"$HOME_DST/homebrew/services/.loader.version"
 install_file "${ROOT}/sm8650-overlay/usr/lib/systemd/system/plugin_loader.service" \
   "$R/usr/lib/systemd/system/plugin_loader.service" 0644
 mkdir -p "$R/usr/lib/systemd/system/multi-user.target.wants"
 ln -sfn ../plugin_loader.service "$R/usr/lib/systemd/system/multi-user.target.wants/plugin_loader.service"
-# Updating Decky writes its own unit to /etc (runs the x86 binary without
-# box64); this drop-in keeps box64 in front whatever unit file wins.
+# Updating Decky writes its own unit to /etc; this drop-in keeps our native
+# arm64 ExecStart and environment whatever unit file wins.
 install_file "$OVL/usr/lib/systemd/system/plugin_loader.service.d/50-steamos-arm-box64.conf" \
   "$R/usr/lib/systemd/system/plugin_loader.service.d/50-steamos-arm-box64.conf" 0644
 # Handheld Control: profiles, fan and stick lighting in Quick Access (talks
@@ -680,6 +693,11 @@ install_file "$OVL/usr/lib/systemd/user/steamos-manager-session-cleanup.service.
   "$R/usr/lib/systemd/user/steamos-manager-session-cleanup.service.d/10-steamos-arm-timeout.conf" 0644
 install_file "$OVL/usr/lib/systemd/system/user@.service.d/20-steamos-arm-io.conf" \
   "$R/usr/lib/systemd/system/user@.service.d/20-steamos-arm-io.conf" 0644
+# SDDM in UTC so a timezone change during Steam's first-run setup can't make it
+# skip re-reading sddm.conf.d (Switch to Desktop does nothing on first boot).
+mkdir -p "$R/usr/lib/systemd/system/sddm.service.d"
+install_file "$OVL/usr/lib/systemd/system/sddm.service.d/10-steamos-arm-timezone.conf" \
+  "$R/usr/lib/systemd/system/sddm.service.d/10-steamos-arm-timezone.conf" 0644
 install_file "$OVL/usr/lib/systemd/system/steamos-arm-update-cleanup.service" \
   "$R/usr/lib/systemd/system/steamos-arm-update-cleanup.service" 0644
 mkdir -p "$R/usr/lib/systemd/system/multi-user.target.wants"
@@ -687,6 +705,10 @@ ln -sfn ../steamos-arm-update-cleanup.service \
   "$R/usr/lib/systemd/system/multi-user.target.wants/steamos-arm-update-cleanup.service"
 install_file "$OVL/usr/share/polkit-1/rules.d/60-steamos-arm-update.rules" \
   "$R/usr/share/polkit-1/rules.d/60-steamos-arm-update.rules" 0644
+install_file "$OVL/usr/share/polkit-1/rules.d/61-steamos-arm-no-plasma-charge-limit.rules" \
+  "$R/usr/share/polkit-1/rules.d/61-steamos-arm-no-plasma-charge-limit.rules" 0644
+install_file "$OVL/usr/lib/NetworkManager/conf.d/41-steamos-arm-wifi-scan.conf" \
+  "$R/usr/lib/NetworkManager/conf.d/41-steamos-arm-wifi-scan.conf" 0644
 install_file "$OVL/usr/share/steamos-arm/update/signing.pub" \
   "$R/usr/share/steamos-arm/update/signing.pub" 0644
 # Settings > System names the installed release (set again on each boot,
@@ -721,6 +743,16 @@ install_file "$OVL/usr/lib/udev/rules.d/70-steamos-arm-devcoredump.rules" \
 # This image never had it, so Desktop Mode had no way back but a restart.
 # Desktop Mode touch keyboard (GitHub #36): the same plasma-keyboard the
 # other images build, and KWin told to show it for a tapped text field.
+# Desktop Mode Wi-Fi applet (Syou, Gen 4): this image never built plasma-nm, so
+# the tray had no network entry. Same two builds as the 8 Gen 2 / 8 Gen 3 image.
+if [[ ! -f "$R/usr/lib/qt6/plugins/plasma/kcms/systemsettings_qwidgets/kcm_networkmanagement.so" ]]; then
+  log "== KF6 NetworkManagerQt 6.14 (plasma-nm needs >= 6.5)"
+  "${SCRIPT_DIR}/build-kf6-nm-qt-6.14.sh" "$R" \
+    || die "networkmanager-qt 6.14 is required"
+  log "== official Plasma plasma-nm 6.2.5 (Network Manager)"
+  "${SCRIPT_DIR}/build-plasma-nm-6.2.5.sh" "$R" \
+    || die "plasma-nm 6.2.5 is required (Network Manager)"
+fi
 if [[ ! -x "$R/usr/bin/plasma-keyboard" ]]; then
   log "== plasma-keyboard 0.1.0 (desktop touch keyboard)"
   "${SCRIPT_DIR}/build-plasma-keyboard.sh" "$R" \
@@ -738,6 +770,15 @@ if ! grep -q '^\[Wayland\]' "$R/etc/xdg/kwinrc" 2>/dev/null; then
   mkdir -p "$R/etc/xdg"
   printf '\n[Wayland]\nInputMethod[$e]=%s\nVirtualKeyboardEnabled=true\n' "$KWIN_IM" >>"$R/etc/xdg/kwinrc"
 fi
+
+log "== zram, swappiness, TEO, remote play buffer, backlight untag (every SoC)"
+for f in usr/lib/systemd/zram-generator.conf.d/60-steamos-arm-zram.conf \
+         usr/lib/tmpfiles.d/steamos-arm-cpuidle-teo.conf \
+         usr/lib/sysctl.d/60-steamos-arm-net-rmem.conf \
+         usr/lib/sysctl.d/61-steamos-arm-zram.conf \
+         usr/lib/udev/rules.d/99-zz-steamos-arm-backlight-untag.rules; do
+  install_file "$OVL/$f" "$R/$f" 0644
+done
 
 log "== Return to Gaming Mode desktop icon"
 install_file "$OVL/etc/skel/Desktop/Return.desktop" "$R/etc/skel/Desktop/Return.desktop" 0644

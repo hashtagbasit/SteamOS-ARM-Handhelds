@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # Install Decky PluginLoader on SteamOS Frame (aarch64).
-# PluginLoader is x86_64 — systemd must start it via Box64/FEX, not raw binfmt.
+# Runs Decky's native aarch64 PluginLoader build directly (no emulator). The x86_64
+# build under Box64 can't load Python 3.14's _ssl (Decky 3.3.0+) and crash-loops.
+# Only if the arm64 asset is unavailable does it fall back to the last good x86_64
+# release (v3.2.10) under Box64.
 # Steam Client channel (not SteamOS) selects Decky's update branch:
 #   Steam Client stable → loader.json branch 0
 #   Steam Client beta   → loader.json branch 1
-# The binary installed is always the newest GitHub PluginLoader (do not downgrade).
+# The loader version is pinned to a tested release (DECKY_VERSION) and checked
+# against the sha256 GitHub publishes for the asset.
 #
 # Usage:
 #   install-decky                 # ask Steam Client channel, then install
@@ -46,7 +50,11 @@ SYSTEM_DROPINS="/usr/share/steamos-odin/plugin_loader.service.d"
 BUNDLE_ROOT="/usr/share/steamos-odin/decky-plugins"
 DECKY_LOADER_REPO="SteamDeckHomebrew/decky-loader"
 DECKY_BRANCH="${DECKY_BRANCH:-}"
-OVERLAY_ETC="/var/lib/overlays/etc/upper"
+# Tested release and the sha256 of its PluginLoader-arm64 asset.
+DECKY_VERSION="${DECKY_VERSION:-v3.3.0}"
+DECKY_ARM64_SHA256="${DECKY_ARM64_SHA256:-8ef5dcf36cbbbb6e97201a6baed5d79c4cc44ec27789fc9af1c5b6ae8f0b25b6}"
+# Last release whose x86_64 loader works under Box64 (Python 3.13 or older).
+DECKY_X86_FALLBACK="v3.2.10"
 
 systemctl_root() {
   env -u DBUS_SESSION_BUS_ADDRESS systemctl --no-ask-password "$@"
@@ -65,6 +73,7 @@ fex_detected() {
   return 1
 }
 
+# Only needed for the x86_64 fallback.
 require_emulator() {
   if box64_detected; then
     log "Box64 detected"
@@ -159,35 +168,69 @@ elevate_if_needed() {
   exec pkexec --disable-internal-agent "$SCRIPT_PATH" "$@"
 }
 
-# Newest PluginLoader asset (GitHub lists newest first). Channel only sets loader.json.
-fetch_newest_loader() {
-  local json version url
-  json="$(curl -fsSL "https://api.github.com/repos/${DECKY_LOADER_REPO}/releases")" \
-    || die "Failed to fetch decky-loader releases"
-  version="$(printf '%s' "$json" | python3 -c 'import json,sys
-rels=json.load(sys.stdin)
-for r in rels:
-    if any(a.get("name")=="PluginLoader" for a in r.get("assets") or []):
-        print(r["tag_name"]); break
-')"
-  url="$(printf '%s' "$json" | python3 -c 'import json,sys
-rels=json.load(sys.stdin)
-for r in rels:
-    for a in r.get("assets") or []:
-        if a.get("name")=="PluginLoader":
-            print(a["browser_download_url"]); raise SystemExit
-')"
-  [[ -n "$version" && -n "$url" ]] || die "No PluginLoader asset on GitHub"
-  printf '%s\n%s\n' "$version" "$url"
+# Print "<url>\n<sha256 or empty>" for asset $2 of release tag $1, or fail.
+fetch_release_asset() {
+  local tag="$1" asset="$2" json
+  json="$(curl -fsSL "https://api.github.com/repos/${DECKY_LOADER_REPO}/releases/tags/${tag}")" || return 1
+  printf '%s' "$json" | python3 -c 'import json,sys
+asset=sys.argv[1]
+for a in json.load(sys.stdin).get("assets") or []:
+    if a.get("name")==asset:
+        print(a["browser_download_url"])
+        print((a.get("digest") or "").removeprefix("sha256:"))
+        raise SystemExit(0)
+raise SystemExit(1)
+' "$asset"
+}
+
+download_verified() {
+  local url="$1" want="$2" dest="$3" got
+  curl -fsSL -o "$dest" "$url" || return 1
+  if [[ -n "$want" ]]; then
+    got="$(sha256sum "$dest" | cut -d' ' -f1)"
+    if [[ "$got" != "$want" ]]; then
+      warn "sha256 mismatch for ${url} (got ${got}, want ${want})"
+      return 1
+    fi
+    log "sha256 verified (${want})"
+  else
+    warn "No sha256 published for ${url} — unverified"
+  fi
+}
+
+# Download the loader into ${PLUGIN_LOADER}.new. Sets LOADER_VERSION and
+# LOADER_NATIVE (1 = arm64 build, 0 = x86_64 under Box64).
+fetch_loader() {
+  local meta=() url sha
+  LOADER_NATIVE=1
+  LOADER_VERSION="$DECKY_VERSION"
+  if mapfile -t meta < <(fetch_release_asset "$DECKY_VERSION" PluginLoader-arm64) && [[ -n "${meta[0]:-}" ]]; then
+    url="${meta[0]}"
+    # Pinned hash for the tested release; the API digest for an overridden one.
+    sha="${meta[1]:-}"
+    [[ "$DECKY_VERSION" == v3.3.0 ]] && sha="$DECKY_ARM64_SHA256"
+    if download_verified "$url" "$sha" "${PLUGIN_LOADER}.new"; then
+      return 0
+    fi
+    warn "arm64 PluginLoader ${DECKY_VERSION} download failed"
+  else
+    warn "No PluginLoader-arm64 asset in ${DECKY_VERSION}"
+  fi
+  warn "Falling back to the x86_64 loader ${DECKY_X86_FALLBACK} under Box64"
+  LOADER_NATIVE=0
+  LOADER_VERSION="$DECKY_X86_FALLBACK"
+  require_emulator
+  mapfile -t meta < <(fetch_release_asset "$DECKY_X86_FALLBACK" PluginLoader) || true
+  [[ -n "${meta[0]:-}" ]] || die "No PluginLoader asset for ${DECKY_X86_FALLBACK}"
+  download_verified "${meta[0]}" "${meta[1]:-}" "${PLUGIN_LOADER}.new" || die "Failed to download PluginLoader"
 }
 
 write_plugin_loader_unit() {
   local dest="$1" emu start
-  emu="$(emulator_bin || true)"
-  if [[ -n "$emu" ]]; then
-    start="${emu} ${PLUGIN_LOADER}"
-  else
-    start="${PLUGIN_LOADER}"
+  start="${PLUGIN_LOADER}"
+  if [[ "${LOADER_NATIVE:-1}" == 0 ]]; then
+    emu="$(emulator_bin || true)"
+    [[ -n "$emu" ]] && start="${emu} ${PLUGIN_LOADER}"
   fi
   mkdir -p "$(dirname "$dest")"
   cat >"$dest" <<EOF
@@ -214,6 +257,7 @@ Environment=XDG_CONFIG_HOME=${REAL_HOME}/.config
 Environment=XDG_DATA_HOME=${REAL_HOME}/.local/share
 Environment=XDG_RUNTIME_DIR=/run/user/${REAL_UID}
 Environment=BOX64_NOBANNER=1
+Environment=KEEP_SYSTEMD_SERVICE=1
 
 [Install]
 WantedBy=multi-user.target
@@ -221,43 +265,33 @@ EOF
   chmod 0644 "$dest"
 }
 
+# /etc is an overlay (upper dir /var/lib/overlays/etc/upper). Writing links
+# there, or straight into the upper dir behind the mount's back, gives
+# "Stale file handle" and, with set -e, aborted the whole install. So the unit
+# and its wants link live in /usr/lib (always seen by systemd, and where the
+# image ships them); anything stale in /etc is removed on a best-effort basis.
 persist_unit() {
   write_plugin_loader_unit "$PLUGIN_UNIT_USR"
-  write_plugin_loader_unit "$PLUGIN_UNIT_ETC"
-  mkdir -p /etc/systemd/system/multi-user.target.wants
-  ln -sfn "$PLUGIN_UNIT_USR" /etc/systemd/system/multi-user.target.wants/plugin_loader.service
-  # SteamOS mounts the /etc overlay after systemd has loaded units, so a link
-  # written into /etc at runtime is invisible at the next boot and Decky never
-  # starts. The vendor wants dir under /usr/lib is always seen.
   mkdir -p /usr/lib/systemd/system/multi-user.target.wants
+  rm -f /usr/lib/systemd/system/multi-user.target.wants/plugin_loader.service
   ln -sfn ../plugin_loader.service /usr/lib/systemd/system/multi-user.target.wants/plugin_loader.service
-  if [[ -d "$OVERLAY_ETC" ]]; then
-    mkdir -p "$OVERLAY_ETC/systemd/system/multi-user.target.wants" \
-      "$OVERLAY_ETC/systemd/system/plugin_loader.service.d" || true
-    write_plugin_loader_unit "$OVERLAY_ETC/systemd/system/plugin_loader.service" || true
-    ln -sfn "$PLUGIN_UNIT_USR" \
-      "$OVERLAY_ETC/systemd/system/multi-user.target.wants/plugin_loader.service" || true
-  fi
+  # A unit in /etc would override the one above (and may still say box64).
+  rm -f "$PLUGIN_UNIT_ETC" /etc/systemd/system/multi-user.target.wants/plugin_loader.service 2>/dev/null \
+    || warn "Could not remove stale plugin_loader.service from /etc (overlay); ignoring"
 }
 
 apply_dropins() {
-  local drop src dest ovl
-  install -d -m 0755 /etc/systemd/system/plugin_loader.service.d \
-    /usr/lib/systemd/system/plugin_loader.service.d
+  local drop src
+  install -d -m 0755 /usr/lib/systemd/system/plugin_loader.service.d
   for drop in fast-stop.conf fex-steam-rootfs.conf sm8550.conf; do
-    src=""
-    [[ -f "${SYSTEM_DROPINS}/${drop}" ]] && src="${SYSTEM_DROPINS}/${drop}"
-    [[ -n "$src" ]] || continue
-    dest="/etc/systemd/system/plugin_loader.service.d/${drop}"
-    # Paths already use /home/steamos; copy as-is (no sed).
-    install -m 0644 "$src" "$dest"
+    src="${SYSTEM_DROPINS}/${drop}"
+    [[ -f "$src" ]] || continue
     install -m 0644 "$src" "/usr/lib/systemd/system/plugin_loader.service.d/${drop}"
-    if [[ -d "$OVERLAY_ETC" ]]; then
-      ovl="$OVERLAY_ETC/systemd/system/plugin_loader.service.d"
-      mkdir -p "$ovl" 2>/dev/null && install -m 0644 "$src" "$ovl/${drop}" || true
-    fi
     log "Installed drop-in ${drop}"
   done
+  # Old installs left copies under /etc; one that still starts box64 would
+  # override the native unit. Best effort: the overlay may refuse.
+  rm -f /etc/systemd/system/plugin_loader.service.d/*.conf 2>/dev/null || true
 }
 
 install_bundled_plugins() {
@@ -283,25 +317,17 @@ enable_cef() {
 }
 
 install_loader() {
-  local branch version url emu
+  local branch
   branch="$(normalize_branch "${DECKY_BRANCH:-release}")"
-  require_emulator
   command -v curl >/dev/null 2>&1 || die "curl is required"
-  emu="$(emulator_bin || true)"
-  [[ -n "$emu" ]] || die "box64/FEX binary not found"
-  log "Emulator: ${emu}"
-
-  mapfile -t meta < <(fetch_newest_loader)
-  version="${meta[0]}"
-  url="${meta[1]}"
-  log "Installing PluginLoader ${version} (newest) — update channel $(branch_label "$branch") for ${REAL_USER}"
 
   mkdir -p "${HOMEBREW_ROOT}/services" "${HOMEBREW_ROOT}/settings" \
     "${HOMEBREW_ROOT}/plugins" "${HOMEBREW_ROOT}/services/.systemd"
-  curl -fsSL -o "${PLUGIN_LOADER}.new" "$url" || die "Failed to download PluginLoader"
+  fetch_loader
+  log "Installing PluginLoader ${LOADER_VERSION} ($([[ "$LOADER_NATIVE" == 1 ]] && echo native arm64 || echo x86_64 via Box64)) — update channel $(branch_label "$branch") for ${REAL_USER}"
   chmod 755 "${PLUGIN_LOADER}.new"
   mv -f "${PLUGIN_LOADER}.new" "${PLUGIN_LOADER}"
-  printf '%s\n' "$version" >"$LOADER_VERSION_FILE"
+  printf '%s\n' "$LOADER_VERSION" >"$LOADER_VERSION_FILE"
   if [[ "$branch" == prerelease ]]; then
     printf '{"branch": 1}\n' >"$LOADER_SETTINGS"
   else
@@ -314,7 +340,10 @@ install_loader() {
   install_bundled_plugins
   chown -R "${REAL_UID}:${REAL_GID}" "$HOMEBREW_ROOT"
   systemctl_root daemon-reload
-  systemctl_root enable plugin_loader.service
+  # The wants link above already enables it; `enable` is only a belt, and
+  # must not abort the install when the /etc overlay refuses a link.
+  systemctl_root enable plugin_loader.service 2>/dev/null \
+    || warn "systemctl enable failed (overlay /etc); relying on the /usr/lib wants link"
   systemctl_root restart plugin_loader.service || systemctl_root start plugin_loader.service || true
 
   if [[ -x "$PLUGIN_LOADER" ]]; then
@@ -341,6 +370,11 @@ verify_loader() {
     warn "PluginLoader not installed"
   fi
   [[ -f "$LOADER_VERSION_FILE" ]] && log "Version: $(tr -d '\n' <"$LOADER_VERSION_FILE")"
+  # x86_64 ELF (e_machine 0x3e) means Box64; anything else runs natively.
+  LOADER_NATIVE=1
+  if [[ -f "$PLUGIN_LOADER" ]] && [[ "$(od -An -tx1 -j18 -N1 "$PLUGIN_LOADER" | tr -d ' ')" == 3e ]]; then
+    LOADER_NATIVE=0
+  fi
   persist_unit
   apply_dropins
   systemctl_root daemon-reload || true
@@ -350,13 +384,9 @@ verify_loader() {
 uninstall_loader() {
   systemctl_root disable --now plugin_loader.service 2>/dev/null || true
   rm -f "$PLUGIN_UNIT_ETC" "$PLUGIN_UNIT_USR" \
-    /etc/systemd/system/multi-user.target.wants/plugin_loader.service
-  rm -rf /etc/systemd/system/plugin_loader.service.d
-  if [[ -d "$OVERLAY_ETC" ]]; then
-    rm -f "$OVERLAY_ETC/systemd/system/plugin_loader.service" \
-      "$OVERLAY_ETC/systemd/system/multi-user.target.wants/plugin_loader.service"
-    rm -rf "$OVERLAY_ETC/systemd/system/plugin_loader.service.d"
-  fi
+    /etc/systemd/system/multi-user.target.wants/plugin_loader.service \
+    /usr/lib/systemd/system/multi-user.target.wants/plugin_loader.service 2>/dev/null || true
+  rm -rf /etc/systemd/system/plugin_loader.service.d 2>/dev/null || true
   systemctl_root daemon-reload || true
   rm -rf "$HOMEBREW_ROOT"
   log "Decky removed"
@@ -400,10 +430,10 @@ Usage: install-decky [install|install-stable|install-beta|verify|uninstall]
   (no args) / install   Ask Steam Client channel, then install
   install-stable        Decky update channel = Steam Client stable
   install-beta          Decky update channel = Steam Client beta
-  verify                Rewrite the systemd unit (Box64) and check the service
+  verify                Rewrite the systemd unit and check the service
   uninstall             Remove Decky and ~/homebrew
 
-PluginLoader is always the newest GitHub build, started via Box64.
+PluginLoader is the pinned native arm64 build (Box64 x86_64 fallback only if missing).
 Bundled plugins: SM8550-LED and SM8550-Power.
 EOF
     ;;

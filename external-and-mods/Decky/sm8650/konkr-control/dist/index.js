@@ -610,7 +610,7 @@ function GameSettings({ st, refresh, target, name, running, onBack }) {
                 onChange: (o) => change({ priority: o.data === "normal" ? undefined : o.data }),
             })),
         ]),
-        section("Fan", [
+        st.has_fan === false ? null : section("Fan", [
             row(jsx(DFL.DropdownItem, {
                 label: "Fan for this game",
                 rgOptions: gameFanOptions(st.fan_curves || {}),
@@ -709,7 +709,7 @@ function Content() {
         { id: "game", label: "Game" },
         { id: "lights", label: "Lights" },
         { id: "more", label: "More" },
-    ];
+    ].filter((t) => t.id !== "fan" || st.has_fan !== false);
     const pages = {
         power: () => [
             section("Profile", [
@@ -854,7 +854,7 @@ function Content() {
         children: [
             jsx("style", { children: TAB_CSS }),
             jsx(DFL.Tabs, {
-                activeTab: tab,
+                activeTab: tabs.some((t) => t.id === tab) ? tab : "power",
                 onShowTab: pickTab,
                 tabs: tabs.map((t) => ({
                     id: t.id,

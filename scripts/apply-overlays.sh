@@ -31,7 +31,9 @@ log() { echo "$*" | tee -a "$LOG"; }
 
 [[ -d "$R/usr/bin" ]] || die "missing rootfs at $R"
 for k in "${KOUTS[@]}"; do
-  [[ -f "$k/boot/KERNEL" ]] || die "missing kernel $k"
+  # The image's own kernel (the first) needs a KERNEL; one that only adds its
+  # modules (the Gen 3 kernel) is enough with a boot/Image.
+  [[ -f "$k/boot/KERNEL" || ( "$k" != "$KOUT" && -f "$k/boot/Image" ) ]] || die "missing kernel $k"
   [[ -d "$k/modules/$(basename "$k")" ]] || die "missing modules $k/modules/$(basename "$k")"
 done
 [[ -x "$GSBUILD/src/gamescope" ]] || die "missing built gamescope"
@@ -89,6 +91,7 @@ done
 # regdb.bin, and the Pocket FIT has always run with the Frame's copy.
 for ((i = ${#KOUTS[@]} - 1; i >= 0; i--)); do
   k="${KOUTS[$i]}"
+  [[ -d "$k/firmware" ]] || continue
   rsync -a --exclude=/ath12k/ "$k/firmware/" "$R/usr/lib/firmware/"
   if [[ -d "$k/firmware/ath12k" ]]; then
     rsync -a --ignore-existing "$k/firmware/ath12k/" "$R/usr/lib/firmware/ath12k/"
@@ -97,7 +100,7 @@ done
 # Lenovo Legion Y700 Gen 3: its firmware and audio profile, when its kernel is
 # one of this rootfs's (kernel-tb321fu).
 for k in "${KOUTS[@]}"; do
-  if [[ "$(basename "$k")" == *-tb321fu-steamos ]]; then
+  if [[ "$(basename "$k")" == *-tb321fu-steamos || "$(basename "$k")" == *-tb321fu ]]; then
     "${SCRIPT_DIR}/install-tb321fu.sh" "$R" || die "TB321FU firmware/audio install failed"
   fi
 done
@@ -337,6 +340,8 @@ done
 unset _so
 install_file "$OVL/usr/lib/NetworkManager/conf.d/40-sm8550-wifi.conf" \
   "$R/usr/lib/NetworkManager/conf.d/40-sm8550-wifi.conf" 0644
+install_file "$OVL/usr/lib/NetworkManager/conf.d/41-steamos-arm-wifi-scan.conf" \
+  "$R/usr/lib/NetworkManager/conf.d/41-steamos-arm-wifi-scan.conf" 0644
 install_file "$OVL/usr/lib/modprobe.d/ath12k.conf" \
   "$R/usr/lib/modprobe.d/ath12k.conf" 0644
 install_file "$OVL/usr/lib/systemd/network/99-sm8550-wlan0.link" \
@@ -382,6 +387,11 @@ install_file "$OVL/usr/lib/systemd/user/steamos-manager-session-cleanup.service.
   "$R/usr/lib/systemd/user/steamos-manager-session-cleanup.service.d/10-steamos-arm-timeout.conf" 0644
 install_file "$OVL/usr/lib/systemd/system/user@.service.d/20-steamos-arm-io.conf" \
   "$R/usr/lib/systemd/system/user@.service.d/20-steamos-arm-io.conf" 0644
+# SDDM in UTC so a timezone change during Steam's first-run setup can't make it
+# skip re-reading sddm.conf.d (Switch to Desktop does nothing on first boot).
+mkdir -p "$R/usr/lib/systemd/system/sddm.service.d"
+install_file "$OVL/usr/lib/systemd/system/sddm.service.d/10-steamos-arm-timezone.conf" \
+  "$R/usr/lib/systemd/system/sddm.service.d/10-steamos-arm-timezone.conf" 0644
 install_file "$OVL/usr/lib/systemd/system/steamos-arm-update-cleanup.service" \
   "$R/usr/lib/systemd/system/steamos-arm-update-cleanup.service" 0644
 mkdir -p "$R/usr/lib/systemd/system/multi-user.target.wants"
@@ -389,6 +399,8 @@ ln -sfn ../steamos-arm-update-cleanup.service \
   "$R/usr/lib/systemd/system/multi-user.target.wants/steamos-arm-update-cleanup.service"
 install_file "$OVL/usr/share/polkit-1/rules.d/60-steamos-arm-update.rules" \
   "$R/usr/share/polkit-1/rules.d/60-steamos-arm-update.rules" 0644
+install_file "$OVL/usr/share/polkit-1/rules.d/61-steamos-arm-no-plasma-charge-limit.rules" \
+  "$R/usr/share/polkit-1/rules.d/61-steamos-arm-no-plasma-charge-limit.rules" 0644
 install_file "$OVL/usr/share/steamos-arm/update/signing.pub" \
   "$R/usr/share/steamos-arm/update/signing.pub" 0644
 # Settings > System names the installed release (set again on each boot,
@@ -858,6 +870,7 @@ rm -f "$R/usr/lib/tmpfiles.d/sm8550-cpuidle-teo.conf" \
 for f in usr/lib/systemd/zram-generator.conf.d/60-steamos-arm-zram.conf \
          usr/lib/tmpfiles.d/steamos-arm-cpuidle-teo.conf \
          usr/lib/sysctl.d/60-steamos-arm-net-rmem.conf \
+         usr/lib/sysctl.d/61-steamos-arm-zram.conf \
          usr/lib/udev/rules.d/99-zz-steamos-arm-backlight-untag.rules; do
   install_file "$OVL/$f" "$R/$f" 0644
 done
@@ -1057,28 +1070,40 @@ cp -r --no-preserve=ownership "${MOD}/Decky/Plug-ins/homebrew/plugins/decky-lsfg
   "$R/usr/share/steamos-arm/decky-plugins/"
 # Decky itself. Upstream left it to a first-boot installer in ARM-Manager
 # that most people never found — no Decky, so no KONKR Control either.
-# v3.2.9's bundled Python is missing http.server, socketserver and
-# configparser, so plugin backends that import them die at startup
-# (SteamGridDB). Fixed in v3.2.10 (decky-loader #968/#970).
-DECKY_VERSION=v3.2.10-pre1
-DECKY_LOADER="${MOD}/Decky/loader/PluginLoader-${DECKY_VERSION}"
+# Decky 3.3.0 bundles Python 3.14 and box64 cannot load its _ssl module, so the
+# x86 loader crash-loops. Decky now publishes a native aarch64 build: run that
+# directly, no box64. Pinned to a tested release and checked against the
+# sha256 GitHub publishes for the asset.
+DECKY_VERSION=v3.3.0
+DECKY_SHA256=8ef5dcf36cbbbb6e97201a6baed5d79c4cc44ec27789fc9af1c5b6ae8f0b25b6
+DECKY_LOADER="${MOD}/Decky/loader/PluginLoader-arm64-${DECKY_VERSION}"
+if [[ -s "$DECKY_LOADER" ]] && ! echo "${DECKY_SHA256}  ${DECKY_LOADER}" | sha256sum -c --status; then
+  rm -f "$DECKY_LOADER"
+fi
 if [[ ! -s "$DECKY_LOADER" ]]; then
   mkdir -p "${DECKY_LOADER%/*}"
   curl -fL -o "$DECKY_LOADER.part" \
-    "https://github.com/SteamDeckHomebrew/decky-loader/releases/download/${DECKY_VERSION}/PluginLoader" &&
+    "https://github.com/SteamDeckHomebrew/decky-loader/releases/download/${DECKY_VERSION}/PluginLoader-arm64" &&
     mv "$DECKY_LOADER.part" "$DECKY_LOADER"
 fi
-[[ -s "$DECKY_LOADER" ]] || die "Decky loader ${DECKY_VERSION} missing and download failed"
+[[ -s "$DECKY_LOADER" ]] || die "Decky loader ${DECKY_VERSION} (arm64) missing and download failed"
+echo "${DECKY_SHA256}  ${DECKY_LOADER}" | sha256sum -c --status \
+  || die "Decky loader ${DECKY_VERSION} sha256 mismatch"
 mkdir -p "$HOME_DST/homebrew/services" "$HOME_DST/homebrew/settings" "$HOME_DST/homebrew/data" "$HOME_DST/homebrew/logs"
 # ~/.cache must exist (user-owned, see chown below) before anything running
 # as root with HOME=/home/steamos can create it root-owned.
 mkdir -p "$HOME_DST/.cache"
 install -m0755 "$DECKY_LOADER" "$HOME_DST/homebrew/services/PluginLoader"
+# Same binary in /usr: decky-plugin-fixes uses it to repair installs whose
+# ~/homebrew still has the x86 loader (updates can't write the home folder).
+mkdir -p "$R/usr/share/steamos-arm/decky"
+install -m0755 "$DECKY_LOADER" "$R/usr/share/steamos-arm/decky/PluginLoader-arm64"
+printf '%s' "$DECKY_VERSION" >"$R/usr/share/steamos-arm/decky/PluginLoader-arm64.version"
 printf '%s' "$DECKY_VERSION" >"$HOME_DST/homebrew/services/.loader.version"
 mkdir -p "$R/usr/lib/systemd/system/multi-user.target.wants"
 ln -sfn ../plugin_loader.service "$R/usr/lib/systemd/system/multi-user.target.wants/plugin_loader.service"
-# Updating Decky writes its own unit to /etc (runs the x86 binary without
-# box64); this drop-in keeps box64 in front whatever unit file wins.
+# Updating Decky writes its own unit to /etc; this drop-in keeps our native
+# arm64 ExecStart and environment whatever unit file wins.
 install_file "$OVL/usr/lib/systemd/system/plugin_loader.service.d/50-steamos-arm-box64.conf" \
   "$R/usr/lib/systemd/system/plugin_loader.service.d/50-steamos-arm-box64.conf" 0644
 # Loadout: emulators, PC game stores and apps (engine + Decky plugin).
