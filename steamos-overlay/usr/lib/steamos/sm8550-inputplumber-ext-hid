@@ -24,7 +24,7 @@ ext_hid_present() {
   local ev props name bus kbd mouse
   for ev in /sys/class/input/event*; do
     [[ -e "$ev" ]] || continue
-    props="$(udevadm info -q property -p "$ev" 2>/dev/null)" || continue
+    props="$(timeout 3 udevadm info -q property -p "$ev" 2>/dev/null)" || continue
     name="$(printf '%s\n' "$props" | sed -n 's/^NAME=//p' | head -1)"
     name="${name#\"}"
     name="${name%\"}"
@@ -44,10 +44,10 @@ ext_hid_present() {
 composite_ids() {
   local i found=0
   for i in 0 1 2 3; do
-    if busctl --system get-property org.shadowblip.InputPlumber \
+    if timeout 3 busctl --system get-property org.shadowblip.InputPlumber \
          "/org/shadowblip/InputPlumber/CompositeDevice${i}" \
          org.shadowblip.Input.CompositeDevice Name >/dev/null 2>&1 \
-      || inputplumber device "$i" targets list >/dev/null 2>&1; then
+      || timeout 3 inputplumber device "$i" targets list >/dev/null 2>&1; then
       printf '%s\n' "$i"
       found=1
     fi
@@ -57,26 +57,26 @@ composite_ids() {
 
 targets_have_keyboard() {
   local id="$1" listed
-  listed="$(inputplumber device "$id" targets list 2>/dev/null)" || listed=""
+  listed="$(timeout 3 inputplumber device "$id" targets list 2>/dev/null)" || listed=""
   printf '%s\n' "$listed" | grep -qiE '(^|[[:space:]])keyboard([[:space:]]|$)'
 }
 
 set_targets() {
   local id="$1"
   shift
-  if inputplumber device "$id" targets set "$@" >/dev/null 2>&1; then
+  if timeout 3 inputplumber device "$id" targets set "$@" >/dev/null 2>&1; then
     return 0
   fi
   local n=$# path="/org/shadowblip/InputPlumber/CompositeDevice${id}"
-  busctl --system call org.shadowblip.InputPlumber "$path" \
+  timeout 3 busctl --system call org.shadowblip.InputPlumber "$path" \
     org.shadowblip.Input.CompositeDevice SetTargetDevices as "$n" "$@" \
     >/dev/null 2>&1
 }
 
 ready=0
 for _ in $(seq 1 25); do
-  if inputplumber devices list >/dev/null 2>&1 \
-    || busctl --system get-property org.shadowblip.InputPlumber \
+  if timeout 3 inputplumber devices list >/dev/null 2>&1 \
+    || timeout 3 busctl --system get-property org.shadowblip.InputPlumber \
          /org/shadowblip/InputPlumber/CompositeDevice0 \
          org.shadowblip.Input.CompositeDevice Name >/dev/null 2>&1; then
     ready=1

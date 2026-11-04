@@ -1,0 +1,25 @@
+--- a/src/udev/device.rs	2026-10-18 22:36:41
++++ b/src/udev/device.rs	2026-10-18 22:36:41
+@@ -778,9 +778,19 @@
+         let match_rule = match subsystem.as_str() {
+             "hidraw" => {
+                 let name = self.name.clone();
+-                Some(format!(
+-                    r#"ACTION=="add|change", SUBSYSTEMS=="{subsystem}", KERNEL=="{name}""#
+-                ))
++                // hidraw numbers are reused, and these rules outlive the device.
++                // Match the parent HID device too (its name carries a per-device
++                // sequence number), or a stale rule hides whatever hidraw node
++                // takes the name next, such as our own uhid target.
++                let parent = self.path.rsplit('/').nth(2).filter(|p| !p.is_empty());
++                match parent {
++                    Some(parent) => Some(format!(
++                        r#"ACTION=="add|change", KERNEL=="{name}", SUBSYSTEMS=="hid", KERNELS=="{parent}""#
++                    )),
++                    None => Some(format!(
++                        r#"ACTION=="add|change", SUBSYSTEMS=="{subsystem}", KERNEL=="{name}""#
++                    )),
++                }
+             }
+             "input" => {
+                 let rule_fn = || {

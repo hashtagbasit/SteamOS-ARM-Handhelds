@@ -29,7 +29,8 @@ source_devices:
   - group: gamepad
     evdev:
       name: gpio-keys-ayn
-      phys_path: gpio-keys-ayn/input0
+      # name only: the gpio-keys driver reports phys "gpio-keys/input0" for every
+      # instance, so the old "gpio-keys-ayn/input0" could not match
       handler: event*
     capability_map_id: ayn_mcu
   # Gyro / accel (with the gyro kernel): qcom-imu-pad.service runs

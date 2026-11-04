@@ -5,8 +5,12 @@ Wants=inputplumber.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/lib/steamos/sm8550-inputplumber-ext-hid
+ExecStart=/usr/bin/timeout -k 3 25 /usr/lib/steamos/sm8550-inputplumber-ext-hid
 Nice=5
+# oneshot defaults to no timeout; a stuck InputPlumber call held the boot
+# for minutes (ledger S23).
+TimeoutStartSec=30
+SuccessExitStatus=124 137 143
 
 [Install]
 WantedBy=multi-user.target

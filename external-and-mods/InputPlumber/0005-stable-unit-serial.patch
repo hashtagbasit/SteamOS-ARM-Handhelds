@@ -1,0 +1,108 @@
+From: PB-OS (project-barry/pb-os b915f100), GPL-2.0; reused with credit
+Subject: Steam Deck controller targets report a stable per-device serial
+
+Steam replaces any serial that does not start with "F" with a constant
+<vid>-<pid>-1ae1c0b, shared by every device and changed by the PID. Per-controller
+settings (Nintendo layout, haptics) then follow the account across devices and
+are lost on a PID change. Applies to deck and deck-uhid.
+---
+diff --git a/src/drivers/steam_deck/mod.rs b/src/drivers/steam_deck/mod.rs
+index 7c9c7bc..6707e63 100644
+--- a/src/drivers/steam_deck/mod.rs
++++ b/src/drivers/steam_deck/mod.rs
+@@ -21,6 +21,31 @@ pub enum ProductId {
+ /// Vendor ID
+ pub const VID: u16 = 0x28de;
+ 
++/// The unit serial the controller reports to Steam. Steam keeps a serial
++/// only if it starts with "F" ("FC" for some controller types); any other
++/// it replaces with "<vid>-<pid>-<constant>", which is the same on every
++/// device and changes with the PID. Steam keys its per-controller settings
++/// (Use Nintendo Button Layout, haptics, ...) on that serial and syncs them
++/// through Steam Cloud, so on such a serial they followed the account from
++/// device to device and were lost whenever the PID changed. "FC" and ten hex
++/// digits of a hash of the SoC serial (or the machine id): the same for this
++/// device across updates and reinstalls, its own on every device. None when
++/// neither can be read.
++pub fn unit_serial() -> Option<String> {
++    let id = ["/sys/devices/soc0/serial_number", "/etc/machine-id"]
++        .iter()
++        .filter_map(|path| std::fs::read_to_string(path).ok())
++        .map(|text| text.trim().to_string())
++        .find(|text| !text.is_empty() && text.chars().any(|c| c != '0'))?;
++    // FNV-1a: stable across Rust versions, unlike std's DefaultHasher.
++    let mut hash: u64 = 0xcbf29ce484222325;
++    for byte in "pb-os steam pad\0".bytes().chain(id.bytes()) {
++        hash ^= byte as u64;
++        hash = hash.wrapping_mul(0x100000001b3);
++    }
++    Some(format!("FC{:010X}", hash & 0xff_ffff_ffff))
++}
++
+ impl ProductId {
+     pub fn to_u16(&self) -> u16 {
+         match self {
+diff --git a/src/input/target/steam_deck.rs b/src/input/target/steam_deck.rs
+index e4199ea..b279dba 100644
+--- a/src/input/target/steam_deck.rs
++++ b/src/input/target/steam_deck.rs
+@@ -29,7 +29,7 @@ use crate::{
+             STICK_X_MAX, STICK_X_MIN, STICK_Y_MAX, STICK_Y_MIN, TRIGG_MAX,
+         },
+         report_descriptor::{CONTROLLER_DESCRIPTOR, KEYBOARD_DESCRIPTOR, MOUSE_DESCRIPTOR},
+-        ProductId, VID,
++        unit_serial, ProductId, VID,
+     },
+     input::{
+         capability::{
+@@ -946,11 +946,13 @@ impl TargetOutputDevice for SteamDeckDevice {
+             self.device = Some(device);
+             self.config = config;
+             self.config_rx = None;
+-            self.serial_number = format!(
+-                "{:04x?}-{:04x?}-1ae1c0b",
+-                VID,
+-                self.config.product_id.to_u32()
+-            );
++            self.serial_number = unit_serial().unwrap_or_else(|| {
++                format!(
++                    "{:04x?}-{:04x?}-1ae1c0b",
++                    VID,
++                    self.config.product_id.to_u32()
++                )
++            });
+         }
+ 
+         // Increment the frame
+diff --git a/src/input/target/steam_deck_uhid.rs b/src/input/target/steam_deck_uhid.rs
+index efbbc53..5519ff2 100644
+--- a/src/input/target/steam_deck_uhid.rs
++++ b/src/input/target/steam_deck_uhid.rs
+@@ -22,7 +22,7 @@ use crate::{
+             STICK_X_MAX, STICK_X_MIN, STICK_Y_MAX, STICK_Y_MIN, TRIGG_MAX,
+         },
+         report_descriptor::CONTROLLER_DESCRIPTOR,
+-        ProductId, VID,
++        unit_serial, ProductId, VID,
+     },
+     input::{
+         capability::{
+@@ -841,11 +841,13 @@ impl TargetOutputDevice for SteamDeckUhidDevice {
+             self.device = Some(device);
+             self.config = config;
+             self.config_rx = None;
+-            self.serial_number = format!(
+-                "{:04x?}-{:04x?}-1ae1c0b",
+-                VID,
+-                self.config.product_id.to_u32()
+-            );
++            self.serial_number = unit_serial().unwrap_or_else(|| {
++                format!(
++                    "{:04x?}-{:04x?}-1ae1c0b",
++                    VID,
++                    self.config.product_id.to_u32()
++                )
++            });
+         }
+ 
+         let Some(device) = self.device.as_mut() else {
