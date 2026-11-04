@@ -79,7 +79,9 @@ fi
 # Then index.html paints and never pulls libraries.js (no Gamepad window).
 htmlcache="${STEAMROOT}/config/htmlcache"
 is_odin3=0
-if grep -aqE "ayn,odin3|qcom,sm8750" /sys/firmware/devicetree/base/compatible 2>/dev/null; then
+# Lenovo tablets are SM8750 too, but not handhelds: no Odin 3 pad, scale or wpa_supplicant.
+if grep -aqE "ayn,odin3|qcom,sm8750" /sys/firmware/devicetree/base/compatible 2>/dev/null &&
+   ! grep -aqE "lenovo,(elden|baldur)" /sys/firmware/devicetree/base/compatible 2>/dev/null; then
   is_odin3=1
 fi
 if [[ "$is_odin3" -eq 1 ]]; then

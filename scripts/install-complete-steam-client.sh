@@ -8,6 +8,7 @@
 #
 # Usage:
 #   install-complete-steam-client.sh <STEAM_HOME>
+#   install-complete-steam-client.sh --check <DIR>   (exit 0 if DIR is a complete client)
 #
 # Env:
 #   STEAM_ARM_SCRIPT   override path to install-steam-arm
@@ -19,7 +20,6 @@
 # like a new Steam Deck (login screen, no host account).
 set -euo pipefail
 
-STEAM_HOME="${1:?STEAM_HOME}"
 HERE="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd -- "${HERE}/.." && pwd)"
 CHANNEL="${STEAM_ARM_CHANNEL:-steamdeck_publicbeta}"
@@ -35,6 +35,12 @@ is_complete() {
   compgen -G "${d}/package/steam_client_*_linuxarm64.installed" >/dev/null \
     || [[ -s "${d}/.odin-complete-client" ]]
 }
+
+if [[ "${1:-}" == --check ]]; then
+  is_complete "${2:?--check needs a directory}"
+  exit $?
+fi
+STEAM_HOME="${1:?STEAM_HOME}"
 
 # Remove host login, tokens, userdata. Keep the ARM client (steamui, steamrt, packages).
 sanitize_steam_user_data() {
@@ -82,14 +88,18 @@ sanitize_steam_user_data() {
   printf '%b\n' '"InstallConfigStore"' '{' '\t"SteamOS"' '\t{' \
     '\t\t"WifiForceWPASupplicant"\t\t"1"' '\t}' '}' >"${d}/config/config.vdf"
 
-  # With no ~/.steam/registry.vdf at all Steam skips the first-run setup and
-  # goes straight to sign-in. Ship one that says setup hasn't run.
+  # Steam shows its first-run setup (language, time zone, Wi-Fi, then sign-in)
+  # while the CompletedOOBE / CompletedOOBEStage1 registry values are absent;
+  # it writes them itself when setup finishes. Ship a registry.vdf without them
+  # (the earlier explicit "0" values images carried skipped the setup, and a
+  # registry-less home is what Armada ships). A neutral value keeps the file
+  # non-empty.
   local home="${d%/.local/share/Steam}"
   if [[ "$home" != "$d" ]]; then
     mkdir -p "${home}/.steam"
     printf '%b\n' '"Registry"' '{' '\t"HKCU"' '\t{' '\t\t"Software"' '\t\t{' \
       '\t\t\t"Valve"' '\t\t\t{' '\t\t\t\t"Steam"' '\t\t\t\t{' \
-      '\t\t\t\t\t"CompletedOOBEStage1"\t\t"0"' '\t\t\t\t\t"CompletedOOBE"\t\t"0"' \
+      '\t\t\t\t\t"RunningAppID"\t\t"0"' \
       '\t\t\t\t}' '\t\t\t}' '\t\t}' '\t}' '}' >"${home}/.steam/registry.vdf"
   fi
 }

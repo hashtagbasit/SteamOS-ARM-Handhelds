@@ -157,6 +157,12 @@ if [[ -z "$OUTPUT" ]]; then
     base="$(basename "$card")"
     name="${base#*-}"
     mode="$(head -1 "$card/modes" 2>/dev/null || true)"
+    # Lenovo tablets: the panel's native size is its largest listed mode, not
+    # whichever is listed first (Game Mode came up at 1920x1200 on a
+    # 2560x1600 Gen 3).
+    if grep -aqE "lenovo,(tb321fu|elden|baldur)" /sys/firmware/devicetree/base/compatible 2>/dev/null; then
+      mode="$(awk -F'[x@ ]' '/^[0-9]+x[0-9]+/ { a = $1 * $2; if (a > m) { m = a; best = $1 "x" $2 } } END { print best }' "$card/modes" 2>/dev/null || true)"
+    fi
     if [[ "$mode" =~ ^([0-9]+)x([0-9]+) ]]; then
       w="${BASH_REMATCH[1]}"
       h="${BASH_REMATCH[2]}"
@@ -200,6 +206,25 @@ else
   W="${GAMESCOPE_WIDTH:-$PANEL_W}"
   H="${GAMESCOPE_HEIGHT:-$PANEL_H}"
 fi
+# Games and Steam render at this size; gamescope scales it to the panel.
+# Lenovo tablets: half the panel (Gen 3 1280x800, Gen 4 1520x952). Their
+# panels are too big for KMS rotation, so the rotation shader composites
+# every frame, and at full 2.5K/3K that ran them hot and drained the battery.
+NW="$W"
+NH="$H"
+if grep -aqE "lenovo,(tb321fu|elden|baldur)" /sys/firmware/devicetree/base/compatible 2>/dev/null; then
+  NW=$(( W / 2 / 2 * 2 ))
+  NH=$(( H / 2 / 2 * 2 ))
+fi
+# Full panel instead (sharper, hotter): `touch /etc/steamos-arm/native-resolution`
+# and restart Game Mode; remove the file to go back to half. An explicit
+# GAMESCOPE_NESTED_* below still wins.
+if [[ -e /etc/steamos-arm/native-resolution ]]; then
+  NW="$W"
+  NH="$H"
+fi
+NW="${GAMESCOPE_NESTED_WIDTH:-$NW}"
+NH="${GAMESCOPE_NESTED_HEIGHT:-$NH}"
 # Highest refresh the panel lists (Pocket FIT: 144/120/90/60 at one pixel
 # clock, via kernel patch kernel-sm8650/patches/0003; ROCKNIX's driver alone
 # lists only 144). gamescope collects every listed rate into its dynamic refresh
@@ -309,7 +334,9 @@ GAMESCOPE_SESSION_TARGET="${GAMESCOPE_SESSION_TARGET:-gamescope-session.target}"
 WATCH_SERVICE=""
 
 IS_ODIN3=0
-if grep -aqE "ayn,odin3|qcom,sm8750" /sys/firmware/devicetree/base/compatible 2>/dev/null; then
+# Any SM8750 handheld (Odin 3, Pocket FIT Elite), but not the Lenovo tablets.
+if grep -aqE "ayn,odin3|qcom,sm8750" /sys/firmware/devicetree/base/compatible 2>/dev/null &&
+   ! grep -aqE "lenovo,(elden|baldur)" /sys/firmware/devicetree/base/compatible 2>/dev/null; then
   IS_ODIN3=1
 fi
 
@@ -350,8 +377,8 @@ GAMESCOPE_ARGS+=(
   --max-scale 2
   --output-width "$W"
   --output-height "$H"
-  --nested-width "$W"
-  --nested-height "$H"
+  --nested-width "$NW"
+  --nested-height "$NH"
   --nested-refresh "$REFRESH_HZ"
   --generate-drm-mode fixed
   -T "$stats"
@@ -380,12 +407,13 @@ if [[ "${GAMESCOPE_SESSION_TARGET}" != "gamescope-session.target" ]]; then
   WATCH_SERVICE="steamvr-nested-desktop.service"
 fi
 
-# mangoapp sizes its text in pixels for the Deck's 800 lines, so on the
-# tablets (1904 lines on the Legion Y700 Gen 4) the performance overlay was
-# a sliver in the corner. Scale it to the panel; read_cfg keeps Steam's
-# preset file (MANGOHUD_CONFIGFILE) in use, which MANGOHUD_CONFIG alone skips.
-if [[ "$MANGOAPP" == 1 && -z "${MANGOHUD_CONFIG:-}" && "$H" -gt 1200 ]]; then
-  MANGOHUD_CONFIG="read_cfg,font_scale=$(awk -v h="$H" 'BEGIN { printf "%.1f", h / 800 }')"
+# mangoapp sizes its text in pixels for the Deck's 800 lines. It is an X
+# client of the nested screen, so scale by the nested height (NH), not the
+# panel's: on the tablets running at half panel (Gen 3 800, Gen 4 952 lines)
+# scaling by the panel made the overlay huge. read_cfg keeps Steam's preset
+# file (MANGOHUD_CONFIGFILE) in use, which MANGOHUD_CONFIG alone skips.
+if [[ "$MANGOAPP" == 1 && -z "${MANGOHUD_CONFIG:-}" && "$NH" -gt 1000 ]]; then
+  MANGOHUD_CONFIG="read_cfg,font_scale=$(awk -v h="$NH" 'BEGIN { printf "%.1f", h / 800 }')"
   export MANGOHUD_CONFIG
 fi
 
@@ -396,6 +424,6 @@ fi
 env | grep -E '^(STEAM_DISPLAY_REFRESH_LIMITS|STEAM_USE_MANGOAPP|STEAM_MANGOAPP_[A-Z_]+|STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND|GAMESCOPE_MANGOAPP_SOCKET_DISABLE|MANGOHUD_CONFIGFILE|MANGOHUD_CONFIG)=' \
   >"$XDG_RUNTIME_DIR/gamescope-steam.env" 2>/dev/null || true
 
-echo >&2 "gamescope-session: output=$OUTPUT panel=${PANEL_W}x${PANEL_H} nested=${W}x${H}@${REFRESH_HZ} max=${MAX_HZ} mangoapp=${MANGOAPP} kms_rotation=${KMS_ROTATION} ignore_touch=${GAMESCOPE_IGNORE_TOUCH:-} bottom=${GAMESCOPE_LEASE_CONNECTOR:-none} orientation=${PANEL_ORIENT:-auto}"
+echo >&2 "gamescope-session: output=$OUTPUT panel=${PANEL_W}x${PANEL_H} render=${W}x${H} nested=${NW}x${NH}@${REFRESH_HZ} max=${MAX_HZ} mangoapp=${MANGOAPP} kms_rotation=${KMS_ROTATION} ignore_touch=${GAMESCOPE_IGNORE_TOUCH:-} bottom=${GAMESCOPE_LEASE_CONNECTOR:-none} orientation=${PANEL_ORIENT:-auto}"
 
 exec gamescope "${GAMESCOPE_ARGS[@]}" -- /usr/lib/steamos/gamescope-onready ${WATCH_SERVICE:-}

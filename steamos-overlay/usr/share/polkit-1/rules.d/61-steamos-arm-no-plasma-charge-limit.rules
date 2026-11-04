@@ -1,0 +1,11 @@
+// The charge limit is owned by Game Mode (steamos-arm-power, set from Steam
+// or Handheld Control). Plasma's PowerDevil keeps its own copy of the
+// threshold and re-applies it through kauth's chargethresholdhelper every
+// time the desktop session starts, which put the limit back to whatever the
+// desktop last had (72 % on a Pocket FIT) on each Game <-> Desktop switch.
+// Refuse that helper; the limit stays what Game Mode set.
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.kde.powerdevil.chargethresholdhelper") == 0) {
+        return polkit.Result.NO;
+    }
+});

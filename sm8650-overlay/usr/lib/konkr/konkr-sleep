@@ -216,6 +216,49 @@ sysbtn_rebind() {
   done
 }
 
+# InputPlumber doesn't always recover the pad by itself. With udev slow after
+# a wake it tried to add the returning pad to the composite that was still
+# stopping, every add failed ("channel closed") and it never retried: no deck
+# target, the raw pad unhidden, Steam showed it as an Xbox pad (2026-10-18).
+# Once the pad is back, check that it is hidden and Steam's deck pad is
+# visible; if not, restart InputPlumber (~5 s).
+pad_event() {
+  local e
+  for e in /sys/class/input/event*; do
+    [[ $(cat "$e/device/name" 2>/dev/null) == "AYANEO Controller" ]] && { echo "/dev/input/${e##*/}"; return; }
+  done
+}
+
+pad_ok() {  # pad_ok <pad evdev>
+  local h
+  [[ $(stat -c %a "$1" 2>/dev/null) == 0 ]] || return 1
+  for h in /sys/class/hidraw/hidraw*; do
+    [[ $(readlink -f "$h/device") == */0003:28DE:12F0.* ]] || continue
+    [[ $(stat -c %a "/dev/${h##*/}" 2>/dev/null) != 0 ]] && return 0
+  done
+  return 1
+}
+
+pad_watch() {
+  local i ev=
+  for i in {1..30}; do
+    ev=$(pad_event); [[ -n $ev ]] && break
+    sleep 0.5
+  done
+  [[ -n $ev ]] || { log "pad-watch: the pad never came back"; return; }
+  for i in {1..8}; do
+    sleep 1
+    pad_ok "$ev" && return
+  done
+  log "pad-watch: InputPlumber lost the pad, restarting it"
+  systemctl restart inputplumber.service
+}
+
+pad_watch_start() {
+  systemd-run --no-block --quiet --collect --unit=konkr-pad-watch \
+    /usr/lib/konkr/konkr-sleep pad-watch 2>/dev/null || true
+}
+
 # 8 Gen 3 on our 7.2 kernel: the kernel itself handles Wi-Fi, audio graphs,
 # touch and the PMIC wake sources across s2idle (Armada's suspend series).
 # Unloading ath12k and unbinding touch on top of that hung the Pocket FIT on
@@ -292,6 +335,7 @@ post() {
   fan_supply_on
   sysbtn_rebind
   xhci_on
+  pad_watch_start
   wifi_watch_start
   if light; then
     systemctl kill -s HUP konkrd.service >/dev/null 2>&1
@@ -327,7 +371,8 @@ case "${1:-}" in
   standby-post)
     [[ -d /sys/module/${WIFI_MODS[0]} ]] || modprobe "${WIFI_MODS[0]}" ;;
   standby-screen-on) gamescope_screen 0 ;;
+  pad-watch) pad_watch ;;
   wifi-watch) exec /usr/lib/steamos-arm/steamos-arm-wifi-wake watch ;;
-  *) echo "usage: konkr-sleep pre|post|standby-pre|standby-audio-on|standby-post|standby-screen-on|wifi-watch" >&2; exit 2 ;;
+  *) echo "usage: konkr-sleep pre|post|pad-watch|standby-pre|standby-audio-on|standby-post|standby-screen-on|wifi-watch" >&2; exit 2 ;;
 esac
 exit 0

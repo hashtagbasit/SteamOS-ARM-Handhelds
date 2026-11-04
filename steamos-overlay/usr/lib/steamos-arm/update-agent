@@ -38,6 +38,17 @@ NAME = re.compile(r"^steamos-arm-(?P<soc>sm\d{4})-(?P<version>\d+(?:\.\d+)*)(?P<
 PART = re.compile(r"^(?P<base>steamos-arm-(?P<soc>sm\d{4})-(?P<version>\d+(?:\.\d+)*)(?:-full)?\.sau)\.(?P<n>\d{3})$")
 
 
+def tablet():
+    """Lenovo Legion Y700 tablets record the chip their system came from, but
+    the handheld packages of that chip would replace their kernel and boot
+    files. Until they get releases of their own, there is nothing for them."""
+    try:
+        compat = Path("/sys/firmware/devicetree/base/compatible").read_bytes().decode(errors="replace").split("\0")
+    except OSError:
+        return False
+    return any(c in compat for c in ("lenovo,tb321fu", "lenovo,elden", "lenovo,baldur"))
+
+
 def vkey(v):
     return tuple(int(x) for x in re.findall(r"\d+", v or "0"))
 
@@ -117,6 +128,8 @@ def media_candidates(soc):
 
 
 def newest(installed, soc):
+    if tablet():
+        return {}
     found = media_candidates(soc)
     try:
         found += github_candidates(soc)
