@@ -13,6 +13,9 @@ mainline Qualcomm kernels (the device says `msm_dpu`, the game's handles say
 | 0004 RAM name | ROCKNIX |
 | 0005 SM8750 battery | ROCKNIX |
 | 0006 Adreno on mainline: GPU clock, VRAM, blank instead of fake zeros, no crash on an unreadable process | ours |
+| 0007 CPU temperature from a thermal zone that reads (8 Elite) | ours |
+| 0008 CPU and GPU temperature from thermal zones on the Lenovo tablets' 7.2.x kernels | ours |
+| 0009 mangoapp frametime fields in gamescope's order (app timing, then visible) | see CREDITS.md |
 
 Built inside the SteamOS rootfs (its glibc) by
 `scripts/build-mangohud-in-rootfs.sh`; the image build installs the result

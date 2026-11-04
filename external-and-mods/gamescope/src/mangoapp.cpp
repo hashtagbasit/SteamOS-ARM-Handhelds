@@ -281,14 +281,18 @@ extern gamescope::ConVar<bool> cv_mangoapp_use_output_timing;
 
 void mangoapp_output_update( uint64_t vblanktime )
 {
-	static uint64_t s_uLastBasePlaneCommitID = 0;
-	if ( s_uLastBasePlaneCommitID != g_uCurrentBasePlaneCommitID )
+	// Only a base-plane commit newer than any shown before is a new frame
+	// (commit IDs only grow), so going back to an older commit (focus moving
+	// between windows) isn't counted as a frame. Idea from PB-OS's gamescope
+	// fork (project-barry/gamescope d509c434).
+	static uint64_t s_uNewestCommitID = 0;
+	if ( g_uCurrentBasePlaneCommitID > s_uNewestCommitID )
 	{
+		s_uNewestCommitID = g_uCurrentBasePlaneCommitID;
 		static uint64_t s_uLastBasePlaneUpdateVBlankTime = vblanktime;
         uint64_t last_frametime = s_uLastBasePlaneUpdateVBlankTime;
         uint64_t frametime = vblanktime - last_frametime;
 		s_uLastBasePlaneUpdateVBlankTime = vblanktime;
-		s_uLastBasePlaneCommitID = g_uCurrentBasePlaneCommitID;
         if ( last_frametime > vblanktime )
             return;
 

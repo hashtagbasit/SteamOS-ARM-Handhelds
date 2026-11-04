@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <atomic>
+#include <chrono>
 #include <thread>
 #include <vector>
 
@@ -175,7 +176,19 @@ static void request_buffer(struct pipewire_state *state)
 {
 	struct pw_buffer *pw_buffer = pw_stream_dequeue_buffer(state->stream);
 	if (!pw_buffer) {
-		pwr_log.errorf("warning: out of buffers");
+		// A client that paces the capture keeps buffers on purpose, and this
+		// runs on every vblank: report the first miss, then at most once a
+		// minute, instead of a log line per frame.
+		static uint64_t s_ulMissed = 0;
+		static std::chrono::steady_clock::time_point s_LastReport;
+		auto now = std::chrono::steady_clock::now();
+		s_ulMissed++;
+		if (s_ulMissed == 1 || now - s_LastReport >= std::chrono::minutes(1)) {
+			pwr_log.infof("out of buffers: %llu frames without a free buffer since the last report (the client holds them)",
+				(unsigned long long) s_ulMissed);
+			s_ulMissed = 0;
+			s_LastReport = now;
+		}
 		return;
 	}
 

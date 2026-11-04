@@ -1,0 +1,88 @@
+From: hashtagbasit
+Subject: Qualcomm: CPU and GPU temperature from thermal zones that read
+
+The Lenovo tablets' 7.2.x kernels showed 0 C for both. The CPU zones there
+are "cpuss0-thermal" / "cpu2-top-thermal" (no dash after cpuss, which the
+earlier matching missed), a hwmon cpu sensor that reads 0 was kept, and the
+GPU had no fallback when no hwmon named "gpu" exists. Match the zone types
+on their prefix, drop a cpu sensor that reads 0, and read the hottest
+gpuss thermal zone when the GPU hwmon is missing or reads 0.
+
+---
+--- a/src/cpu.cpp
++++ b/src/cpu.cpp
+@@ -552,8 +552,10 @@
+             continue;
+ 
+         std::string type = read_line(d / "type");
+-        bool cpuss = type.substr(0, 6) == "cpuss-";
+-        if (!cpuss && type.substr(0, 4) != "cpu-")
++        // "cpuss-0" on the 8 Elite, "cpuss0-thermal" and "cpu2-top-thermal"
++        // on mainline 8 Gen 3 (Lenovo tablets).
++        bool cpuss = type.compare(0, 5, "cpuss") == 0;
++        if (!cpuss && type.compare(0, 3, "cpu") != 0)
+             continue;
+ 
+         long millicelsius = 0;
+@@ -639,6 +641,15 @@
+         }
+     }
+ 
++    // A hwmon cpu sensor that reads 0 (7.2.x Lenovo tablet kernels) is no
++    // sensor: look through the thermal zones for one that reads.
++    if (!path.empty() && !input.empty() && file_exists(input)) {
++        long mc = 0;
++        try { mc = std::stol(read_line(input)); } catch (...) {}
++        if (mc <= 0)
++            path.clear();
++    }
++
+     if (path.empty()) {
+         try {
+             check_thermal_zones(path, input);
+--- a/src/gpu_fdinfo.cpp
++++ b/src/gpu_fdinfo.cpp
+@@ -197,6 +197,33 @@
+     }
+ 
+     return static_cast<float>(total) / 1024 / 1024 / 1024;
++}
++
++// Adreno on mainline: gpuss thermal zones ("gpuss-0-thermal", "gpuss0-thermal").
++// A game's DRM handles say "msm", the device says "msm_dpu".
++static bool is_qualcomm_msm(const std::string& module) {
++    return module == "msm" || module == "msm_drm" || module == "msm_dpu";
++}
++
++static float qualcomm_gpu_zone_temp() {
++    long best = 0;
++    std::error_code ec;
++    for (const auto& d : fs::directory_iterator("/sys/class/thermal", ec)) {
++        if (d.path().filename().string().compare(0, 12, "thermal_zone") != 0)
++            continue;
++        std::string type;
++        {
++            std::ifstream t(d.path() / "type");
++            std::getline(t, type);
++        }
++        if (type.compare(0, 5, "gpuss") != 0 && type.compare(0, 4, "gpu-") != 0)
++            continue;
++        std::ifstream f(d.path() / "temp");
++        long v = 0;
++        if (f >> v && v > best)
++            best = v;
++    }
++    return best / 1000.f;
+ }
+ 
+ void GPU_fdinfo::find_hwmon_sensors()
+@@ -815,6 +842,9 @@
+             metrics.temp = get_kgsl_temp();
+         else
+             metrics.temp = hwmon_sensors["temp"].val / 1000.f;
++        // No gpu hwmon (or one reading 0): the hottest gpuss thermal zone.
++        if (is_qualcomm_msm(module) && metrics.temp <= 0)
++            metrics.temp = qualcomm_gpu_zone_temp();
+ 
+         metrics.memory_temp = hwmon_sensors["vram_temp"].val / 1000.f;
+ 

@@ -1538,6 +1538,16 @@ static void _update_app_target_refresh_cycle()
 	{
 		auto rates = GetBackend()->GetCurrentConnector()->GetValidDynamicRefreshRates();
 
+		// A refresh rate on its own (no frame cap) is meant as is: Steam's
+		// Refresh Rate slider at 60 on a 60/120 Hz panel wants 60 Hz, not
+		// 120 Hz with nothing to double. (PB-OS gamescope 36cd8a21.)
+		if ( !g_nCombinedAppRefreshCycleChangeFPS[ type ] &&
+			 std::find( rates.begin(), rates.end(), uint32_t( target_fps ) ) != rates.end() )
+		{
+			g_nDynamicRefreshRate[ type ] = target_fps;
+			return;
+		}
+
 		// Find highest mode to do refresh doubling with.
 		for ( auto rate = rates.rbegin(); rate != rates.rend(); rate++ )
 		{
