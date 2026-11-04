@@ -1,0 +1,6 @@
+# KIOXIA THGJFJT1E45BATPC (some Odin 2 Pro units): waking the disk from runtime
+# SLEEP fails about 60% of the time, 8 PA errors a minute and freezes under load.
+# Keep this part awake and its link out of hibernate. No measurable battery cost
+# (#86). Other UFS parts stay on the normal path.
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z]", ATTRS{model}=="THGJFJT1E45BATPC*", \
+  RUN+="/bin/sh -c 'd=/sys/bus/platform/devices/1d84000.ufshc; echo 2 >$d/spm_lvl; echo 2 >$d/rpm_lvl; echo 0 >$d/auto_hibern8; echo on >/sys/block/%k/device/power/control; echo on >/sys/bus/scsi/devices/0:0:0:49488/power/control'"

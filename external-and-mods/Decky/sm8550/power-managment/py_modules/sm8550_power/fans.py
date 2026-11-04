@@ -68,7 +68,7 @@ def fan_tick(config: dict[str, Any]) -> None:
     if temp is None:
         return
 
-    smoothing = float(settings.get("smoothing", 0.5))
+    smoothing = float(settings.get("smoothing", 0.85))
     if _smoothed_temp is None:
         _smoothed_temp = temp
     else:

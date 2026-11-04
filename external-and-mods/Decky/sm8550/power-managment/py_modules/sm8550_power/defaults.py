@@ -69,7 +69,7 @@ FACTORY: dict[str, Any] = {
         "manual_level": 4,
         "ramp_up": 36,
         "ramp_down": 6,
-        "smoothing": 0.50,
+        "smoothing": 0.85,
         "min_pwm": 51,
     },
     "underclocks": {
