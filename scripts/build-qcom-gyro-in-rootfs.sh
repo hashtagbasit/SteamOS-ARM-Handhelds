@@ -6,7 +6,7 @@
 #   libssc (+ our patches)              GPL-3.0+
 #   hexagonrpc (+ our patches, with sscregistrygen) GPL-3.0+
 #   qcom-motion, qcom-sdl-pad           GPL-3.0+ AND Apache-2.0
-# Build only: protoc-gen-c from protobuf-c 1.5.0, as SteamOS's protobuf-c
+# Build only: protoc-gen-c from protobuf-c 1.5.2, as SteamOS's protobuf-c
 # package ships one linked against an abseil the rootfs no longer has.
 # Sources and refs: external-and-mods/kernel/vendor/qcom-gyro/SOURCES.md.
 # Licenses go to <rootfs>/usr/share/licenses/qcom-gyro/.
@@ -23,7 +23,7 @@ V="${ROOT}/external-and-mods/kernel/vendor/qcom-gyro/src"
 
 # name url commit
 REPOS=(
-  "protobuf-c https://github.com/protobuf-c/protobuf-c.git 8c201f6e47a53feaab773922a743091eb6c8972a"
+  "protobuf-c https://github.com/protobuf-c/protobuf-c.git 4719fdd7760624388c2c5b9d6759eb6a47490626"
   "qrtr https://github.com/linux-msm/qrtr.git b51ffaf22707b6000ecfb894c5b750f3bb7843b2"
   "libqrtr-glib https://gitlab.freedesktop.org/mobile-broadband/libqrtr-glib.git 8991f0e93713ebf4da48ae4f23940ead42f64c8c"
   "libqmi https://gitlab.freedesktop.org/mobile-broadband/libqmi.git defb13dcab0adc7f44f6741807244507a14a30c5"
@@ -70,9 +70,9 @@ m() { local n=$1; shift; mkdir -p build
 # autotools, not build-cmake: that one puts /usr/include first on the protoc
 # path, where the protobuf-c.proto of the rootfs shadows the source copy.
 (cd src/protobuf-c && ./autogen.sh && ./configure --disable-shared &&
-  make -j"$(nproc)" protoc-c/protoc-gen-c) >build/protobuf-c.log 2>&1 ||
+  make -j"$(nproc)" protoc-gen-c/protoc-gen-c) >build/protobuf-c.log 2>&1 ||
   { tail -40 build/protobuf-c.log; exit 1; }
-export PATH=/t/qcom-gyro/src/protobuf-c/protoc-c:$PATH
+export PATH=/t/qcom-gyro/src/protobuf-c/protoc-gen-c:$PATH
 m qrtr -Dqrtr-ns=disabled -Dsystemd-service=disabled
 m libqrtr-glib -Dintrospection=false -Dgtk_doc=false
 m libqmi -Dmbim_qmux=false -Dqrtr=true -Dudev=false -Dintrospection=false \
