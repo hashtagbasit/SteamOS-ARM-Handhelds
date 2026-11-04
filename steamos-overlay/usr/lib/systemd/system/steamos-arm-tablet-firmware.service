@@ -2,7 +2,9 @@
 Description=Copy the tablet's firmware out of its own Android partitions
 ConditionFirmware=device-tree-compatible(lenovo,elden)
 DefaultDependencies=no
-After=local-fs.target systemd-udev-settle.service
+# Not systemd-udev-settle: it waits for every device and stalled boots for
+# minutes on Gen 4 (ledger S23); the script settles for 15 s itself.
+After=local-fs.target systemd-udev-trigger.service
 # Before the login manager: Game Mode opens the GPU, which loads its signed
 # zap firmware once, at that moment.
 Before=NetworkManager.service bluetooth.service display-manager.service
@@ -11,7 +13,10 @@ Before=NetworkManager.service bluetooth.service display-manager.service
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/lib/steamos-arm/tablet-firmware-boot
-TimeoutStartSec=5min
+# Never hold the boot: the copy continues on the next boot if it is cut off.
+TimeoutStartSec=100
+TimeoutStopSec=10
+SuccessExitStatus=124 137 143
 
 [Install]
 WantedBy=multi-user.target

@@ -1,0 +1,36 @@
+From: enij90 <226572015+enij90@users.noreply.github.com>
+Subject: [PATCH] ASoC: qcom: q6apm-lpass-dais: release the secondary TDM clock across system suspend
+
+The speakers run on the secondary TDM port (0010). Its bit clock is a q6prm
+clock taken in prepare and only dropped at shutdown. A stream still open at
+suspend therefore kept LPASS powered and CX could not collapse for the whole
+sleep. Drop the clock together with the graphs; prepare takes it back on
+resume.
+
+Taken from https://github.com/enij90/armada-tb321fu (Lenovo Legion Tab Gen 3 / Y700 2025,
+TB321FU, SM8650).
+---
+--- a/sound/soc/qcom/qdsp6/q6apm-lpass-dais.c
++++ b/sound/soc/qcom/qdsp6/q6apm-lpass-dais.c
+@@ -644,6 +644,21 @@
+ 		dai_data->is_restored[i] = false;
+ 	}
+ 
++	/*
++	 * The secondary TDM/MI2S bit clock is a q6prm clock: while it is voted
++	 * the ADSP keeps LPASS powered and CX cannot collapse for the whole
++	 * sleep. A stream still open at suspend would keep it, so drop it with
++	 * the graphs; prepare takes it back on resume.
++	 */
++	if (dai_data->sec_tdm_clks_enabled) {
++		struct clk *ibit = q6apm_lpass_y700_sec_ibit_clk(dai_data,
++								 SECONDARY_TDM_RX_0);
++
++		if (ibit)
++			clk_disable_unprepare(ibit);
++		dai_data->sec_tdm_clks_enabled = false;
++	}
++
+ 	return 0;
+ }
+ 

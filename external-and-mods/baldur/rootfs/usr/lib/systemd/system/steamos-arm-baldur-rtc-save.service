@@ -1,0 +1,7 @@
+[Unit]
+Description=Lenovo Legion Y700 Gen 5: save the PMIC RTC offset
+After=time-sync.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/steamos-arm/baldur-rtc-offset save

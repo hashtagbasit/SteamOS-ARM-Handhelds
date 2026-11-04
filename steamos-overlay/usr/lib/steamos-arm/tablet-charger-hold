@@ -30,6 +30,13 @@ def bootloader_args():
     return " ".join(text)
 
 
+def pon(name):
+    try:
+        return Path("/sys/kernel/qcom_pon", name).read_text().strip()
+    except OSError:
+        return None
+
+
 def charger_online():
     for ps in Path("/sys/class/power_supply").glob("*"):
         try:
@@ -93,7 +100,13 @@ def say(msg):
 def main():
     args = bootloader_args()
     log("bootloader: " + (" ".join(a for a in args.split() if a.startswith("androidboot.")) or "-"))
-    if "androidboot.mode=charger" not in args and "androidboot.mode=offmode_charging" not in args:
+    usb = pon("usb_charger")
+    log(f"pmic power-on: usb_charger={usb or '-'} trigger={pon('trigger') or '-'} trigger_code={pon('trigger_code') or '-'}")
+    if "androidboot.mode=charger" in args or "androidboot.mode=offmode_charging" in args:
+        log("charger boot decided by: androidboot.mode")
+    elif usb == "1":
+        log("charger boot decided by: qcom_pon usb_charger")
+    else:
         return 0
     log(f"charger mode, battery {battery()}%: holding the boot until Power is held")
     saved = backlights(0)

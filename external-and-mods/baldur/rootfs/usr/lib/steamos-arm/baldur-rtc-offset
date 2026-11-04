@@ -1,0 +1,32 @@
+#!/bin/bash
+# Lenovo Legion Y700 Gen 5: the PMIC RTC counts but holds no offset to wall
+# time, so the clock sat at the epoch (Jan 06) until NTP synced.
+#   restore: set the clock from the RTC counter plus the saved offset
+#   save:    store the offset, only while the clock is synchronised
+set -eu
+OFFSET_FILE=/var/lib/steamos-arm/baldur-rtc-offset
+rtc=
+for n in /sys/class/rtc/rtc*; do
+  [ -e "$n/since_epoch" ] && { rtc=$n; break; }
+done
+[ -n "$rtc" ] || { echo "no rtc device" >&2; exit 0; }
+counter=$(cat "$rtc/since_epoch")
+case "${1:-}" in
+restore)
+  [ -s "$OFFSET_FILE" ] || { echo "no saved offset yet"; exit 0; }
+  want=$((counter + $(cat "$OFFSET_FILE")))
+  now=$(date +%s)
+  if [ "$want" -gt $((now + 2)) ] || [ "$want" -lt $((now - 2)) ]; then
+    date -s "@$want" >/dev/null
+    echo "clock set from the RTC: $(date -d "@$want" '+%F %T') (was $(date -d "@$now" '+%F %T'))"
+  fi
+  ;;
+save)
+  [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" = yes ] \
+    || { echo "clock not synchronised, offset not saved"; exit 0; }
+  mkdir -p "${OFFSET_FILE%/*}"
+  echo $(($(date +%s) - counter)) > "$OFFSET_FILE.new"
+  mv -f "$OFFSET_FILE.new" "$OFFSET_FILE"
+  ;;
+*) echo "usage: $0 restore|save" >&2; exit 2 ;;
+esac

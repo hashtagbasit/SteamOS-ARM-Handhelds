@@ -77,6 +77,20 @@ for u in steamos-arm-tablet-backlight steamos-arm-tablet-boot-watch steamos-arm-
   install -Dm0644 $OV/usr/lib/systemd/system/$u.service $R/usr/lib/systemd/system/$u.service
   ln -sfn ../$u.service $R/usr/lib/systemd/system/multi-user.target.wants/$u.service
 done
+# Return to Gaming Mode saves Game Mode as the default and ignores a second tap (BUGS S28).
+install -m0644 $OV/etc/skel/Desktop/Return.desktop $R/etc/skel/Desktop/Return.desktop
+install -m0644 $OV/etc/skel/Desktop/Return.desktop $R/usr/share/applications/steamos-gamemode.desktop
+install -Dm0755 $OV/etc/skel/Desktop/Return.desktop $R/home/steamos/Desktop/Return.desktop
+chown -R 1000:1000 $R/home/steamos/Desktop
+# zram, swappiness, TEO, remote play buffer, backlight untag (the 8 Elite
+# base never had them).
+for f in usr/lib/systemd/zram-generator.conf.d/60-steamos-arm-zram.conf \
+         usr/lib/tmpfiles.d/steamos-arm-cpuidle-teo.conf \
+         usr/lib/sysctl.d/60-steamos-arm-net-rmem.conf \
+         usr/lib/sysctl.d/61-steamos-arm-zram.conf \
+         usr/lib/udev/rules.d/99-zz-steamos-arm-backlight-untag.rules; do
+  install -Dm0644 $OV/$f $R/$f
+done
 HC=$(find $M -maxdepth 6 -type d -path "*homebrew/plugins/konkr-control" | head -1)
 [ -n "$HC" ] || fail "Handheld Control"
 install -m0644 external-and-mods/Decky/sm8650/konkr-control/main.py $HC/main.py
@@ -115,6 +129,8 @@ grep -q "def rescan" $R/usr/lib/steamos-arm/gen5-emergency-key || fail "emergenc
 grep -q host-reconcile $R/usr/libexec/tb323fu/tb323fu-usb-port && [ -f $R/usr/lib/udev/rules.d/71-tb323fu-usb-host.rules ] || fail "USB-C routing"
 grep -q fail_safe $R/usr/libexec/tb323fu/tb323fu-speaker-gain || fail "speaker gain"
 [ -f $R/usr/share/inputplumber/devices/05-lenovo-tb323fu-legion-g9-2026.yaml ] && [ -f $R/usr/share/inputplumber/capability_maps/lenovo_legion_g9_2026.yaml ] || fail "G9 2026"
+grep -q "compression-algorithm = zstd" $R/usr/lib/systemd/zram-generator.conf.d/60-steamos-arm-zram.conf && grep -q "swappiness = 150" $R/usr/lib/sysctl.d/61-steamos-arm-zram.conf || fail "zram"
+grep -q qdbus6 $R/home/steamos/Desktop/Return.desktop && grep -q qdbus6 $R/usr/share/applications/steamos-gamemode.desktop || fail "Return to Gaming Mode"
 [ -L $R/etc/systemd/system/multi-user.target.wants/inputplumber.service ] || [ -L $R/usr/lib/systemd/system/multi-user.target.wants/inputplumber.service ] || fail "InputPlumber not enabled"
 echo "system checks ok"
 sync; umount $M

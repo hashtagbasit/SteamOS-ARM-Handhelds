@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+# G9 2026 firmware reports a fast double Home as a KEY_HOMEPAGE pulse.
+# Other Consumer Control keys keep InputPlumber's normal keyboard translation.
+version: 2
+kind: CapabilityMap
+name: Y700 Gen4 G9 2026 firmware double Home
+id: y700_g9_consumer
+mapping:
+  - name: Firmware double Home opens Quick Access
+    source_events:
+      - evdev:
+          event_type: KEY
+          event_code: KEY_HOMEPAGE
+          value_type: button
+    target_event:
+      gamepad:
+        button: QuickAccess

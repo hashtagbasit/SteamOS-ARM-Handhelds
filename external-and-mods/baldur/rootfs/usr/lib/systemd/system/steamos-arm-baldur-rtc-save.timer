@@ -1,0 +1,9 @@
+[Unit]
+Description=Lenovo Legion Y700 Gen 5: save the PMIC RTC offset after NTP and every 6 hours
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=6h
+
+[Install]
+WantedBy=timers.target

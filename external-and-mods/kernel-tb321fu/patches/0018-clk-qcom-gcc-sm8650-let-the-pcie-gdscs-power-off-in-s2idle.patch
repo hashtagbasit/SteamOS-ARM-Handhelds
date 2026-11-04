@@ -1,0 +1,50 @@
+From: enij90 <226572015+enij90@users.noreply.github.com>
+Subject: [PATCH] clk: qcom: gcc-sm8650: let the PCIe GDSCs power off in s2idle
+
+Mainline keeps the SM8650 PCIe GDSCs in retention when they are disabled.
+With the controller still powered, the s2idle wake needs a PCIe memory vote
+in the sleep set, which keeps DDR and CX from collapsing. Let the GDSCs go
+fully off instead: the Wi-Fi (WCN7850) comes back with a fresh PCIe link.
+The tablet therefore also skips the PCIe sleep floor (kernel-sm8650 0047).
+
+Taken from https://github.com/enij90/armada-tb321fu (Lenovo Legion Tab Gen 3 / Y700 2025,
+TB321FU, SM8650).
+---
+--- a/drivers/clk/qcom/gcc-sm8650.c
++++ b/drivers/clk/qcom/gcc-sm8650.c
+@@ -3436,7 +3436,7 @@
+ 	.pd = {
+ 		.name = "pcie_0_gdsc",
+ 	},
+-	.pwrsts = PWRSTS_RET_ON,
++	.pwrsts = PWRSTS_OFF_ON,
+ 	.flags = POLL_CFG_GDSCR | RETAIN_FF_ENABLE | VOTABLE,
+ };
+ 
+@@ -3447,7 +3447,7 @@
+ 	.pd = {
+ 		.name = "pcie_0_phy_gdsc",
+ 	},
+-	.pwrsts = PWRSTS_RET_ON,
++	.pwrsts = PWRSTS_OFF_ON,
+ 	.flags = POLL_CFG_GDSCR | RETAIN_FF_ENABLE | VOTABLE,
+ };
+ 
+@@ -3458,7 +3458,7 @@
+ 	.pd = {
+ 		.name = "pcie_1_gdsc",
+ 	},
+-	.pwrsts = PWRSTS_RET_ON,
++	.pwrsts = PWRSTS_OFF_ON,
+ 	.flags = POLL_CFG_GDSCR | RETAIN_FF_ENABLE | VOTABLE,
+ };
+ 
+@@ -3469,7 +3469,7 @@
+ 	.pd = {
+ 		.name = "pcie_1_phy_gdsc",
+ 	},
+-	.pwrsts = PWRSTS_RET_ON,
++	.pwrsts = PWRSTS_OFF_ON,
+ 	.flags = POLL_CFG_GDSCR | RETAIN_FF_ENABLE | VOTABLE,
+ };
+ 

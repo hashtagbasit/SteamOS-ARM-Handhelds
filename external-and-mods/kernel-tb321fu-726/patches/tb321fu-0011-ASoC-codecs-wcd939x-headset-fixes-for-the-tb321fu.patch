@@ -1,0 +1,127 @@
+From: guf296 <guf296@126.com>
+Subject: [PATCH] ASoC: codecs: wcd939x / wcd-mbhc headset fixes for the TB321FU
+
+Headset detection changes from the TB321FU bring-up.
+
+Taken from https://github.com/GUF296/linux branch TB321FU-7.1.1
+(5df8e852e), the Lenovo Legion Tab Gen 3 / Y700 2025 (TB321FU) bring-up.
+
+Rebased onto 7.2.8 for SteamOS ARM Port: the codec probe waits with
+sdw_slave_wait_for_init() there. Rebased onto 7.2.6 for the Gen 3 kernel:
+the same hunks, only line offsets changed.
+
+---
+diff --git a/sound/soc/codecs/wcd-mbhc-v2.c b/sound/soc/codecs/wcd-mbhc-v2.c
+index 0a2447d..7500c69 100644
+--- a/sound/soc/codecs/wcd-mbhc-v2.c
++++ b/sound/soc/codecs/wcd-mbhc-v2.c
+@@ -362,7 +362,8 @@ static void wcd_mbhc_report_plug_insertion(struct wcd_mbhc *mbhc,
+ 
+ 	if (!is_pa_on) {
+ 		wcd_mbhc_compute_impedance(mbhc);
+-		if ((mbhc->zl > mbhc->cfg->linein_th) &&
++		if (!mbhc->cfg->typec_analog_mux &&
++		    (mbhc->zl > mbhc->cfg->linein_th) &&
+ 		    (mbhc->zr > mbhc->cfg->linein_th) &&
+ 		    (jack_type == SND_JACK_HEADPHONE)) {
+ 			jack_type = SND_JACK_LINEOUT;
+@@ -524,7 +525,6 @@ static void mbhc_plug_detect_fn(struct work_struct *work)
+ 	wcd_mbhc_cancel_pending_work(mbhc);
+ 
+ 	detection_type = wcd_mbhc_read_field(mbhc, WCD_MBHC_MECH_DETECTION_TYPE);
+-
+ 	/* Set the detection type appropriately */
+ 	wcd_mbhc_write_field(mbhc, WCD_MBHC_MECH_DETECTION_TYPE, !detection_type);
+ 
+@@ -644,6 +644,7 @@ int wcd_mbhc_typec_report_plug(struct wcd_mbhc *mbhc)
+ 	if (mbhc->mbhc_cb->clk_setup)
+ 		mbhc->mbhc_cb->clk_setup(mbhc->component, true);
+ 	wcd_mbhc_write_field(mbhc, WCD_MBHC_L_DET_EN, 1);
++	wcd_mbhc_write_field(mbhc, WCD_MBHC_MECH_DETECTION_TYPE, 1);
+ 
+ 	schedule_work(&mbhc->mbhc_plug_detect_work);
+ 
+@@ -802,6 +803,15 @@ static int wcd_mbhc_initialise(struct wcd_mbhc *mbhc)
+ 	else
+ 		mbhc->swap_thr = GND_MIC_SWAP_THRESHOLD;
+ 
++	if (mbhc->cfg->typec_analog_mux) {
++		/*
++		 * Lenovo's downstream runtime DT uses active-low MBHC switch
++		 * polarity for the Type-C analog path.
++		 */
++		mbhc->cfg->hphl_swh = false;
++		mbhc->cfg->gnd_swh = false;
++	}
++
+ 	/* setup HS detection */
+ 	if (mbhc->mbhc_cb->hph_pull_up_control_v2)
+ 		mbhc->mbhc_cb->hph_pull_up_control_v2(component,
+@@ -1216,7 +1226,6 @@ static void wcd_correct_swch_plug(struct work_struct *work)
+ 	/* Find plug type */
+ 	output_mv = wcd_measure_adc_continuous(mbhc);
+ 	plug_type = wcd_mbhc_get_plug_from_adc(mbhc, output_mv);
+-
+ 	/*
+ 	 * Report plug type if it is either headset or headphone
+ 	 * else start the 3 sec loop
+diff --git a/sound/soc/codecs/wcd939x.c b/sound/soc/codecs/wcd939x.c
+index ac23809..f3feed4 100644
+--- a/sound/soc/codecs/wcd939x.c
++++ b/sound/soc/codecs/wcd939x.c
+@@ -853,6 +853,7 @@ static int wcd939x_codec_enable_hphr_pa(struct snd_soc_dapm_widget *w,
+ 					      WCD939X_VNEG_CTRL_4_ILIM_SEL, 0xd);
+ 		snd_soc_component_write_field(component, WCD939X_ANA_HPH,
+ 					      WCD939X_HPH_HPHR_REF_ENABLE, true);
++		wcd_clsh_set_hph_mode(wcd939x->clsh_info, hph_mode);
+ 
+ 		if (snd_soc_component_read_field(component, WCD939X_ANA_HPH,
+ 						 WCD939X_HPH_HPHL_REF_ENABLE))
+@@ -996,6 +997,7 @@ static int wcd939x_codec_enable_hphl_pa(struct snd_soc_dapm_widget *w,
+ 					      WCD939X_VNEG_CTRL_4_ILIM_SEL, 0xd);
+ 		snd_soc_component_write_field(component, WCD939X_ANA_HPH,
+ 					      WCD939X_HPH_HPHL_REF_ENABLE, true);
++		wcd_clsh_set_hph_mode(wcd939x->clsh_info, hph_mode);
+ 
+ 		if (snd_soc_component_read_field(component, WCD939X_ANA_HPH,
+ 						 WCD939X_HPH_HPHR_REF_ENABLE))
+@@ -3264,9 +3266,11 @@ static int wcd939x_soc_codec_probe(struct snd_soc_component *component)
+ 	struct device *dev = component->dev;
+ 	int ret, i;
+ 
+-	ret = sdw_slave_wait_for_init(wcd939x->tx_sdw_dev, 2000);
+-	if (ret)
+-		return ret;
++	ret = sdw_slave_wait_for_init(wcd939x->tx_sdw_dev, 10000);
++	if (ret) {
++		dev_err(dev, "soundwire device init timeout, deferring probe\n");
++		return -EPROBE_DEFER;
++	}
+ 
+ 	snd_soc_component_init_regmap(component, wcd939x->regmap);
+ 
+@@ -3447,17 +3451,15 @@ static int wcd939x_typec_mux_set(struct typec_mux_dev *mux,
+ 	struct wcd939x_priv *wcd939x = typec_mux_get_drvdata(mux);
+ 	unsigned int previous_mode = wcd939x->typec_mode;
+ 
+-	if (!wcd939x->wcd_mbhc)
+-		return -EINVAL;
++	wcd939x->typec_mode = state->mode;
+ 
+-	if (wcd939x->typec_mode != state->mode) {
+-		wcd939x->typec_mode = state->mode;
++	if (!wcd939x->wcd_mbhc)
++		return 0;
+ 
+-		if (wcd939x->typec_mode == TYPEC_MODE_AUDIO)
+-			return wcd_mbhc_typec_report_plug(wcd939x->wcd_mbhc);
+-		else if (previous_mode == TYPEC_MODE_AUDIO)
+-			return wcd_mbhc_typec_report_unplug(wcd939x->wcd_mbhc);
+-	}
++	if (wcd939x->typec_mode == TYPEC_MODE_AUDIO)
++		return wcd_mbhc_typec_report_plug(wcd939x->wcd_mbhc);
++	else if (previous_mode == TYPEC_MODE_AUDIO)
++		return wcd_mbhc_typec_report_unplug(wcd939x->wcd_mbhc);
+ 
+ 	return 0;
+ }

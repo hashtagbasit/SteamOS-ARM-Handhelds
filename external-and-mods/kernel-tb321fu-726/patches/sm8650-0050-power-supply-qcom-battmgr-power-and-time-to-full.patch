@@ -1,0 +1,32 @@
+From: hashtagbasit
+Subject: power: supply: qcom_battmgr: real power on SM8550-family firmware
+
+On a Pocket FIT (SM8650) the firmware's battery power reading is stale: it
+sat at 99.18 W while the battery took 19.7 W (2.3 A at 8.6 V).
+UPower derives the charge and drain rate from power_now.
+
+For the SM8550 variant, power_now is the battery's own current times its
+voltage. (Steam's charging time comes from /run/vpower, written in user
+space from fresh readings.)
+
+---
+--- a/drivers/power/supply/qcom_battmgr.c
++++ b/drivers/power/supply/qcom_battmgr.c
+@@ -600,6 +600,17 @@
+ 		break;
+ 	case POWER_SUPPLY_PROP_POWER_NOW:
+ 		val->intval = battmgr->status.power_now;
++		/*
++		 * The SM8550-family firmware's power reading goes stale: a Pocket
++		 * FIT reported a fixed 99.18 W while its battery took 19.7 W, and
++		 * UPower (and Steam through it) take the charge and drain rate
++		 * from here. Report the battery's own current times voltage.
++		 */
++		if (battmgr->variant == QCOM_BATTMGR_SM8550 && battmgr->status.voltage_now) {
++			s64 ua = abs(battmgr->status.current_now);
++
++			val->intval = (int)div_s64(ua * battmgr->status.voltage_now, 1000000);
++		}
+ 		break;
+ 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
+ 		if (unit != QCOM_BATTMGR_UNIT_mAh)

@@ -1,0 +1,23 @@
+From: enij90 <226572015+enij90@users.noreply.github.com>
+Subject: [PATCH] soundwire: qcom: force runtime suspend across system sleep
+
+The controller only has runtime PM ops. A peripheral kept runtime-active
+(the jack codec) keeps it active through s2idle together with the LPASS
+macro clocks it uses. Force the runtime suspend across system sleep so the
+ADSP can release LPASS while the system sleeps.
+
+Taken from https://github.com/enij90/armada-tb321fu (Lenovo Legion Tab Gen 3 / Y700 2025,
+TB321FU, SM8650).
+---
+diff --git a/drivers/soundwire/qcom.c b/drivers/soundwire/qcom.c
+index d34aff92e..5fd0a56d8 100644
+--- a/drivers/soundwire/qcom.c
++++ b/drivers/soundwire/qcom.c
+@@ -1836,6 +1836,7 @@ static int __maybe_unused swrm_runtime_suspend(struct device *dev)
+ }
+ 
+ static const struct dev_pm_ops swrm_dev_pm_ops = {
++	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
+ 	SET_RUNTIME_PM_OPS(swrm_runtime_suspend, swrm_runtime_resume, NULL)
+ };
+ 

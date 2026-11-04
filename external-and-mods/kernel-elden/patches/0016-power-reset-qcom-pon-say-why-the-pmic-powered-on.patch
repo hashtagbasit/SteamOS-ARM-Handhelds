@@ -1,0 +1,267 @@
+From: hashtagbasit
+Subject: power: reset: qcom-pon: say why the PMIC powered on
+
+The PMICs of the SM8550/8650/8750 generation have no PON_REASON1 register
+any more: the PBS firmware keeps a log of its power-on sequence in two
+SDAMs (PMK8550 sdam_5 and sdam_6), and the "PON trigger received" event in
+it names what started the power-on. Read that log at probe, publish the
+last trigger and log a line:
+
+  /sys/kernel/qcom_pon/trigger       power_key, usb_charger, rtc_alarm, ...
+  /sys/kernel/qcom_pon/trigger_code  raw code, e.g. 0x71c2
+  /sys/kernel/qcom_pon/usb_charger   1 when the USB plug-in started it
+  /sys/kernel/qcom_pon/log           the raw entries (state event data)
+
+A tablet plugged into USB while off can then tell a charger power-on from
+the power key without any help from the bootloader's command line. The
+log layout follows Qualcomm's pmic-pon-log driver.
+
+--- a/drivers/power/reset/qcom-pon.c	2026-10-20 00:46:36
++++ b/drivers/power/reset/qcom-pon.c	2026-10-20 00:47:12
+@@ -4,6 +4,7 @@
+ #include <linux/delay.h>
+ #include <linux/errno.h>
+ #include <linux/kernel.h>
++#include <linux/kobject.h>
+ #include <linux/module.h>
+ #include <linux/of.h>
+ #include <linux/of_platform.h>
+@@ -11,6 +12,7 @@
+ #include <linux/reboot.h>
+ #include <linux/reboot-mode.h>
+ #include <linux/regmap.h>
++#include <linux/sysfs.h>
+ 
+ #define PON_SOFT_RB_SPARE		0x8f
+ 
+@@ -19,6 +21,220 @@
+ 
+ #define NO_REASON_SHIFT			0
+ 
++/*
++ * The PMIC's PBS firmware keeps a log of its power-on sequence in two SDAMs
++ * (PMK8550: sdam_5 and sdam_6). It is how this PMIC generation tells why it
++ * powered on: the PON_REASON1 register of the older PMICs is gone. Each entry
++ * is state, event, data1, data0, in a ring buffer that continues from the
++ * first SDAM into the second. The event "PON trigger received" carries the
++ * trigger: SID in data1[7:4], peripheral in bits 11:4, IRQ in data0[2:0], or
++ * a small fixed code for the power key, the reset line and so on.
++ */
++#define PON_LOG_SDAM0			0x7400
++#define PON_LOG_SDAM_STRIDE		0x100
++#define PON_LOG_MAX_SDAM		2
++#define PON_LOG_SDAM_COUNT		0x45
++#define PON_LOG_PUSH_PTR		0x46
++#define PON_LOG_PUSH_SDAM		0x47
++#define PON_LOG_FIFO_START		0x4b
++#define PON_LOG_FIFO_END		0xbf
++#define PON_LOG_FIFO_SIZE		(PON_LOG_FIFO_END - PON_LOG_FIFO_START + 1)
++#define PON_LOG_ENTRY_SIZE		4
++#define PON_LOG_EVENT_PON_TRIGGER	0x01
++
++struct pon_log_entry {
++	u8 state, event, data1, data0;
++};
++
++#define PON_LOG_MAX_ENTRIES \
++	(PON_LOG_MAX_SDAM * PON_LOG_FIFO_SIZE / PON_LOG_ENTRY_SIZE)
++
++static struct {
++	bool valid;
++	u16 trigger;
++	int nentries;
++	struct pon_log_entry log[PON_LOG_MAX_ENTRIES];
++} pon_trigger;
++
++static struct kobject *pon_kobj;
++
++static const struct {
++	u16 code;
++	const char *name;
++	bool usb;
++} pon_trigger_names[] = {
++	{ 0x0084, "ps_hold", false },
++	{ 0x0085, "hard_reset", false },
++	{ 0x0086, "resin", false },
++	{ 0x0087, "power_key", false },
++	{ 0x0621, "rtc_alarm", false },
++	{ 0x0640, "smpl", false },
++	{ 0x0202, "usb_charger", true },
++	{ 0x18a0, "usb_charger", true },
++	{ 0x2763, "usb_charger", true },
++	{ 0x31c2, "usb_charger", true },
++	{ 0x71c2, "usb_charger", true },
++	{ 0x8732, "usb_charger", true },
++};
++
++static const char *pon_trigger_name(u16 code, bool *usb)
++{
++	int i;
++
++	*usb = false;
++	for (i = 0; i < ARRAY_SIZE(pon_trigger_names); i++) {
++		if (pon_trigger_names[i].code == code) {
++			*usb = pon_trigger_names[i].usb;
++			return pon_trigger_names[i].name;
++		}
++	}
++	/*
++	 * Peripheral 0x1c, IRQ 2 on any PMIC is the USB plug-in of the
++	 * PM8550B / PMIH0108 family, whatever slave ID the board gave it.
++	 */
++	if (((code >> 4) & 0xff) == 0x1c && (code & 7) == 2) {
++		*usb = true;
++		return "usb_charger";
++	}
++	return "other";
++}
++
++static ssize_t trigger_show(struct kobject *kobj, struct kobj_attribute *attr,
++			    char *buf)
++{
++	bool usb;
++
++	if (!pon_trigger.valid)
++		return sysfs_emit(buf, "unavailable\n");
++	return sysfs_emit(buf, "%s\n", pon_trigger_name(pon_trigger.trigger, &usb));
++}
++
++static ssize_t trigger_code_show(struct kobject *kobj,
++				 struct kobj_attribute *attr, char *buf)
++{
++	if (!pon_trigger.valid)
++		return sysfs_emit(buf, "unavailable\n");
++	return sysfs_emit(buf, "0x%04x\n", pon_trigger.trigger);
++}
++
++static ssize_t usb_charger_show(struct kobject *kobj,
++				struct kobj_attribute *attr, char *buf)
++{
++	bool usb = false;
++
++	if (pon_trigger.valid)
++		pon_trigger_name(pon_trigger.trigger, &usb);
++	return sysfs_emit(buf, "%d\n", usb);
++}
++
++static ssize_t log_show(struct kobject *kobj, struct kobj_attribute *attr,
++			char *buf)
++{
++	ssize_t n = 0;
++	int i;
++
++	for (i = 0; i < pon_trigger.nentries; i++)
++		n += sysfs_emit_at(buf, n, "%02x %02x %02x%02x\n",
++				   pon_trigger.log[i].state,
++				   pon_trigger.log[i].event,
++				   pon_trigger.log[i].data1,
++				   pon_trigger.log[i].data0);
++	return n;
++}
++
++static struct kobj_attribute pon_trigger_attr = __ATTR_RO(trigger);
++static struct kobj_attribute pon_trigger_code_attr = __ATTR_RO(trigger_code);
++static struct kobj_attribute pon_usb_charger_attr = __ATTR_RO(usb_charger);
++static struct kobj_attribute pon_log_attr = __ATTR_RO(log);
++
++static struct attribute *pon_trigger_attrs[] = {
++	&pon_trigger_attr.attr,
++	&pon_trigger_code_attr.attr,
++	&pon_usb_charger_attr.attr,
++	&pon_log_attr.attr,
++	NULL
++};
++ATTRIBUTE_GROUPS(pon_trigger);
++
++/*
++ * Read the PBS log, find the last "PON trigger received" event (the one that
++ * started this power-on) and publish it in /sys/kernel/qcom_pon/. Nothing
++ * here is fatal: a PMIC without the log just has no attributes.
++ */
++static void qcom_pon_read_trigger(struct device *dev, struct regmap *regmap)
++{
++	u8 fifo[PON_LOG_MAX_SDAM * PON_LOG_FIFO_SIZE];
++	unsigned int reg, count, end_sdam, end_addr, total, end, start;
++	int i, j, last = -1, error;
++	bool usb;
++
++	if (pon_trigger.valid)
++		return;
++
++	error = regmap_read(regmap, PON_LOG_SDAM0 + PON_LOG_SDAM_COUNT, &reg);
++	if (error)
++		return;
++	count = (reg & 0xff) + 1;
++	if (count > PON_LOG_MAX_SDAM) {
++		dev_dbg(dev, "no PBS PON log (SDAM count %u)\n", count);
++		return;
++	}
++	error = regmap_read(regmap, PON_LOG_SDAM0 + PON_LOG_PUSH_PTR, &end_addr);
++	if (!error)
++		error = regmap_read(regmap, PON_LOG_SDAM0 + PON_LOG_PUSH_SDAM,
++				    &end_sdam);
++	if (error || end_addr < PON_LOG_FIFO_START || end_addr > PON_LOG_FIFO_END ||
++	    end_sdam >= count) {
++		dev_dbg(dev, "no PBS PON log (push pointer 0x%x/%u)\n",
++			end_addr, end_sdam);
++		return;
++	}
++	for (i = 0; i < count; i++) {
++		error = regmap_bulk_read(regmap,
++					 PON_LOG_SDAM0 + i * PON_LOG_SDAM_STRIDE +
++					 PON_LOG_FIFO_START,
++					 fifo + i * PON_LOG_FIFO_SIZE,
++					 PON_LOG_FIFO_SIZE);
++		if (error)
++			return;
++	}
++
++	/* The ring is read from the oldest entry up to the push pointer. */
++	total = count * PON_LOG_FIFO_SIZE;
++	end = end_sdam * PON_LOG_FIFO_SIZE + end_addr - PON_LOG_FIFO_START;
++	start = (end + total - (total / PON_LOG_ENTRY_SIZE) * PON_LOG_ENTRY_SIZE) % total;
++
++	for (i = 0; i < total / PON_LOG_ENTRY_SIZE; i++) {
++		struct pon_log_entry e;
++		u8 *b = (u8 *)&e;
++
++		for (j = 0; j < PON_LOG_ENTRY_SIZE; j++)
++			b[j] = fifo[(start + i * PON_LOG_ENTRY_SIZE + j) % total];
++		if (!e.state && !e.event && !e.data1 && !e.data0)
++			continue;	/* unused space of a ring that has not wrapped */
++		pon_trigger.log[pon_trigger.nentries++] = e;
++		if (e.event == PON_LOG_EVENT_PON_TRIGGER)
++			last = pon_trigger.nentries - 1;
++	}
++	if (last < 0) {
++		dev_info(dev, "PBS PON log has no power-on trigger (%d entries)\n",
++			 pon_trigger.nentries);
++		return;
++	}
++	pon_trigger.trigger = (pon_trigger.log[last].data1 << 8) |
++			      pon_trigger.log[last].data0;
++	pon_trigger.valid = true;
++
++	pon_kobj = kobject_create_and_add("qcom_pon", kernel_kobj);
++	if (!pon_kobj || sysfs_create_groups(pon_kobj, pon_trigger_groups))
++		dev_warn(dev, "cannot create /sys/kernel/qcom_pon\n");
++
++	dev_info(dev, "PMIC power-on trigger: %s (0x%04x, SID %u PID 0x%02x IRQ %u), usb_charger=%d\n",
++		 pon_trigger_name(pon_trigger.trigger, &usb), pon_trigger.trigger,
++		 pon_trigger.trigger >> 12, (pon_trigger.trigger >> 4) & 0xff,
++		 pon_trigger.trigger & 7, usb);
++}
++
+ struct qcom_pon {
+ 	struct device *dev;
+ 	struct regmap *regmap;
+@@ -80,6 +296,9 @@
+ 		}
+ 	}
+ 
++	if (of_device_is_compatible(pdev->dev.of_node, "qcom,pmk8350-pon"))
++		qcom_pon_read_trigger(pon->dev, pon->regmap);
++
+ 	platform_set_drvdata(pdev, pon);
+ 
+ 	return devm_of_platform_populate(&pdev->dev);

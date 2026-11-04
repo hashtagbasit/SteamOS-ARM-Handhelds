@@ -1,0 +1,16 @@
+[Unit]
+Description=Lenovo Legion Y700 Gen 5: set the clock from the PMIC RTC and a saved offset
+DefaultDependencies=no
+RequiresMountsFor=/var/lib/steamos-arm
+After=local-fs.target
+Before=time-set.target sysinit.target systemd-timesyncd.service
+Wants=time-set.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=20
+ExecStart=/usr/lib/steamos-arm/baldur-rtc-offset restore
+
+[Install]
+WantedBy=sysinit.target

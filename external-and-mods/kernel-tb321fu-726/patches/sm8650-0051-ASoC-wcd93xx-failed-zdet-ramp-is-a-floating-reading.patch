@@ -1,0 +1,22 @@
+Subject: [PATCH] ASoC: wcd939x: a failed zdet ramp is a floating reading
+
+When the impedance ramp does not complete, the measurement returned
+without writing a result, and wcd939x then used a 0, which reads as a
+short: headphones could be classed as mono or as a lineout.
+Report the failed ramp as floating impedance, which the caller already
+treats as no usable reading.
+
+Rebased onto 7.2.6 for the Gen 3 kernel: only the wcd939x half is carried
+here, the wcd938x half is already in the series (0304).
+---
+--- a/sound/soc/codecs/wcd939x.c
++++ b/sound/soc/codecs/wcd939x.c
+@@ -2337,6 +2337,8 @@
+ 		dev_dbg(component->dev,
+ 			"%s: Impedance detect ramp error, c1=%d, x1=0x%x\n",
+ 			__func__, c1, x1);
++		/* no reading is not 0 ohm */
++		*zdet = WCD939X_ZDET_FLOATING_IMPEDANCE;
+ 		goto ramp_down;
+ 	}
+ 

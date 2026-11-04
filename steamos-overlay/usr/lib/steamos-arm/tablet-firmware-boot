@@ -9,8 +9,9 @@ grep -aq "lenovo,elden" /sys/firmware/devicetree/base/compatible 2>/dev/null && 
 manifest=/usr/share/steamos-arm/tablets/${model}-firmware.json
 dest=/var/lib/steamos-arm/firmware/${model}
 [[ -f "$manifest" ]] || exit 0
+timeout 15 udevadm settle 2>/dev/null
 before="$(find "$dest" -type f 2>/dev/null | wc -l)"
-/usr/lib/steamos-arm/tablet-firmware "$manifest" "$dest" --also /usr/lib/firmware
+timeout -k 5 60 /usr/lib/steamos-arm/tablet-firmware "$manifest" "$dest" --also /usr/lib/firmware
 after="$(find "$dest" -type f 2>/dev/null | wc -l)"
 (( after > before )) || exit 0
 # Remote processors that failed to start for want of firmware.
@@ -30,11 +31,11 @@ if [[ ! -e /sys/class/net/wlan0 ]]; then
   echo 1 >/sys/bus/pci/rescan
   for _ in $(seq 30); do [[ -e /sys/class/net/wlan0 ]] && break; sleep 0.5; done
   if [[ ! -e /sys/class/net/wlan0 ]]; then
-    modprobe -r ath12k_wifi7 ath12k 2>/dev/null; modprobe ath12k_wifi7 2>/dev/null || modprobe ath12k 2>/dev/null
+    timeout 15 modprobe -r ath12k_wifi7 ath12k 2>/dev/null; timeout 15 modprobe ath12k_wifi7 2>/dev/null || timeout 15 modprobe ath12k 2>/dev/null
   fi
   [[ -e /sys/class/net/wlan0 ]] && echo "tablet-firmware: Wi-Fi up" || echo "tablet-firmware: Wi-Fi still missing"
 fi
-systemctl try-restart bluetooth.service 2>/dev/null
+systemctl --no-block try-restart bluetooth.service 2>/dev/null
 # The audio DSP's card came up without its firmware on the first boot and
 # stayed silent until the next one (Gen 4 testers), even after the start
 # above. So the boot that first copies the firmware restarts once, before

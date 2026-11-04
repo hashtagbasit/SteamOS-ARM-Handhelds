@@ -28,9 +28,9 @@ fetch() {  # fetch URL FILE [SHA256]
 }
 
 # Firmware: unpack, check the pinned SHA256SUMS, then every file against it.
-fetch "$TB321FU_FW_URL" tb321fu-firmware.tar.gz
+fetch "$TB321FU_FW_URL" "tb321fu-firmware-$(basename "$TB321FU_FW_URL")"
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
-tar -C "$W" -xzf "$CACHE/tb321fu-firmware.tar.gz"
+tar -C "$W" -xzf "$CACHE/tb321fu-firmware-$(basename "$TB321FU_FW_URL")"
 FW="$(echo "$W"/firmware-lenovo-tb321fu-*)"
 echo "$TB321FU_FW_SUMS_SHA256  $FW/SHA256SUMS" | sha256sum -c --quiet || die "firmware SHA256SUMS changed"
 (cd "$FW" && sha256sum -c --quiet SHA256SUMS) || die "firmware files don't match SHA256SUMS"
@@ -153,8 +153,12 @@ CARD=LenovoY700TB321
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/steamos-arm/tb321fu-audio"
 sink() { pactl list short sinks 2>/dev/null | awk '/platform-sound\.pro-output-0/ {print $2; exit}'; }
 jack() { amixer -c "$CARD" cget "iface=CARD,name='Headphone Jack'" 2>/dev/null | grep -q ': values=on'; }
-route() {  # speakers or headphones, and the microphone that goes with them
-  if jack; then
+dp() { amixer -c "$CARD" cget "iface=CARD,name='DP0 Jack'" 2>/dev/null | grep -q ': values=on'; }
+mode() { if dp; then echo dp; elif jack; then echo hp; else echo spk; fi; }
+route() {  # DisplayPort, headphones or speakers, and the microphone that goes with them
+  if dp; then
+    alsaucm -c "hw:$CARD" set _verb HiFi set _enadev DisplayPort set _enadev Mic1 >/dev/null 2>&1
+  elif jack; then
     alsaucm -c "hw:$CARD" set _verb HiFi set _enadev Headphones set _enadev Headset >/dev/null 2>&1
   else
     alsaucm -c "hw:$CARD" set _verb HiFi set _enadev Speaker set _enadev Mic1 >/dev/null 2>&1
@@ -172,16 +176,28 @@ start() {
   src="$(pactl list short sources 2>/dev/null | awk '/platform-sound\.pro-input-2/ {print $2; exit}')"
   [ -n "$src" ] && pactl set-default-source "$src"
   # First start only: a sane volume. After that, PipeWire keeps the user's.
+  # The microphone starts at 80 %: at 100 % speech peaks reach 0 dBFS.
   if [ ! -e "$STATE" ]; then
     pactl set-sink-volume "$s" 40%; pactl set-sink-mute "$s" 0
+    [ -n "$src" ] && pactl set-source-volume "$src" 80%
     mkdir -p "${STATE%/*}"; : >"$STATE"
   fi
 }
 start || exit 1
-last="$(jack && echo hp || echo spk)"
+last="$(mode)"
 while sleep 1; do
-  now="$(jack && echo hp || echo spk)"
-  if [ "$now" != "$last" ]; then route; last="$now"; fi
+  now="$(mode)"
+  if [ "$now" != "$last" ]; then
+    route
+    # The DP driver holds the display commit that goes back to the panel
+    # until the DP audio stream is closed: close the sink now when the
+    # display goes, not after PipeWire's idle timeout (the panel stayed black
+    # for 5 s).
+    if [ "$last" = dp ]; then
+      pactl suspend-sink "$(sink)" 1 2>/dev/null; pactl suspend-sink "$(sink)" 0 2>/dev/null
+    fi
+    last="$now"
+  fi
   # The card came back (PipeWire or WirePlumber restarted): set it up again.
   [ -n "$(sink)" ] || { sleep 2; start; }
 done
@@ -263,7 +279,7 @@ CalibrationMatrix=1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1
 KCM
 
 # The Adreno 750's GMU fails to come back from runtime suspend on this tablet
-# (Armada TB321FU notes): keep it powered until that is understood.
+# (see github.com/enij90/armada-tb321fu): keep it powered until that is understood.
 install -Dm0644 /dev/stdin "$R/usr/lib/systemd/system/steamos-arm-tb321fu-gpu-on.service" <<'UNIT'
 [Unit]
 Description=Lenovo Legion Y700 Gen 3: keep the GPU powered (its GMU doesn't resume)
@@ -308,6 +324,18 @@ wireplumber.profiles = {
     support.portal-permissionstore = disabled
   }
 }
+
+# DisplayPort over USB-C: on unplug the DP driver holds the display commit that
+# switches back to the panel until the DP audio stream is closed, and
+# WirePlumber closes an idle sink only after 5 s: the panel stayed black that
+# long. Close an idle DisplayPort sink after 0.5 s (a card profile that names
+# its sinks; under pro-audio tb321fu-audio closes the sink itself).
+monitor.alsa.rules = [
+  {
+    matches = [ { node.name = "~alsa_output.platform-sound.*DisplayPort.*" } ]
+    actions = { update-props = { session.suspend-timeout-seconds = 0.5 } }
+  }
+]
 CONF
 install -Dm0644 /dev/stdin "$R/usr/lib/systemd/system/steamos-arm-tb321fu-setup.service" <<'UNIT'
 [Unit]
@@ -425,6 +453,94 @@ install -Dm0644 /dev/stdin "$R/usr/lib/udev/rules.d/91-steamos-arm-tb321fu-usb-h
 SUBSYSTEM=="typec", KERNEL=="port[01]-partner", ACTION=="add|remove", PROGRAM="/usr/bin/grep -aq lenovo,tb321fu /sys/firmware/devicetree/base/compatible", TAG+="systemd", ENV{SYSTEMD_WANTS}+="steamos-arm-tb321fu-usb-host.service"
 SUBSYSTEM=="usb_role", ACTION=="change", PROGRAM="/usr/bin/grep -aq lenovo,tb321fu /sys/firmware/devicetree/base/compatible", TAG+="systemd", ENV{SYSTEMD_WANTS}+="steamos-arm-tb321fu-usb-host.service"
 RULES
+
+# The PMIC RTC keeps counting through power-off but holds no offset to wall
+# time (the UEFI variable rtc-pm8xxx reads is missing and SDAM 2 on this PMIC
+# is only 128 bytes), so every boot started in the past until NTP synced, and
+# systemd-tmpfiles then deleted files made before the sync as 28 days old.
+# Keep the offset in /var: set the clock from it early, save it again while
+# the clock is synchronised.
+# Taken from github.com/enij90/armada-tb321fu (its chrony check replaced by
+# systemd-timesyncd's).
+install -Dm0755 /dev/stdin "$R/usr/lib/steamos-arm/tb321fu-rtc-offset" <<'SH'
+#!/bin/bash
+#   restore: set the clock from the RTC counter and the saved offset
+#   save:    store the offset, only while the clock is synchronised
+set -eu
+OFFSET_FILE=/var/lib/tb321fu/rtc-offset
+rtc=
+for n in /sys/class/rtc/rtc*; do
+  case "$(cat "$n/name")" in rtc-pm8xxx*) rtc=$n; break ;; esac
+done
+[ -n "$rtc" ] || { echo "no rtc-pm8xxx device" >&2; exit 1; }
+counter=$(cat "$rtc/since_epoch")
+case "${1:-}" in
+restore)
+  [ -s "$OFFSET_FILE" ] || { echo "no saved offset yet"; exit 0; }
+  offset=$(cat "$OFFSET_FILE")
+  now=$(date +%s)
+  want=$((counter + offset))
+  if [ "$want" -gt $((now + 2)) ] || [ "$want" -lt $((now - 2)) ]; then
+    date -s "@$want" >/dev/null
+    echo "clock set from the RTC: $(date -d "@$want" "+%F %T") (was $(date -d "@$now" "+%F %T"))"
+  fi
+  ;;
+save)
+  [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" = yes ] \
+    || { echo "clock not synchronised, offset not saved"; exit 0; }
+  mkdir -p "${OFFSET_FILE%/*}"
+  echo $(($(date +%s) - counter)) > "$OFFSET_FILE.new"
+  mv -f "$OFFSET_FILE.new" "$OFFSET_FILE"
+  ;;
+*)
+  echo "usage: $0 restore|save" >&2
+  exit 2
+  ;;
+esac
+SH
+install -Dm0644 /dev/stdin "$R/usr/lib/systemd/system/steamos-arm-tb321fu-rtc.service" <<'UNIT'
+[Unit]
+Description=Lenovo Legion Y700 Gen 3: set the clock from the PMIC RTC and a saved offset
+ConditionFirmware=device-tree-compatible(lenovo,tb321fu)
+DefaultDependencies=no
+RequiresMountsFor=/var/lib/tb321fu
+After=local-fs.target
+Before=time-set.target sysinit.target systemd-timesyncd.service
+Wants=time-set.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/steamos-arm/tb321fu-rtc-offset restore
+
+[Install]
+WantedBy=sysinit.target
+UNIT
+ln -sfn ../steamos-arm-tb321fu-rtc.service "$R/usr/lib/systemd/system/sysinit.target.wants/steamos-arm-tb321fu-rtc.service"
+install -Dm0644 /dev/stdin "$R/usr/lib/systemd/system/steamos-arm-tb321fu-rtc-save.service" <<'UNIT'
+[Unit]
+Description=Lenovo Legion Y700 Gen 3: save the PMIC RTC offset
+ConditionFirmware=device-tree-compatible(lenovo,tb321fu)
+After=time-sync.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/steamos-arm/tb321fu-rtc-offset save
+UNIT
+install -Dm0644 /dev/stdin "$R/usr/lib/systemd/system/steamos-arm-tb321fu-rtc-save.timer" <<'UNIT'
+[Unit]
+Description=Lenovo Legion Y700 Gen 3: save the PMIC RTC offset after NTP and every 6 hours
+ConditionFirmware=device-tree-compatible(lenovo,tb321fu)
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=6h
+
+[Install]
+WantedBy=timers.target
+UNIT
+mkdir -p "$R/usr/lib/systemd/system/timers.target.wants"
+ln -sfn ../steamos-arm-tb321fu-rtc-save.timer "$R/usr/lib/systemd/system/timers.target.wants/steamos-arm-tb321fu-rtc-save.timer"
 
 # Tell the ABL each boot worked, or it gives up on the slot after 7.
 O="${HERE}/../steamos-overlay"

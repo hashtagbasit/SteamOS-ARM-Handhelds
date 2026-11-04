@@ -1,0 +1,42 @@
+From: hashtagbasit <53941105+hashtagbasit@users.noreply.github.com>
+Subject: [PATCH] arm64: built-in DTB keeps the bootloader's charger mode
+
+Plugged in while off, the Legion Y700 Gen 4's bootloader starts the kernel
+in charger mode, but CMDLINE_FORCE throws its command line away, so Linux
+booted all the way into Game Mode. Keep androidboot.mode=charger from the
+bootloader's /chosen/bootargs and log the rest for reports.
+---
+--- a/arch/arm64/kernel/setup.c
++++ b/arch/arm64/kernel/setup.c
+@@ -231,8 +231,8 @@
+ 	phys_addr_t dt_phys = __pa_symbol(__dtb_start);
+ 	phys_addr_t builtin_mem;
+ 	bool from_loader = false;
+-	const char *name;
+-	int size;
++	const char *name, *args = NULL;
++	int size, chosen;
+ 
+ 	if (fdt_totalsize(dt) <= sizeof(builtin_fdt)) {
+ 		memcpy(builtin_fdt, dt, fdt_totalsize(dt));
+@@ -254,6 +254,20 @@
+ 		early_init_dt_scan_memory();
+ 		from_loader = memblock_phys_mem_size() != 0;
+ 		initial_boot_params = dt;
++		/*
++		 * CMDLINE_FORCE drops the bootloader's command line, and with it
++		 * charger mode (plugged in while off). Keep that one word, so
++		 * tablet-charger-hold can leave the tablet dark and charging.
++		 */
++		chosen = fdt_path_offset(loader, "/chosen");
++		if (chosen >= 0)
++			args = fdt_getprop(loader, chosen, "bootargs", NULL);
++		if (args) {
++			pr_info("Bootloader command line: %s\n", args);
++			if (strstr(args, "androidboot.mode=charger"))
++				strlcat(boot_command_line, " androidboot.mode=charger",
++					COMMAND_LINE_SIZE);
++		}
+ 		/* Nothing usable from the bootloader: the built-in banks. */
+ 		if (!from_loader)
+ 			early_init_dt_scan_memory();

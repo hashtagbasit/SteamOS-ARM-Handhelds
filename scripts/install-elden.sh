@@ -149,6 +149,11 @@ for f in tablet-charger-hold tablet-backlight tablet-boot-watch; do
   install -Dm0755 "$O/usr/lib/steamos-arm/$f" "$R/usr/lib/steamos-arm/$f"
 done
 install -Dm0755 "$O/usr/lib/systemd/system-sleep/steamos-arm-sleep-stats" "$R/usr/lib/systemd/system-sleep/steamos-arm-sleep-stats"
+# Dual boot with ZUXOS: switch slots (Handheld Control's Restart into ZUXOS),
+# and move SteamOS from the microSD card to internal storage next to ZUXOS.
+for f in tablet-slot tablet-dualboot-install; do
+  install -Dm0755 "$O/usr/lib/steamos-arm/$f" "$R/usr/lib/steamos-arm/$f"
+done
 # Asleep or awake, power off before the battery runs flat: a sleeping
 # handheld at 0 % browns out and can boot-loop on the charger.
 install -Dm0755 "$O/usr/lib/systemd/system-sleep/steamos-arm-low-battery" "$R/usr/lib/systemd/system-sleep/steamos-arm-low-battery"
@@ -157,5 +162,13 @@ sed -i -e 's/^PercentageCritical=.*/PercentageCritical=6/' -e 's/^PercentageActi
 for u in steamos-arm-tablet-charger steamos-arm-tablet-backlight steamos-arm-tablet-boot-watch; do
   install -Dm0644 "$O/usr/lib/systemd/system/$u.service" "$R/usr/lib/systemd/system/$u.service"
   ln -sfn ../$u.service "$R/usr/lib/systemd/system/multi-user.target.wants/$u.service"
+done
+# Legion G9 2026 controller (3537:1136) on the Gen 4: the pad as a Steam Deck
+# controller, the tablet's haptics motors for rumble, and the controller's
+# firmware double-Home (a KEY_HOMEPAGE pulse) as Quick Access.
+E="${HERE}/../external-and-mods/elden/rootfs/usr/share/inputplumber"
+install -Dm0644 "$E/devices/05-lenovo-y700-gen4-g9-2026.yaml" "$R/usr/share/inputplumber/devices/05-lenovo-y700-gen4-g9-2026.yaml"
+for m in lenovo_legion_g9_2026 y700_g9_consumer; do
+  install -Dm0644 "$E/capability_maps/$m.yaml" "$R/usr/share/inputplumber/capability_maps/$m.yaml"
 done
 echo "[elden] firmware manifest, topology and audio profile installed"

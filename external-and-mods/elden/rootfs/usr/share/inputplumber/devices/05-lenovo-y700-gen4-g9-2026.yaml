@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Only the exact Gen4 model and 3537:1136 controller are matched.
+# Tablet sensors are deliberately absent: the existing sensor bridge is shared
+# with iio-sensor-proxy and must retain its current readers and units.
+version: 1
+kind: CompositeDevice
+name: Lenovo Legion Y700 Gen4 + Legion G9 2026
+matches:
+  - udev:
+      sys_path: /sys/firmware/devicetree/base
+      attributes:
+        - name: model
+          value: Lenovo Legion Y700 Gen4
+maximum_sources: 0
+options:
+  auto_manage: true
+source_devices:
+  - group: gamepad
+    evdev:
+      name: GameSir Legion Gaming Controller G9 2026
+      vendor_id: "3537"
+      product_id: "1136"
+      handler: event*
+    capability_map_id: lenovo_legion_g9_2026
+  - group: consumer
+    evdev:
+      name: GameSir Legion Gaming Controller G9 2026 Consumer Control
+      vendor_id: "3537"
+      product_id: "1136"
+      handler: event*
+    capability_map_id: y700_g9_consumer
+  # Both tablet motors receive the same ordinary game rumble effect. This does
+  # not implement separate left/right channels or HD haptic waveforms.
+  - group: haptics
+    evdev:
+      name: aw86927-haptics
+      vendor_id: "0000"
+      product_id: "0000"
+      handler: event*
+    unique: false
+target_devices:
+  - deck-uhid
+  - keyboard

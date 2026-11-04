@@ -1,0 +1,203 @@
+#!/bin/bash
+# Lenovo Legion Y700 Gen 4: SteamOS on internal storage next to ZUXOS.
+#
+#   tablet-dualboot-install --boot boot-dual.img [--size GB] [--dry-run] [--yes]
+#
+# Run from SteamOS on the microSD card (the dual boot from boot_b), so
+# nothing on internal storage is in use. It
+#   1. saves the partition table and boot_b to /home/.ufs-backup on the card
+#   2. shrinks Android's userdata from its end and puts a "steamos" partition
+#      (ext4) in the space after it; nothing before userdata moves
+#   3. copies the running system from the card into it
+#   4. writes boot-dual.img (root=PARTLABEL=steamos) to boot_b
+# ZUXOS stays on slot A. Its data is gone with the shrink: in fastboot,
+# `fastboot -w` formats the smaller userdata, and ZUXOS starts fresh.
+# Back to SteamOS from ZUXOS: fastboot set_active b.
+#
+# TABLET_DUALBOOT_TEST=1 skips the tablet checks, and DISK/ROOT_SRC/BOOT_B
+# point it at a test disk, copy source and boot_b stand-in.
+set -euo pipefail
+
+SIZE_GB=128
+MIN_SIZE_GB=24
+ANDROID_MIN_GB=32
+BOOT_IMG=""
+DRY=0
+YES=0
+LABEL=steamos
+LINUX_FS=0FC63DAF-8483-4772-8E79-3D69D8477DE4
+BACKUP=${BACKUP:-/home/.ufs-backup}
+TEST=${TABLET_DUALBOOT_TEST:-0}
+
+die() { echo "tablet-dualboot-install: $*" >&2; exit 1; }
+log() { echo "==> $*"; }
+usage() { sed -n '2,20s/^# \{0,1\}//p' "$0"; exit 2; }
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --boot) BOOT_IMG=${2:?}; shift 2 ;;
+    --size) SIZE_GB=${2:?}; shift 2 ;;
+    --dry-run) DRY=1; shift ;;
+    --yes) YES=1; shift ;;
+    -h|--help) usage ;;
+    *) die "unknown option $1 (--help)" ;;
+  esac
+done
+[[ $(id -u) == 0 ]] || exec pkexec "$0" "$@"
+[[ $SIZE_GB =~ ^[0-9]+$ ]] && (( SIZE_GB >= MIN_SIZE_GB )) || die "--size: at least $MIN_SIZE_GB (GB)"
+for c in sfdisk partx mkfs.ext4 rsync blockdev; do command -v $c >/dev/null || die "$c missing"; done
+
+# --- where we are ----------------------------------------------------------
+if [[ $TEST != 1 ]]; then
+  grep -aq "lenovo,elden" /sys/firmware/devicetree/base/compatible 2>/dev/null \
+    || die "this is for the Lenovo Legion Y700 Gen 4"
+  findmnt -no SOURCE / | grep -q '^/dev/mmcblk' \
+    || die "run it from SteamOS on the microSD card (dual boot), not from internal storage"
+fi
+# The running system's own file system, without what is mounted over it:
+# /etc is an overlay (its changes in /var/lib/overlays/etc/upper), and a copy
+# of the live / would leave it out.
+if [[ -z ${ROOT_SRC:-} ]]; then
+  ROOT_SRC=$(mktemp -d /run/tablet-dualboot-src.XXXXXX)
+  mount --bind / "$ROOT_SRC"
+  mount -o remount,bind,ro "$ROOT_SRC"
+  trap 'umount "$ROOT_SRC" 2>/dev/null; rmdir "$ROOT_SRC" 2>/dev/null || true' EXIT
+fi
+[[ -d $ROOT_SRC/usr/lib && -d $ROOT_SRC/etc ]] || die "no system at $ROOT_SRC"
+if [[ -z ${DISK:-} ]]; then
+  ud=$(readlink -f /dev/disk/by-partlabel/userdata 2>/dev/null) || true
+  [[ -b $ud ]] || die "no userdata partition found"
+  DISK=/dev/$(lsblk -no PKNAME "$ud")
+fi
+[[ -b $DISK ]] || die "$DISK is not a block device"
+[[ $TEST == 1 || $DISK == /dev/sd* ]] || die "userdata isn't on the UFS ($DISK)"
+if [[ -z ${BOOT_B:-} ]]; then
+  BOOT_B=$(readlink -f /dev/disk/by-partlabel/boot_b 2>/dev/null) || true
+fi
+[[ -b $BOOT_B || ( $TEST == 1 && -f $BOOT_B ) ]] || die "no boot_b partition"
+
+# --- the boot image --------------------------------------------------------
+[[ -n $BOOT_IMG ]] || die "--boot boot-dual.img is required (it's in the Gen 4 package)"
+[[ -f $BOOT_IMG ]] || die "$BOOT_IMG not found"
+[[ $(head -c 8 "$BOOT_IMG") == "ANDROID!" ]] || die "$BOOT_IMG is not an Android boot image"
+grep -aq "root=PARTLABEL=$LABEL" "$BOOT_IMG" || die "$BOOT_IMG doesn't start SteamOS from the $LABEL partition (wrong image?)"
+(( $(stat -c %s "$BOOT_IMG") <= $(blockdev --getsize64 "$BOOT_B" 2>/dev/null || stat -c %s "$BOOT_B") )) \
+  || die "$BOOT_IMG is bigger than boot_b"
+
+# --- the partition table ---------------------------------------------------
+dump=$(sfdisk -d "$DISK") || die "can't read the partition table of $DISK"
+grep -q '^label: gpt' <<<"$dump" || die "$DISK has no GPT"
+grep -q "name=\"$LABEL\"" <<<"$dump" && die "$DISK already has a $LABEL partition: SteamOS is installed next to ZUXOS already"
+ss=$(blockdev --getss "$DISK")
+last_lba=$(sed -n 's/^last-lba: *//p' <<<"$dump")
+[[ -n $last_lba ]] || die "no last-lba in the partition table"
+# userdata: its line, number, start, size
+line=$(grep 'name="userdata"' <<<"$dump") || die "no userdata partition on $DISK"
+[[ $(grep -c 'name="userdata"' <<<"$dump") == 1 ]] || die "more than one userdata partition"
+dev=${line%% :*}; dev=${dev// /}
+num=$(grep -o '[0-9]*$' <<<"$dev")
+start=$(sed -n 's/.*start= *\([0-9]*\).*/\1/p' <<<"$line")
+size=$(sed -n 's/.*size= *\([0-9]*\).*/\1/p' <<<"$line")
+[[ -n $num && -n $start && -n $size ]] || die "can't parse the userdata entry: $line"
+# Only shrink from the end: nothing may start after userdata.
+while read -r s; do
+  (( s <= start )) || die "a partition starts after userdata; this layout isn't supported"
+done < <(sed -n 's/.*start= *\([0-9]*\).*/\1/p' <<<"$dump")
+end=$(( start + size - 1 ))
+(( end <= last_lba )) || die "userdata ends past last-lba"
+
+mib=$(( 1048576 / ss ))
+want=$(( SIZE_GB * 1024 * mib ))                 # sectors for SteamOS
+new_start=$(( (last_lba + 1 - want) / mib * mib ))  # 1 MiB aligned
+(( new_start > start )) || die "userdata is too small for $SIZE_GB GB"
+new_size=$(( last_lba - new_start + 1 ))
+ud_size=$(( new_start - start ))
+(( ud_size >= ANDROID_MIN_GB * 1024 * mib )) || die "ZUXOS would keep less than $ANDROID_MIN_GB GB; pick a smaller --size"
+
+gb() { echo "$(( $1 * ss / 1073741824 )) GB"; }
+used=$(du -sxB1 "$ROOT_SRC" 2>/dev/null | cut -f1)
+(( used < new_size * ss * 9 / 10 )) || die "the system ($(( used / 1073741824 )) GB) doesn't fit in $SIZE_GB GB"
+
+cat <<EOF
+
+Disk:        $DISK ($ss-byte sectors)
+userdata:    partition $num, $(gb "$size") -> $(gb "$ud_size") (ZUXOS)
+$LABEL:     new, $(gb "$new_size"), sectors $new_start-$last_lba (SteamOS)
+system copy: $(( used / 1073741824 )) GB from $ROOT_SRC
+boot_b:      $BOOT_IMG
+backups:     $BACKUP
+
+ZUXOS keeps working, but ALL of its data (apps, photos, accounts) is erased.
+EOF
+if (( DRY )); then echo; echo "Dry run: nothing changed."; exit 0; fi
+if (( ! YES )); then
+  read -r -p "Type ERASE to go on: " ans
+  [[ $ans == ERASE ]] || die "stopped, nothing changed"
+fi
+
+# --- backups ---------------------------------------------------------------
+stamp=$(date +%Y%m%d-%H%M%S)
+mkdir -p "$BACKUP"
+log "backups in $BACKUP"
+printf '%s\n' "$dump" > "$BACKUP/gpt-${DISK##*/}-$stamp.sfdisk"
+sfdisk --backup-pt-sectors "$DISK" -O "$BACKUP/gpt-${DISK##*/}-$stamp.sectors" >/dev/null 2>&1 \
+  || sfdisk --backup -O "$BACKUP/gpt-${DISK##*/}-$stamp.sectors" -d "$DISK" >/dev/null 2>&1 || true
+dd if="$BOOT_B" of="$BACKUP/boot_b-$stamp.img" bs=1M status=none
+sync
+
+# --- partitions ------------------------------------------------------------
+log "shrinking userdata to $(gb "$ud_size")"
+echo ",$ud_size" | sfdisk -N "$num" --no-reread --no-tell-kernel -q "$DISK"
+log "adding $LABEL"
+echo "start=$new_start, size=$new_size, type=$LINUX_FS, name=\"$LABEL\"" \
+  | sfdisk --append --no-reread --no-tell-kernel -q "$DISK"
+check=$(sfdisk -d "$DISK")
+grep -q "name=\"$LABEL\"" <<<"$check" || die "the $LABEL partition isn't in the table (backup: $BACKUP)"
+# Every other partition must be exactly as before.
+diff <(grep -v -e 'name="userdata"' -e "name=\"$LABEL\"" <<<"$dump") \
+     <(grep -v -e 'name="userdata"' -e "name=\"$LABEL\"" <<<"$check") >/dev/null \
+  || die "other partitions changed, restore with: sfdisk $DISK < $BACKUP/gpt-${DISK##*/}-$stamp.sfdisk"
+partx -u "$DISK" 2>/dev/null || true
+partx -a "$DISK" 2>/dev/null || true
+udevadm settle 2>/dev/null || true
+newnum=$(sed -n "s/^[^ ]*[^0-9]\([0-9]*\) :.*name=\"$LABEL\".*/\1/p" <<<"$check")
+part=""
+for p in "${DISK}$newnum" "${DISK}p$newnum"; do [[ -b $p ]] && part=$p; done
+[[ -n $part ]] || die "the kernel doesn't see the new partition yet: reboot from the card and run this again"
+(( $(blockdev --getsz "$part") * 512 == new_size * ss )) || die "$part has the wrong size"
+
+# --- the system ------------------------------------------------------------
+log "formatting $part"
+mkfs.ext4 -q -F -L "$LABEL" -m 1 "$part"
+mnt=$(mktemp -d)
+trap 'mountpoint -q "$mnt" && umount "$mnt"; rmdir "$mnt" 2>/dev/null || true
+      [[ $ROOT_SRC == /run/tablet-dualboot-src.* ]] && { umount "$ROOT_SRC" 2>/dev/null; rmdir "$ROOT_SRC" 2>/dev/null; } || true' EXIT
+mount "$part" "$mnt"
+log "copying the system (a few minutes)"
+rsync -aHAXx --numeric-ids --info=progress2 \
+  --exclude=/home/.ufs-backup/ --exclude=/var/lib/steamos-arm/sd-grown \
+  "${ROOT_SRC%/}/" "$mnt/"
+# Its root line names the card or userdata: the copy starts from its own partition.
+for f in "$mnt/etc/fstab" "$mnt/var/lib/overlays/etc/upper/fstab"; do
+  [[ -f $f ]] || continue
+  sed -i -E "s|^[^#[:space:]]+([[:space:]]+/[[:space:]])|PARTLABEL=$LABEL\1|" "$f"
+  grep -qE "^PARTLABEL=$LABEL[[:space:]]+/[[:space:]]" "$f" || die "no root line in ${f#$mnt}"
+done
+[[ -d $mnt/usr/lib && -s $mnt/etc/os-release ]] || die "the copy has no system in it"
+sync; umount "$mnt"
+
+# --- boot_b ----------------------------------------------------------------
+log "boot_b <- $BOOT_IMG"
+dd if="$BOOT_IMG" of="$BOOT_B" bs=1M conv=fsync status=none
+cmp -n "$(stat -c %s "$BOOT_IMG")" "$BOOT_IMG" "$BOOT_B" || die "boot_b doesn't match $BOOT_IMG (backup: $BACKUP)"
+
+cat <<EOF
+
+Done. SteamOS is on internal storage too ($LABEL, $(gb "$new_size")).
+Last step, so ZUXOS starts clean on its smaller userdata:
+  1. Turn the tablet off, hold Volume Down + Power for fastboot.
+  2. On the computer:   fastboot -w   then   fastboot reboot
+SteamOS starts (slot B), and the microSD card can come out.
+ZUXOS: Handheld Control -> Restart into ZUXOS. Back: fastboot set_active b.
+Don't install ZUXOS system updates: they overwrite boot_b.
+EOF

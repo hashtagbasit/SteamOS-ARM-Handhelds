@@ -1,0 +1,2 @@
+# Lenovo Legion Y700 Gen 5: give the WCN7860 its address when hci0 appears.
+ACTION=="add", SUBSYSTEM=="bluetooth", KERNEL=="hci0", TAG+="systemd", ENV{SYSTEMD_WANTS}+="tb323fu-btaddr.service"

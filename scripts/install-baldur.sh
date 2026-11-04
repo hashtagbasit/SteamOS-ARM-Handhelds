@@ -98,6 +98,19 @@ install -Dm0644 "$B/usr/lib/udev/rules.d/71-tb323fu-usb-host.rules" "$R/usr/lib/
 install -Dm0644 "$B/usr/lib/systemd/user/tb323fu-speaker-gain.service" "$R/usr/lib/systemd/user/tb323fu-speaker-gain.service"
 install -Dm0644 "$B/usr/share/inputplumber/devices/05-lenovo-tb323fu-legion-g9-2026.yaml" "$R/usr/share/inputplumber/devices/05-lenovo-tb323fu-legion-g9-2026.yaml"
 install -Dm0644 "$B/usr/share/inputplumber/capability_maps/lenovo_legion_g9_2026.yaml" "$R/usr/share/inputplumber/capability_maps/lenovo_legion_g9_2026.yaml"
+# Clock from the PMIC RTC plus a saved offset (it showed Jan 06 until NTP),
+# and tb323fu-btaddr started by udev when hci0 appears (its hci0.device wait
+# timed out at boot).
+install -Dm0755 "$B/usr/lib/steamos-arm/baldur-rtc-offset" "$R/usr/lib/steamos-arm/baldur-rtc-offset"
+for u in steamos-arm-baldur-rtc.service steamos-arm-baldur-rtc-save.service steamos-arm-baldur-rtc-save.timer; do
+  install -Dm0644 "$B/usr/lib/systemd/system/$u" "$R/usr/lib/systemd/system/$u"
+done
+ln -sfn ../steamos-arm-baldur-rtc.service "$R/usr/lib/systemd/system/sysinit.target.wants/steamos-arm-baldur-rtc.service" 2>/dev/null \
+  || { mkdir -p "$R/usr/lib/systemd/system/sysinit.target.wants"; ln -sfn ../steamos-arm-baldur-rtc.service "$R/usr/lib/systemd/system/sysinit.target.wants/steamos-arm-baldur-rtc.service"; }
+mkdir -p "$R/usr/lib/systemd/system/timers.target.wants"
+ln -sfn ../steamos-arm-baldur-rtc-save.timer "$R/usr/lib/systemd/system/timers.target.wants/steamos-arm-baldur-rtc-save.timer"
+install -Dm0644 "$B/usr/lib/systemd/system/tb323fu-btaddr.service.d/10-steamos-arm.conf" "$R/usr/lib/systemd/system/tb323fu-btaddr.service.d/10-steamos-arm.conf"
+install -Dm0644 "$B/usr/lib/udev/rules.d/72-steamos-arm-btaddr.rules" "$R/usr/lib/udev/rules.d/72-steamos-arm-btaddr.rules"
 log "platform files"
 
 # Switching, firmware from the card, growing to the card.

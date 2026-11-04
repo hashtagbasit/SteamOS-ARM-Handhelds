@@ -1,0 +1,82 @@
+From: hashtagbasit
+Subject: media: iris: let decoder clients ask for decode-order output
+
+The firmware holds decoded pictures back until they are due in display
+order. A client that reorders frames itself, such as a VA-API driver built
+on this decoder, needs each picture back as soon as it is decoded: with
+B-frames it otherwise arrives one frame late and the client stalls.
+
+Map V4L2_CID_MPEG_VIDEO_DEC_DISPLAY_DELAY_ENABLE to the firmware's decode
+order output property (HFI_PROP_DECODE_ORDER_OUTPUT, as the downstream
+video driver sets it for a zero display delay) on the gen2 platforms
+(SM8550, SM8650, SM8750). Off by default, so existing clients see no
+change.
+
+---
+--- a/drivers/media/platform/qcom/iris/iris_ctrls.c
++++ b/drivers/media/platform/qcom/iris/iris_ctrls.c
+@@ -24,6 +24,8 @@
+ 	switch (id) {
+ 	case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
+ 		return PROFILE_H264;
++	case V4L2_CID_MPEG_VIDEO_DEC_DISPLAY_DELAY_ENABLE:
++		return DEC_OUTPUT_ORDER;
+ 	case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
+ 		return PROFILE_HEVC;
+ 	case V4L2_CID_MPEG_VIDEO_VP9_PROFILE:
+@@ -167,6 +169,8 @@
+ 	switch (cap_id) {
+ 	case PROFILE_H264:
+ 		return V4L2_CID_MPEG_VIDEO_H264_PROFILE;
++	case DEC_OUTPUT_ORDER:
++		return V4L2_CID_MPEG_VIDEO_DEC_DISPLAY_DELAY_ENABLE;
+ 	case PROFILE_HEVC:
+ 		return V4L2_CID_MPEG_VIDEO_HEVC_PROFILE;
+ 	case PROFILE_VP9:
+--- a/drivers/media/platform/qcom/iris/iris_hfi_gen2.c
++++ b/drivers/media/platform/qcom/iris/iris_hfi_gen2.c
+@@ -278,6 +278,24 @@
+ 		.flags = CAP_FLAG_INPUT_PORT,
+ 		.set = iris_set_u32,
+ 	},
++	{
++		/*
++		 * V4L2_CID_MPEG_VIDEO_DEC_DISPLAY_DELAY_ENABLE with no delay:
++		 * the firmware returns every picture as soon as it is decoded,
++		 * in decode order, instead of holding frames back for display
++		 * order. Clients that reorder themselves (VA-API on top of this
++		 * decoder) need it, or a stream with B-frames comes back a frame
++		 * late. Only a zero delay exists, so there is no delay control.
++		 */
++		.cap_id = DEC_OUTPUT_ORDER,
++		.min = 0,
++		.max = 1,
++		.step_or_mask = 1,
++		.value = 0,
++		.hfi_id = HFI_PROP_DECODE_ORDER_OUTPUT,
++		.flags = CAP_FLAG_INPUT_PORT,
++		.set = iris_set_u32,
++	},
+ };
+ 
+ static const struct platform_inst_fw_cap inst_fw_cap_sm8550_enc[] = {
+--- a/drivers/media/platform/qcom/iris/iris_hfi_gen2_defines.h
++++ b/drivers/media/platform/qcom/iris/iris_hfi_gen2_defines.h
+@@ -120,6 +120,7 @@
+ 
+ #define HFI_PROP_FLIP				0x0300014c
+ #define HFI_PROP_SIGNAL_COLOR_INFO		0x03000155
++#define HFI_PROP_DECODE_ORDER_OUTPUT		0x0300015b
+ #define HFI_PROP_PICTURE_TYPE			0x03000162
+ #define HFI_PROP_DEC_DEFAULT_HEADER		0x03000168
+ #define HFI_PROP_DEC_START_FROM_RAP_FRAME	0x03000169
+--- a/drivers/media/platform/qcom/iris/iris_platform_common.h
++++ b/drivers/media/platform/qcom/iris/iris_platform_common.h
+@@ -182,6 +182,7 @@
+ 	LAYER3_BITRATE_HEVC,
+ 	LAYER4_BITRATE_HEVC,
+ 	LAYER5_BITRATE_HEVC,
++	DEC_OUTPUT_ORDER,
+ 	INST_FW_CAP_MAX,
+ };
+ 

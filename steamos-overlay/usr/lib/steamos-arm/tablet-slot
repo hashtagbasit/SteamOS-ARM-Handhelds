@@ -1,6 +1,8 @@
 #!/bin/bash
-# Lenovo Legion Y700 Gen 4, SteamOS on a microSD card started from boot_b
-# with ZUXOS left on slot A: switch the slot the bootloader starts.
+# Lenovo Legion Y700 Gen 4, SteamOS started from boot_b (on the microSD card,
+# or on internal storage in its own "steamos" partition, see
+# tablet-dualboot-install) with ZUXOS left on slot A: switch the slot the
+# bootloader starts.
 #
 #   tablet-slot android   start ZUXOS (slot A) from the next boot on, and restart
 #   tablet-slot status    which slot is active, and whether this is a dual boot
@@ -22,13 +24,16 @@ setbits() {  # setbits <slot> <bits...>
   sfdisk --part-attrs "$disk" "$num" "${other:+$other }${list:+GUID:$list}" >/dev/null
 }
 sd_boot() { findmnt -no SOURCE / | grep -q mmcblk; }
+dual_boot() { sd_boot || [[ $(lsblk -no PARTLABEL "$(findmnt -no SOURCE /)" 2>/dev/null) == steamos ]]; }
 case "${1:-status}" in
   status)
     for s in a b; do echo "boot_$s: $(bits $s)"; done
-    sd_boot && echo "running from the microSD card (dual boot)" || echo "running from internal storage"
+    if sd_boot; then echo "running from the microSD card (dual boot)"
+    elif dual_boot; then echo "running from internal storage next to ZUXOS (dual boot)"
+    else echo "running from internal storage"; fi
     ;;
   android)
-    sd_boot || { echo "SteamOS isn't on the microSD card here: ZUXOS is gone from this tablet" >&2; exit 1; }
+    dual_boot || { echo "SteamOS replaced ZUXOS on this tablet: there's no ZUXOS to start" >&2; exit 1; }
     [[ $(id -u) == 0 ]] || exec pkexec "$0" "$@"
     a=$(bits a | tr ' ' '\n' | grep -vxE '50|55|51|52|53' || true)
     b=$(bits b | tr ' ' '\n' | grep -vx 50 || true)
