@@ -126,6 +126,11 @@ if [[ "$MANGOAPP" != 1 ]]; then
   export STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND=1
 fi
 export STEAM_GAMESCOPE_VRR_SUPPORTED=1
+# Lenovo tablets: the panels can't take it, VRR on means a black screen and then
+# stutter. Keep the option out of Steam.
+if grep -aqE "lenovo,(tb321fu|elden|baldur)" /sys/firmware/devicetree/base/compatible 2>/dev/null; then
+  export STEAM_GAMESCOPE_VRR_SUPPORTED=0
+fi
 export STEAM_GAMESCOPE_HAS_TEARING_SUPPORT=1
 export STEAM_GAMESCOPE_TEARING_SUPPORTED=1
 export STEAM_GAMESCOPE_DYNAMIC_FPSLIMITER=1
