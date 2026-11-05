@@ -95,7 +95,7 @@ ensure_kernel() {
     KOUT="$(readlink -f "$kcur")"
     return 0
   fi
-  if [[ -f "${KOUT}/boot/KERNEL" && -d "${KOUT}/modules/7.2.0" ]]; then
+  if [[ -f "${KOUT}/boot/KERNEL" && -n "$(ls -A "${KOUT}/modules" 2>/dev/null)" ]]; then
     log "SM8750 kernel already staged in ${KOUT}"
     return 0
   fi

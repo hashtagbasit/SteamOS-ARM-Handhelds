@@ -170,18 +170,18 @@ cpu = '${cpu}'
 endian = 'little'
 EOF
   # Build-machine tools: Mesa wants wayland-scanner >= 1.23.1, Ubuntu 24.04 has
-  # 1.22. The Frame's own (1.26, aarch64 like this build host) runs fine here
-  # against the host's libexpat/libxml2 (don't point it at the Frame's libc).
+  # 1.22. The Frame's own (1.26, aarch64 like this build host) does the job.
   mkdir -p "$W/tools"
   # Meson's wayland module wants the scanner version to equal the target's
   # libwayland (the guest has 1.23.1); the code 1.26 generates only uses
-  # calls libwayland has had for years, so report the guest version.
+  # calls libwayland has had for years, so report the guest version. The Frame
+  # scanner runs inside the rootfs: it needs the rootfs's libxml2.
   local wlver
   wlver="$(sed -n 's/^Version: //p' "$s/usr/${libdir}/pkgconfig/wayland-client.pc")"
   cat >"$W/tools/wayland-scanner" <<EOF2
 #!/bin/sh
 if [ "\$1" = "--version" ]; then echo "wayland-scanner ${wlver}" >&2; exit 0; fi
-exec "$R/usr/bin/wayland-scanner" "\$@"
+exec bwrap --tmpfs / --ro-bind "$R/usr" /usr --symlink usr/lib /lib --symlink usr/bin /bin --ro-bind "$R" "$R" --bind "$W" "$W" --dev /dev --proc /proc --chdir "\$PWD" /usr/bin/wayland-scanner "\$@"
 EOF2
   chmod +x "$W/tools/wayland-scanner"
   "$W/tools/wayland-scanner" --version >/dev/null 2>&1 || die "Frame wayland-scanner does not run on this host"
