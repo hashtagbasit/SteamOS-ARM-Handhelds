@@ -1,0 +1,28 @@
+From: hashtagbasit
+Subject: drm/msm/dsi/phy: program the PLL system muxes on 7nm PHY enable
+
+The AYANEO Pocket S 2K's 1440p panel is driven by two bonded DSI links and
+the top half stayed blank on 7.2.8. PHY enable takes the PLL bias reference
+(pll_enable_cnt = 1) but never writes PLL_SYSTEM_MUXES, and every later bias
+get returns early because the reference is held, so the muxes stay unset.
+Write them where the reference is taken and let the bias settle.
+
+---
+--- a/drivers/gpu/drm/msm/dsi/phy/dsi_phy_7nm.c
++++ b/drivers/gpu/drm/msm/dsi/phy/dsi_phy_7nm.c
+@@ -1096,7 +1096,15 @@
+ 	data = DSI_7nm_PHY_CMN_CTRL_0_DIGTOP_PWRDN_B |
+ 	       DSI_7nm_PHY_CMN_CTRL_0_PLL_SHUTDOWNB;
+ 	writel(data, base + REG_DSI_7nm_PHY_CMN_CTRL_0);
++	/*
++	 * This takes the PLL bias reference, so later bias gets return early
++	 * and never program the system muxes. Do it here, as the bias get
++	 * would: otherwise the second PHY of a bonded pair runs with the muxes
++	 * unset and its half of the panel stays blank.
++	 */
++	writel(0xc0, pll->phy->pll_base + REG_DSI_7nm_PHY_PLL_SYSTEM_MUXES);
+ 	spin_unlock_irqrestore(&pll->pll_enable_lock, flags);
++	ndelay(250);
+ 
+ 	/* Assert PLL core reset */
+ 	writel(0x00, base + REG_DSI_7nm_PHY_CMN_PLL_CNTRL);

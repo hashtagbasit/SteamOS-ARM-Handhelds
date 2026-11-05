@@ -1,0 +1,38 @@
+From: hashtagbasit
+Subject: media: iris: stop Steam Remote Play staying green
+
+After the first source change Steam stops and restarts the bitstream
+port, and the driver hands the firmware its stream settings again. Two of
+them never matched what the firmware had reported, so it raised the same
+source change on every restart and returned no picture (a green screen):
+
+- the picture order count type went back as 0 instead of the stream's
+  type, so most H.264 streams mismatched;
+- TIER_AV1's setter runs for every codec and wrote 0 over the HEVC tier
+  that iris_hfi_gen2_set_tier() had just set, so High tier HEVC
+  mismatched. set_tier() already picks the AV1 tier for AV1, so the setter
+  goes.
+
+diff -ru a/drivers/media/platform/qcom/iris/iris_hfi_gen2.c b/drivers/media/platform/qcom/iris/iris_hfi_gen2.c
+--- a/drivers/media/platform/qcom/iris/iris_hfi_gen2.c
++++ b/drivers/media/platform/qcom/iris/iris_hfi_gen2.c
+@@ -179,7 +179,6 @@
+ 		.value = 0,
+ 		.hfi_id = HFI_PROP_TIER,
+ 		.flags = CAP_FLAG_INPUT_PORT,
+-		.set = iris_set_u32,
+ 	},
+ 	{
+ 		.cap_id = DRAP,
+diff -ru a/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c b/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c
+--- a/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c
++++ b/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c
+@@ -339,7 +339,7 @@
+ {
+ 	struct iris_inst_hfi_gen2 *inst_hfi_gen2 = to_iris_inst_hfi_gen2(inst);
+ 	u32 port = iris_hfi_gen2_get_port(inst, plane);
+-	u32 poc = 0;
++	u32 poc = inst->fw_caps[POC].value;
+ 
+ 	inst_hfi_gen2->src_subcr_params.pic_order_cnt = poc;
+ 

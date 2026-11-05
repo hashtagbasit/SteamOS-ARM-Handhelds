@@ -1,0 +1,35 @@
+
+/*
+ * SteamOS ARM additions for the AYANEO Pocket DMG (appended to ROCKNIX's
+ * qcs8550-ayaneo-pocketdmg.dts by kernel-common/build.sh).
+ *
+ * The touch node was written for the vendor "hyn" driver (vdd_ana-supply,
+ * reset-gpio, ts_active pinctrl, display-coords/pos-swap), which this kernel
+ * doesn't carry. hynitron-cst66xx binds the same compatible but reads the
+ * binding the Pocket S Mini uses: without vdd-supply its 3.2 V rail was a
+ * dummy regulator, and without a "default" pinctrl state the int/reset pins
+ * were never set up, so the touchscreen never worked. Same binding as the
+ * S Mini, with display-coords/pos-swap as the standard size and swap.
+ */
+&i2c4 {
+	/delete-node/ hynitron@5a;
+
+	touchscreen@5a {
+		compatible = "hynitron,cst66xx";
+		reg = <0x5a>;
+
+		interrupt-parent = <&tlmm>;
+		interrupts = <25 IRQ_TYPE_EDGE_FALLING>;
+		reset-gpios = <&tlmm 24 GPIO_ACTIVE_LOW>;
+		vdd-supply = <&vreg_l14b_3p2>;
+
+		/* display-coords 0 0 1080 1240 with pos-swap = 1 */
+		touchscreen-size-x = <1240>;
+		touchscreen-size-y = <1080>;
+		touchscreen-swapped-x-y;
+
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&ts_int_active &ts_reset_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+	};
+};

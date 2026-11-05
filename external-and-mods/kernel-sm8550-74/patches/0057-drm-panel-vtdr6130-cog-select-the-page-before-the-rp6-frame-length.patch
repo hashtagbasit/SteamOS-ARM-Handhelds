@@ -1,0 +1,21 @@
+From: hashtagbasit
+Subject: drm/panel: vtdr6130-cog: select the page before the RP6 frame length
+
+The Retroid Pocket 6 init sequence sent "AA 10" without the F0 page select
+command in front, so the panel never switched to page 0x10 and the B1
+frame length write that follows went to the wrong page: the panel ran on
+its reset frame length instead of the one meant for 60 and 120 Hz. Send it
+as F0 AA 10 like every other page switch here (ROCKNIX fixed the same line
+in their RP6 panel patch).
+
+--- a/drivers/gpu/drm/panel/panel-visionox-vtdr6130-cog.c
++++ b/drivers/gpu/drm/panel/panel-visionox-vtdr6130-cog.c
+@@ -143,7 +143,7 @@
+ 					0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+ 	}
+ 
+-	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xAA, 0x10);
++	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xF0, 0xAA, 0x10);
+ 
+ 	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xB1, 
+ 				0x02, 0x16, 0x00, 0x14, 0x00, 0x1C, 0x00, 0x02,

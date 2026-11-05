@@ -1,0 +1,27 @@
+From: Ashketchup <ashley@shuuri.net>
+Subject: [PATCH] wakeup: qcom-ipcc: remove IRQF_NO_SUSPEND across system suspend
+
+Ashketchup's ROCKNIX patch (SM8550 0502, SM8750 0504) for Linux 7.4, where the
+request_irq() name argument is dev_name(&pdev->dev).
+
+The SM8550 deep-sleep self-wake (every few minutes) is the ADSP charger firmware
+pushing BATTMGR_NOTIFICATION over pmic_glink. Those notifications ring the IPCC
+mailbox IRQ, which is requested with IRQF_NO_SUSPEND and so is never masked across
+system suspend, pulling the SoC back out of deep sleep.
+
+Drop IRQF_NO_SUSPEND so the IPCC IRQ is masked during suspend like a normal IRQ.
+Co-processor doorbells (charger, sensors, modem) no longer wake the AP while it is
+asleep; pending signals are handled on resume instead.
+---
+diff --git a/drivers/mailbox/qcom-ipcc.c b/drivers/mailbox/qcom-ipcc.c
+--- a/drivers/mailbox/qcom-ipcc.c
++++ b/drivers/mailbox/qcom-ipcc.c
+@@ -326,7 +326,7 @@
+ 		goto err_mbox;
+ 
+ 	ret = devm_request_irq(&pdev->dev, ipcc->irq, qcom_ipcc_irq_fn,
+-			       IRQF_TRIGGER_HIGH | IRQF_NO_SUSPEND |
++			       IRQF_TRIGGER_HIGH |
+ 			       IRQF_NO_THREAD, dev_name(&pdev->dev), ipcc);
+ 	if (ret < 0)
+ 		goto err_mbox;

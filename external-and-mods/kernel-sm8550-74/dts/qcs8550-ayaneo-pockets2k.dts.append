@@ -1,0 +1,20 @@
+/* --- SteamOS-ARM additions (AYANEO Pocket S) ------------------------------ */
+
+/*
+ * The Pocket S has its volume rocker the other way round from the other
+ * AYANEO Pockets that share qcs8550-ayaneo-pocket-common.dtsi: the line on
+ * PMIC GPIO 6 is the lower key here and the RESIN key the upper one, so
+ * volume up turned it down (Discord, Pocket S 2K). Swap the two codes.
+ */
+/ {
+	gpio-keys {
+		key-volume-up {
+			label = "Volume Down";
+			linux,code = <KEY_VOLUMEDOWN>;
+		};
+	};
+};
+
+&pon_resin {
+	linux,code = <KEY_VOLUMEUP>;
+};

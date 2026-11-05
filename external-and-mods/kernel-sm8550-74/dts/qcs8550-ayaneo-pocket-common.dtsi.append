@@ -1,0 +1,44 @@
+
+/*
+ * SteamOS ARM: let the SD card run at UHS-I speed (SDR50/SDR104). ROCKNIX
+ * masks both modes here, so cards fell back to plain high speed (~25 MB/s)
+ * and loading games from the card took about 3x as long as on the prebuilt
+ * 7.0.14 kernel, which ran the same cards at SDR104.
+ */
+&sdhc_2 {
+	/delete-property/ sdhci-caps-mask;
+};
+
+/*
+ * s2idle (as the reference port): both PCIe WAKE# lines are active low, read as active
+ * high they can wake the SoC straight back up; the codec keeps this rail
+ * enabled through s2idle, idle it in LPM.
+ */
+&pcieport0 {
+	wake-gpios = <&tlmm 96 GPIO_ACTIVE_LOW>;
+};
+
+&pcie1_port0 {
+	wake-gpios = <&tlmm 99 GPIO_ACTIVE_LOW>;
+};
+
+&vreg_l10b_1p8 {
+	regulator-state-mem {
+		regulator-on-in-suspend;
+		regulator-mode = <RPMH_REGULATOR_MODE_LPM>;
+	};
+};
+
+/*
+ * Only the power key wakes the device: the volume key pressed in a bag or
+ * while holding it woke it out of s2idle and drained the battery.
+ */
+&{/gpio-keys/key-volume-up} {
+	/delete-property/ wakeup-source;
+};
+
+/*
+ * Linux 7.4 sm8550.dtsi has the ipa node, which points at ipa_fw_mem; this
+ * file deletes that memory, so delete the node with it (no modem/IPA here).
+ */
+/delete-node/ &ipa;

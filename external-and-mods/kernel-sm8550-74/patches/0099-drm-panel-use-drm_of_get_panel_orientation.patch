@@ -1,0 +1,127 @@
+From: SteamOS ARM port
+Subject: [PATCH] drm/panel: use drm_of_get_panel_orientation
+
+Linux 7.4 renamed of_drm_get_panel_orientation to drm_of_get_panel_orientation
+(declared in drm/drm_of.h). Applies to the ROCKNIX panel drivers that still
+use the old name.
+---
+diff --git a/drivers/gpu/drm/panel/panel-ar16-4inch.c b/drivers/gpu/drm/panel/panel-ar16-4inch.c
+--- a/drivers/gpu/drm/panel/panel-ar16-4inch.c
++++ b/drivers/gpu/drm/panel/panel-ar16-4inch.c
+@@ -16,6 +16,7 @@
+ 
+ #include <drm/drm_mipi_dsi.h>
+ #include <drm/drm_modes.h>
++#include <drm/drm_of.h>
+ #include <drm/drm_panel.h>
+ #include <drm/drm_probe_helper.h>
+ 
+@@ -342,7 +343,7 @@
+ 		return dev_err_probe(dev, PTR_ERR(ctx->reset_gpio),
+ 				     "failed to get reset GPIO\n");
+ 
+-	ret = of_drm_get_panel_orientation(dev->of_node, &ctx->orientation);
++	ret = drm_of_get_panel_orientation(dev->of_node, &ctx->orientation);
+ 	if (ret < 0 && ret != -ENODEV)
+ 		return dev_err_probe(dev, ret, "failed to get orientation\n");
+ 
+diff --git a/drivers/gpu/drm/panel/panel-ddic-ch13726a.c b/drivers/gpu/drm/panel/panel-ddic-ch13726a.c
+--- a/drivers/gpu/drm/panel/panel-ddic-ch13726a.c
++++ b/drivers/gpu/drm/panel/panel-ddic-ch13726a.c
+@@ -13,6 +13,7 @@
+ 
+ #include <drm/drm_mipi_dsi.h>
+ #include <drm/drm_modes.h>
++#include <drm/drm_of.h>
+ #include <drm/drm_panel.h>
+ 
+ #include <video/mipi_display.h>
+@@ -272,7 +273,7 @@
+ 		return dev_err_probe(dev, PTR_ERR(ctx->reset_gpio),
+ 				     "Failed to get reset-gpios\n");
+ 
+-	ret = of_drm_get_panel_orientation(dev->of_node, &ctx->orientation);
++	ret = drm_of_get_panel_orientation(dev->of_node, &ctx->orientation);
+ 	if (ret < 0) {
+ 		dev_err(dev, "%pOF: failed to get orientation %d\n", dev->of_node, ret);
+ 		return ret;
+diff --git a/drivers/gpu/drm/panel/panel-ilitek-il97680a.c b/drivers/gpu/drm/panel/panel-ilitek-il97680a.c
+--- a/drivers/gpu/drm/panel/panel-ilitek-il97680a.c
++++ b/drivers/gpu/drm/panel/panel-ilitek-il97680a.c
+@@ -19,6 +19,7 @@
+ #include <drm/drm_crtc.h>
+ #include <drm/drm_mipi_dsi.h>
+ #include <drm/drm_modes.h>
++#include <drm/drm_of.h>
+ #include <drm/drm_panel.h>
+ 
+ struct panel_info {
+@@ -383,7 +384,7 @@
+ 	pinfo->dsi = dsi;
+ 	mipi_dsi_set_drvdata(dsi, pinfo);
+ 
+-	ret = of_drm_get_panel_orientation(dev->of_node, &pinfo->orientation);
++	ret = drm_of_get_panel_orientation(dev->of_node, &pinfo->orientation);
+ 	if (ret < 0) {
+ 		dev_err(dev, "%pOF: failed to get orientation %d\n", dev->of_node, ret);
+ 		return ret;
+diff --git a/drivers/gpu/drm/panel/panel-visionox-vtdr6130-cog.c b/drivers/gpu/drm/panel/panel-visionox-vtdr6130-cog.c
+--- a/drivers/gpu/drm/panel/panel-visionox-vtdr6130-cog.c
++++ b/drivers/gpu/drm/panel/panel-visionox-vtdr6130-cog.c
+@@ -21,6 +21,7 @@
+ #include <drm/drm_crtc.h>
+ #include <drm/drm_mipi_dsi.h>
+ #include <drm/drm_modes.h>
++#include <drm/drm_of.h>
+ #include <drm/drm_panel.h>
+ 
+ struct panel_info {
+@@ -556,7 +557,7 @@
+ 	pinfo->frame_len_120 = 0x1C;
+ 	pinfo->frame_len_60 = 0x7D0;
+ 
+-	ret = of_drm_get_panel_orientation(dev->of_node, &pinfo->orientation);
++	ret = drm_of_get_panel_orientation(dev->of_node, &pinfo->orientation);
+ 	if (ret < 0) {
+ 		dev_err(dev, "%pOF: failed to get orientation %d\n", dev->of_node, ret);
+ 		return ret;
+diff --git a/drivers/gpu/drm/panel/panel-wt0600-1k.c b/drivers/gpu/drm/panel/panel-wt0600-1k.c
+--- a/drivers/gpu/drm/panel/panel-wt0600-1k.c
++++ b/drivers/gpu/drm/panel/panel-wt0600-1k.c
+@@ -20,6 +20,7 @@
+ #include <drm/drm_connector.h>
+ #include <drm/drm_mipi_dsi.h>
+ #include <drm/drm_modes.h>
++#include <drm/drm_of.h>
+ #include <drm/drm_panel.h>
+ #include <drm/drm_probe_helper.h>
+ 
+@@ -213,7 +214,7 @@
+ 				     "Failed to get reset gpio\n");
+ 
+ 	/* Get panel orientation */
+-	ret = of_drm_get_panel_orientation(dev->of_node, &ctx->orientation);
++	ret = drm_of_get_panel_orientation(dev->of_node, &ctx->orientation);
+ 	if (ret < 0 && ret != -ENODEV)
+ 		return dev_err_probe(dev, ret,
+ 				     "Failed to get panel orientation\n");
+diff --git a/drivers/gpu/drm/panel/panel-wt0600-2k.c b/drivers/gpu/drm/panel/panel-wt0600-2k.c
+--- a/drivers/gpu/drm/panel/panel-wt0600-2k.c
++++ b/drivers/gpu/drm/panel/panel-wt0600-2k.c
+@@ -18,6 +18,7 @@
+ #include <drm/drm_connector.h>
+ #include <drm/drm_mipi_dsi.h>
+ #include <drm/drm_modes.h>
++#include <drm/drm_of.h>
+ #include <drm/drm_panel.h>
+ #include <drm/drm_probe_helper.h>
+ 
+@@ -263,7 +264,7 @@
+ 				     "Failed to register second DSI device\n");
+ 
+ 	/* Get panel orientation */
+-	ret = of_drm_get_panel_orientation(dev->of_node, &ctx->orientation);
++	ret = drm_of_get_panel_orientation(dev->of_node, &ctx->orientation);
+ 	if (ret < 0 && ret != -ENODEV)
+ 		return dev_err_probe(dev, ret,
+ 				     "Failed to get panel orientation\n");

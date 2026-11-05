@@ -1,0 +1,32 @@
+Subject: [PATCH] ASoC: wcd938x/wcd939x: a failed zdet ramp is a floating reading
+
+When the impedance ramp does not complete, the measurement returned
+without writing a result. wcd938x then used an uninitialised value and
+wcd939x a 0, which reads as a short: headphones could be classed as mono
+or as a lineout depending on what was on the stack. Report the failed ramp
+as floating impedance, which both callers already treat as no usable
+reading.
+
+---
+--- a/sound/soc/codecs/wcd938x.c
++++ b/sound/soc/codecs/wcd938x.c
+@@ -2097,6 +2097,8 @@
+ 	if (!c1 || !x1) {
+ 		dev_err(component->dev, "Impedance detect ramp error, c1=%d, x1=0x%x\n",
+ 			c1, x1);
++		/* no reading is not 0 ohm */
++		*zdet = WCD938X_ZDET_FLOATING_IMPEDANCE;
+ 		goto ramp_down;
+ 	}
+ 	d1 = d1_a[c1];
+--- a/sound/soc/codecs/wcd939x.c
++++ b/sound/soc/codecs/wcd939x.c
+@@ -2068,6 +2068,8 @@
+ 		dev_dbg(component->dev,
+ 			"%s: Impedance detect ramp error, c1=%d, x1=0x%x\n",
+ 			__func__, c1, x1);
++		/* no reading is not 0 ohm */
++		*zdet = WCD939X_ZDET_FLOATING_IMPEDANCE;
+ 		goto ramp_down;
+ 	}
+ 

@@ -1,0 +1,52 @@
+
+/*
+ * SteamOS ARM additions for the Retroid Pocket 6 (appended to ROCKNIX's
+ * qcs8550-retroidpocket-rp6.dts by kernel-common/build.sh; the TOP-DPAD
+ * tree includes this one).
+ *
+ * ROCKNIX 20260901 moved the panel to the vtdr6130 driver, which asks for
+ * vdd/vddio/vci/vdd18/vdd28, while this tree only names vddio and avdd.
+ * Nothing claimed the 2.8 V rail, the fixed regulator switched it off at
+ * probe (GPIO 142 low), and the panel stayed black with Game Mode running
+ * (beta 8 7.2.8 test). Hand the rail to the driver as vdd28 and keep it on
+ * from the bootloader.
+ */
+&vdd_disp_2v8 {
+	regulator-boot-on;
+};
+
+&mdss_dsi0 {
+	panel@0 {
+		vdd28-supply = <&vdd_disp_2v8>;
+	};
+};
+
+/*
+ * Touch at the panel's 120 Hz instead of ~28 Hz: read each touch frame in
+ * one I2C transfer and run the bus at 400 kHz (ROCKNIX 3829f7c, measured
+ * 118.8 Hz on hardware, same as Android).
+ */
+&i2c_hub_3 {
+	clock-frequency = <400000>;
+
+	touchscreen@38 {
+		/delete-property/ no-regmap-bulk-read;
+	};
+};
+
+/*
+ * Rumble: the body motor is an LRA, and stock Android drives it as one at
+ * 1300 mV (Retroid's RP6 and Nova device tree). The Odin 2 setup it inherits (ERM, 5000 mV)
+ * feeds it plain DC with auto-resonance off, so a rumble was a single click
+ * or barely felt.
+ */
+&pm8550b_hv_haptics {
+	/delete-property/ qcom,use-erm;
+	qcom,vmax-mv = <1300>;
+};
+
+/* 3.5 mm jack: the ground switch is normally closed. Without it MBHC reads the
+ * plug with inverted polarity and the jack is never reported. */
+&wcd938x {
+	qcom,ground-jack-type-normally-closed;
+};

@@ -1,0 +1,122 @@
+From: hashtagbasit
+Subject: pwm: sn3112: let the stick light supply go in sleep
+
+The driver enabled vdd at probe and only let it go at remove. On the AYN
+Odin 2 that supply is also the gamepad MCU's, so the MCU stayed powered
+through every sleep. Shut the chip down and release vdd at suspend; at
+resume power it up and write the channels back from the cached state (the
+chip loses its registers without power). Channel enables are now cached
+when applied, which the rewrite needs.
+
+diff -ru a/drivers/pwm/pwm-sn3112.c b/drivers/pwm/pwm-sn3112.c
+--- a/drivers/pwm/pwm-sn3112.c
++++ b/drivers/pwm/pwm-sn3112.c
+@@ -33,6 +33,7 @@
+ 	bool pwm_en[SN3112_CHANNELS];
+ #if IS_ENABLED(CONFIG_GPIOLIB)
+ 	struct gpio_desc *sdb;
++	bool powered;		/* vdd is ours to turn off */
+ #endif
+ };
+ 
+@@ -180,6 +181,8 @@
+ 		state->enabled);
+ 
+ 	mutex_lock(&priv->lock);
++	/* resume programs the channels again from these */
++	priv->pwm_en[pwm->hwpwm] = state->enabled;
+ 	sn3112_set_en_reg(priv, pwm->hwpwm, state->enabled, true);
+ 	sn3112_set_val_reg(priv, pwm->hwpwm, val, true);
+ 	sn3112_write_reg(priv, SN3112_REG_APPLY, 0x66);
+@@ -242,6 +245,7 @@
+ 		dev_err(priv->pdev, "Unable to enable regulator: %d\n", ret);
+ 		return ret;
+ 	}
++	priv->powered = true;
+ 
+ 	priv->regmap = devm_regmap_init_i2c(client, &sn3112_regmap_i2c_config);
+ 	if (IS_ERR(priv->regmap)) {
+@@ -312,11 +316,74 @@
+ #endif
+ 
+ 	/* power-off sn5112 power vdd */
+-	regulator_disable(priv->vdd);
++	if (priv->powered)
++		regulator_disable(priv->vdd);
+ 
+ 	pwmchip_remove(chip);
+ }
+ 
++/*
++ * vdd is shared: on the AYN Odin 2 it is the gamepad MCU's rail, and holding
++ * it from probe to remove kept the MCU powered through every sleep. Let it
++ * go for the sleep and set the channels up again after, since the chip
++ * forgets them without power.
++ */
++static int sn3112_pwm_suspend(struct device *dev)
++{
++	struct sn3112 *priv = pwmchip_get_drvdata(dev_get_drvdata(dev));
++	int ret = 0;
++
++	mutex_lock(&priv->lock);
++	if (priv->powered) {
++#if IS_ENABLED(CONFIG_GPIOLIB)
++		if (priv->sdb)
++			gpiod_set_value(priv->sdb, 1);
++#endif
++		ret = regulator_disable(priv->vdd);
++		if (!ret)
++			priv->powered = false;
++#if IS_ENABLED(CONFIG_GPIOLIB)
++		else if (priv->sdb)
++			gpiod_set_value(priv->sdb, 0);
++#endif
++	}
++	mutex_unlock(&priv->lock);
++
++	return ret;
++}
++
++static int sn3112_pwm_resume(struct device *dev)
++{
++	struct sn3112 *priv = pwmchip_get_drvdata(dev_get_drvdata(dev));
++	int ret = 0, retry;
++
++	mutex_lock(&priv->lock);
++	if (priv->powered)
++		goto out;
++	ret = regulator_enable(priv->vdd);
++	if (ret)
++		goto out;
++	priv->powered = true;
++#if IS_ENABLED(CONFIG_GPIOLIB)
++	if (priv->sdb)
++		gpiod_set_value(priv->sdb, 0);
++#endif
++	usleep_range(10000, 20000);
++	for (retry = 0; retry < 5; retry++) {
++		ret = sn3112_write_all(priv);
++		if (!ret)
++			break;
++		usleep_range(20000, 30000);
++	}
++out:
++	mutex_unlock(&priv->lock);
++
++	return ret;
++}
++
++static DEFINE_SIMPLE_DEV_PM_OPS(sn3112_pwm_pm_ops, sn3112_pwm_suspend,
++				sn3112_pwm_resume);
++
+ static const struct i2c_device_id sn3112_id[] = {
+ 	{ "sn3112", 0 },
+ 	{ /* sentinel */ },
+@@ -334,6 +401,7 @@
+ static struct i2c_driver sn3112_i2c_driver = {
+ 	.driver = {
+ 		.name = "sn3112-pwm",
++		.pm = pm_sleep_ptr(&sn3112_pwm_pm_ops),
+ 		.of_match_table = of_match_ptr(sn3112_dt_ids),
+ 	},
+ 	.probe = sn3112_pwm_probe,

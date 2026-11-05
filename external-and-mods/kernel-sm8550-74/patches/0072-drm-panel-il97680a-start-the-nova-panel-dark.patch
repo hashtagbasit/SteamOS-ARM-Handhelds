@@ -1,0 +1,27 @@
+From: hashtagbasit
+Subject: drm/panel: il97680a: start the Retroid Pocket Nova panel dark
+
+The init sequence set the panel to its maximum brightness (0x0d75) before
+any frame was sent, so the Nova flashed white or grey on every mode set
+(boot, power off, switching between Game and Desktop Mode) until
+drm_panel_enable() put the user's brightness back. Start at 0; the
+backlight comes up to the user's level once video flows. Found by
+lavachemist (PB OS).
+
+--- a/drivers/gpu/drm/panel/panel-ilitek-il97680a.c
++++ b/drivers/gpu/drm/panel/panel-ilitek-il97680a.c
+@@ -110,8 +110,13 @@
+ 
+ 	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, MIPI_DCS_WRITE_CONTROL_DISPLAY,
+ 				     0x20);
++	/*
++	 * Start dark: this runs before any frame is sent, so a lit panel
++	 * shows white until then. drm_panel_enable() turns the backlight up
++	 * to the user's level once video flows.
++	 */
+ 	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, MIPI_DCS_SET_DISPLAY_BRIGHTNESS,
+-				     0x0d, 0x75, 0x00, 0x00);
++				     0x00, 0x00, 0x00, 0x00);
+ 
+ 	mipi_dsi_dcs_exit_sleep_mode_multi(&dsi_ctx);
+ 

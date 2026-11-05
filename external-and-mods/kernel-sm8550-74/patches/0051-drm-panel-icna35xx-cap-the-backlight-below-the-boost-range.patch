@@ -1,0 +1,33 @@
+Subject: [PATCH] drm/panel: icna35xx: cap the backlight below the boost range
+
+The backlight was registered with the full 12-bit range, so the top of
+the slider drove these panels (Thor top screen, Odin 3) into their boost
+codes. Cap the range at 3413, the same limit ROCKNIX uses now.
+
+---
+--- a/drivers/gpu/drm/panel/panel-chipone-icna35xx.c
++++ b/drivers/gpu/drm/panel/panel-chipone-icna35xx.c
+@@ -453,6 +453,12 @@
+ 	return brightness;
+ }
+ 
++/*
++ * The DBV register takes 12 bits, but codes above ~83% are the panel's
++ * boost range: a known safe cap for these panels.
++ */
++#define ICNA35XX_MAX_BRIGHTNESS	3413
++
+ static const struct backlight_ops icna35xx_bl_ops = {
+ 	.update_status = icna35xx_bl_update_status,
+ 	.get_brightness = icna35xx_bl_get_brightness,
+@@ -463,8 +469,8 @@
+ 	struct device *dev = &dsi->dev;
+ 	const struct backlight_properties props = {
+ 		.type = BACKLIGHT_RAW,
+-		.brightness = 4096,
+-		.max_brightness = 4096,
++		.brightness = ICNA35XX_MAX_BRIGHTNESS,
++		.max_brightness = ICNA35XX_MAX_BRIGHTNESS,
+ 	};
+ 
+ 	return devm_backlight_device_register(dev, dev_name(dev), dev, dsi,

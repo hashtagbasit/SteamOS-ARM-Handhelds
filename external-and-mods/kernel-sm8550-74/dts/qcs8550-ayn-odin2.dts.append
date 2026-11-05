@@ -1,0 +1,13 @@
+/*
+ * SteamOS ARM additions for the AYN Odin 2 (appended to ROCKNIX's
+ * qcs8550-ayn-odin2.dts by kernel-common/build.sh).
+ */
+#include "qcs8550-ayn-odin2-gyro.dtsi"
+
+/*
+ * The panel and touch 1.8 V IO supply has to stay on in sleep: with it cut
+ * the Odin 2 panel draws over a watt the whole time it sleeps.
+ */
+&vreg_l12b_1p8 {
+	regulator-always-on;
+};

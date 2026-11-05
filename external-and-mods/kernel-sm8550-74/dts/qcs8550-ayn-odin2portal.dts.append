@@ -1,0 +1,42 @@
+
+/*
+ * SteamOS ARM additions for the AYN Odin 2 Portal (appended to ROCKNIX's
+ * qcs8550-ayn-odin2portal.dts by kernel-common/build.sh).
+ *
+ * The two buttons on the back (M1 left, M2 right) are not on the gamepad
+ * MCU: AYN's Android reads them as plain SoC GPIOs 57 and 58, active low.
+ * Give them a gpio-keys node of their own sending BTN_Z / BTN_C, the codes
+ * our InputPlumber map already turns into the back paddles.
+ */
+&tlmm {
+	back_keys_default: back-keys-default-state {
+		pins = "gpio57", "gpio58";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-pull-up;
+	};
+};
+
+/ {
+	gpio-keys-paddles {
+		compatible = "gpio-keys";
+		pinctrl-0 = <&back_keys_default>;
+		pinctrl-names = "default";
+
+		key-back-left {
+			label = "Back M1";
+			gpios = <&tlmm 57 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_Z>;
+			debounce-interval = <15>;
+		};
+
+		key-back-right {
+			label = "Back M2";
+			gpios = <&tlmm 58 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_C>;
+			debounce-interval = <15>;
+		};
+	};
+};
+
+#include "qcs8550-ayn-odin2-gyro.dtsi"

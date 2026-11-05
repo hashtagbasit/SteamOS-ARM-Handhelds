@@ -1,0 +1,54 @@
+From: hashtagbasit
+Subject: drm/panel: il97680a: turn the display on in enable, not prepare
+
+The Retroid Pocket Nova's panel was switched on (DCS display on) at the end
+of its init sequence in prepare(), before the DSI host sends any video, so
+it flashed white on every power-on: waking from sleep and switching to
+Desktop Mode. Display on now happens in enable(), once frames are flowing,
+mirroring disable() which already turns it off first.
+
+---
+--- a/drivers/gpu/drm/panel/panel-ilitek-il97680a.c
++++ b/drivers/gpu/drm/panel/panel-ilitek-il97680a.c
+@@ -117,10 +117,6 @@
+ 
+ 	mipi_dsi_msleep(&dsi_ctx, 120);
+ 
+-	mipi_dsi_dcs_set_display_on_multi(&dsi_ctx);
+-
+-	mipi_dsi_msleep(&dsi_ctx, 20);
+-
+ 	return dsi_ctx.accum_err;
+ }
+ 
+@@ -200,6 +196,22 @@
+ 	return 0;
+ }
+ 
++/*
++ * Display on once the DSI host is sending video. In prepare() the panel
++ * lit up before any frame had arrived and showed white for a moment on
++ * every power-on: waking from sleep and switching to Desktop Mode.
++ */
++static int il97680a_enable(struct drm_panel *panel)
++{
++	struct panel_info *pinfo = to_panel_info(panel);
++	struct mipi_dsi_multi_context dsi_ctx = { .dsi = pinfo->dsi };
++
++	mipi_dsi_dcs_set_display_on_multi(&dsi_ctx);
++	mipi_dsi_msleep(&dsi_ctx, 20);
++
++	return dsi_ctx.accum_err;
++}
++
+ static int il97680a_disable(struct drm_panel *panel)
+ {
+ 	struct panel_info *pinfo = to_panel_info(panel);
+@@ -279,6 +291,7 @@
+ 
+ static const struct drm_panel_funcs il97680a_panel_funcs = {
+ 	.disable = il97680a_disable,
++	.enable = il97680a_enable,
+ 	.prepare = il97680a_prepare,
+ 	.unprepare = il97680a_unprepare,
+ 	.get_modes = il97680a_get_modes,

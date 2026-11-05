@@ -1,0 +1,57 @@
+
+/* --- SteamOS-ARM additions (AYANEO Pocket EVO) --------------------------- */
+
+/*
+ * The AYANEO button, the menu button and the LC/RC buttons are plain GPIO
+ * buttons to ground (not on the controller MCU), and the upstream device
+ * tree leaves them out, so they did nothing (GitHub #32: the AYANEO button
+ * did not open Quick Access). InputPlumber picks them up by the "aya-keys"
+ * name (capability map ayaneo_pocket_evo_keys). Not wake sources: a press
+ * in a bag should not wake the device; the power key does that.
+ */
+/ {
+	aya-keys {
+		compatible = "gpio-keys";
+		label = "aya-keys";
+		pinctrl-0 = <&evo_side_keys>;
+		pinctrl-names = "default";
+
+		key-ayaneo {
+			label = "AYANEO";
+			gpios = <&tlmm 85 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_F13>;
+			debounce-interval = <15>;
+		};
+
+		key-menu {
+			label = "Menu";
+			gpios = <&tlmm 169 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_F14>;
+			debounce-interval = <15>;
+		};
+
+		key-lc {
+			label = "LC";
+			gpios = <&tlmm 170 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_F15>;
+			debounce-interval = <15>;
+		};
+
+		key-rc {
+			label = "RC";
+			gpios = <&tlmm 91 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_F16>;
+			debounce-interval = <15>;
+		};
+	};
+};
+
+&tlmm {
+	/* The buttons only short the line to ground: they need the pull-up. */
+	evo_side_keys: evo-side-keys-state {
+		pins = "gpio85", "gpio91", "gpio169", "gpio170";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-pull-up;
+	};
+};

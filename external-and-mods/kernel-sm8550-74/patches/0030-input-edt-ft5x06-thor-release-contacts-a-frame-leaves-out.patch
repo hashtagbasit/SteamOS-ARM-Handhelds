@@ -1,0 +1,63 @@
+From: hashtagbasit
+Subject: input: edt-ft5x06: AYN Thor: release contacts a frame leaves out
+
+The Thor's bottom FT5452 sometimes loses a TOUCH_EVENT_UP, and the driver
+only releases a slot on an explicit up, so the contact stays down until a
+reboot. Two frozen contacts turn every one-finger drag on the bottom
+screen's trackpad into a scroll. The controller reports every active
+contact in each frame, so on "ayn,thor" the MT core now drops the slots a
+frame leaves out (INPUT_MT_DROP_UNUSED with input_mt_sync_frame()). Other
+boards using the driver, the Retroid Pocket 6 among them, are unchanged.
+
+---
+--- a/drivers/input/touchscreen/edt-ft5x06.c
++++ b/drivers/input/touchscreen/edt-ft5x06.c
+@@ -25,6 +25,7 @@
+ #include <linux/irq.h>
+ #include <linux/kernel.h>
+ #include <linux/module.h>
++#include <linux/of.h>
+ #include <linux/property.h>
+ #include <linux/ratelimit.h>
+ #include <linux/regmap.h>
+@@ -147,6 +148,7 @@
+ 	unsigned int crc_errors;
+ 	unsigned int header_errors;
+ 	bool no_regmap_bulk_read;
++	bool drop_unused;
+ };
+ 
+ struct edt_i2c_chip_data {
+@@ -377,6 +379,13 @@
+ 					       x, y, true);
+ 	}
+ 
++	/*
++	 * Contacts the controller left out of this frame are released (see
++	 * INPUT_MT_DROP_UNUSED below), so a lost TOUCH_EVENT_UP can't keep a
++	 * finger down for good.
++	 */
++	if (tsdata->drop_unused)
++		input_mt_sync_frame(tsdata->input);
+ 	input_mt_report_pointer_emulation(tsdata->input, true);
+ 	input_sync(tsdata->input);
+ 
+@@ -1344,8 +1353,17 @@
+ 
+ 	touchscreen_parse_properties(input, true, &tsdata->prop);
+ 
++	/*
++	 * AYN Thor: the bottom screen sometimes loses a TOUCH_EVENT_UP and
++	 * the contact stays down until reboot (two frozen fingers turn every
++	 * one-finger drag into a scroll). The controller reports every active
++	 * contact in each frame, so dropping the ones a frame leaves out is
++	 * safe there. Other boards keep the old behaviour.
++	 */
++	tsdata->drop_unused = of_machine_is_compatible("ayn,thor");
+ 	error = input_mt_init_slots(input, tsdata->max_support_points,
+-				    INPUT_MT_DIRECT);
++				    INPUT_MT_DIRECT |
++				    (tsdata->drop_unused ? INPUT_MT_DROP_UNUSED : 0));
+ 	if (error) {
+ 		dev_err(&client->dev, "Unable to init MT slots.\n");
+ 		return error;

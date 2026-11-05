@@ -1,0 +1,65 @@
+
+/*
+ * SteamOS ARM additions for the AYN Thor (appended to ROCKNIX's
+ * qcs8550-ayn-thor.dts by kernel-common/build.sh).
+ */
+#include "qcs8550-ayn-thor-gyro.dtsi"
+
+/*
+ * Lid (hall) sensor: the sensor output is open-drain and ROCKNIX sets no
+ * pull-up on gpio17, so with the lid open the level is undefined and it can
+ * read as closed. logind then suspends ~30 s after boot (and again after
+ * every wake): black screen. Same fix as the reference port. Only wake on lid open.
+ */
+&tlmm {
+	hall_lid_n: hall-lid-n-state {
+		pins = "gpio17";
+		function = "gpio";
+		bias-pull-up;
+		output-disable;
+	};
+};
+
+&{/gpio-keys-lid} {
+	pinctrl-0 = <&hall_lid_n>;
+	pinctrl-names = "default";
+
+	hall-lid-sensor {
+		wakeup-event-action = <2>; /* EV_ACT_DEASSERTED: lid opened */
+	};
+};
+
+/*
+ * Touch: ROCKNIX pre-rotates both touchscreens (swap + invert) for its own
+ * compositor. gamescope and KWin rotate touch by the panel orientation
+ * themselves, so it ended up rotated twice. Report native panel coordinates.
+ */
+&i2c4 {
+	touchscreen@38 {
+		/delete-property/ touchscreen-swapped-x-y;
+		/delete-property/ touchscreen-inverted-x;
+	};
+};
+
+&i2c_hub_3 {
+	touchscreen@38 {
+		/delete-property/ touchscreen-swapped-x-y;
+		/delete-property/ touchscreen-inverted-x;
+	};
+};
+
+/* 8bpc panel: dither the 10-bit output instead of truncating it (banding) */
+&display_panel {
+	steamos-arm,dither-8bpc;
+};
+
+/*
+ * Rumble: the body motor is an LRA, and stock Android drives it as one at
+ * 1300 mV (AYN's Thor device tree). The Odin 2 setup it inherits (ERM, 5000 mV)
+ * feeds it plain DC with auto-resonance off, so a rumble was a single click
+ * or barely felt.
+ */
+&pm8550b_hv_haptics {
+	/delete-property/ qcom,use-erm;
+	qcom,vmax-mv = <1300>;
+};
