@@ -131,6 +131,7 @@ ok "second run packs from the saved stock image, no second backup"
 # --- sync ------------------------------------------------------------------
 sha_a=$(sha256sum "$BOOT_A" | cut -d' ' -f1)
 tool --sync || fail "sync failed"
+grep -qx 'mark-good' "$T/slot.log" || fail "sync didn't mark slot A good"
 [[ $(sha256sum "$BOOT_A" | cut -d' ' -f1) == "$sha_a" ]] || fail "sync rewrote boot_a with an unchanged kernel"
 ok "sync: unchanged kernel, boot_a untouched"
 python3 -I - "$T/Image.steamos" "$T/Image.new" <<'PY'
