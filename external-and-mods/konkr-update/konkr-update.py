@@ -392,6 +392,18 @@ def stage(args):
         raise
 
 
+def staged_ready():
+    """The marker is written before the boot image, so it alone does not mean
+    the update can be installed by a restart: the new boot image must be in."""
+    pending = Path('/' + PENDING)
+    if not pending.exists(): return False
+    nxt = Path('/home/.konkr-updates') / pending.read_text().strip() / 'next-KERNEL'
+    try:
+        return not nxt.exists() or digest(nxt) == digest('/boot/KERNEL')
+    except OSError:
+        return False
+
+
 def install_kernel(src, boot):
     temp = boot / 'KERNEL.new'
     shutil.copyfile(src, temp)
@@ -942,7 +954,7 @@ def main():
             # The device's own model decides the SoC (the REDMAGIC 6 shares this
             # rootfs but no update package fits it, so it gets none).
             print(json.dumps({'version': rel.get('version', ''), 'soc': this_soc(),
-                              'staged': Path('/' + PENDING).exists()}))
+                              'staged': staged_ready()}))
         else:
             m, size = validate_archive(a.package); print(json.dumps({'version': m['version'], 'bytes': size}, indent=2))
     except Exception as e:
