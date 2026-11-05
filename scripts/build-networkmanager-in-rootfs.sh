@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the Frame's own NetworkManager (1.52.1, Valve's Holo package) with
+# Build the Frame's own NetworkManager (1.52.1-1.6, Valve's Holo package) with
 # Valve's resume patch from their newer Deck build (1.58.0-1.9): after sleep
 # NetworkManager scans only the channel it was on instead of every band.
 # Pocket FIT: Wi-Fi back 0.95 s after wake instead of 9.3 s (DFS channel).
@@ -15,8 +15,10 @@ ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 R="$(cd "${1:?rootfs}" && pwd)"
 WORKDIR="${STEAMOS_WORK:-/work}"
 OUT="${2:-${WORKDIR}/networkmanager-build}"
-VER=1.52.1 REL=1.1 PPP=2.5.0
-SRC_URL="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/networkmanager-${VER}-${REL}.src.tar.gz"
+# 1.6 has no public source package, 1.5 is the newest. Its two iwd patches are
+# in external-and-mods/NetworkManager/patches with the 8021X one.
+VER=1.52.1 REL=1.6 SRC_REL=1.5 PPP=2.5.0
+SRC_URL="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-3.8/networkmanager-${VER}-${SRC_REL}.src.tar.gz"
 log() { printf '==> [networkmanager] %s\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 command -v bwrap >/dev/null || die "bwrap required"
@@ -25,7 +27,7 @@ command -v bwrap >/dev/null || die "bwrap required"
 
 T="$R/t/nm"
 rm -rf "$T"; mkdir -p "$T"
-log "Valve's source package ${VER}-${REL}"
+log "Valve's source package ${VER}-${SRC_REL}"
 curl -fsSL "$SRC_URL" | tar -xz -C "$T"
 git clone -q "$T/networkmanager/NetworkManager" "$T/src"
 git -C "$T/src" checkout -q "$VER"
@@ -57,10 +59,19 @@ bwrap --bind "$R" / --dev /dev --proc /proc --tmpfs /tmp bash -c "set -e
     -Dpppd=/usr/bin/pppd -Dpppd_plugin_dir=/usr/lib/pppd/${PPP} >/dev/null
   ninja -C /t/nm/build src/core/NetworkManager src/core/devices/wifi/libnm-device-plugin-wifi.so >/dev/null"
 
-# Every symbol the stock daemon exports must still be there for its plugins.
-missing="$(comm -23 <(nm -D --defined-only "$R/usr/bin/NetworkManager" | awk '{print $3}' | sort) \
-                    <(nm -D --defined-only "$T/build/src/core/NetworkManager" | awk '{print $3}' | sort) | wc -l)"
-[[ "$missing" == 0 ]] || die "daemon lacks ${missing} symbols the stock plugins use"
+# Every daemon symbol the plugins we KEEP import must still be there. The
+# stock wifi plugin is replaced by our own, so its imports do not count: it
+# alone uses Valve's nm_wifi_performance_get, nm_wifi_performance_get_modes and
+# nm_config_data_get_wifi_powersave_preference (1.6 daemon, not in 1.5 source).
+# Cost: no Wi-Fi performance-mode leases (Get/AcquireWifiPerformanceLease), a
+# Frame VR feature; nothing in the handheld rootfs (steamos-manager) uses it.
+kept="$(for f in "$R"/usr/lib/NetworkManager/${VER}-${REL}/*.so; do
+  [[ "$(basename "$f")" == libnm-device-plugin-wifi.so ]] || nm -D --undefined-only "$f" | awk '{print $2}'
+done | sort -u)"
+missing="$(comm -12 <(printf '%s\n' "$kept") \
+                    <(nm -D --defined-only "$R/usr/bin/NetworkManager" | awk '{print $3}' | sort) |
+           comm -23 - <(nm -D --defined-only "$T/build/src/core/NetworkManager" | awk '{print $3}' | sort) | wc -l)"
+[[ "$missing" == 0 ]] || die "daemon lacks ${missing} symbols the kept plugins use"
 mkdir -p "$OUT"
 install -m0755 "$T/build/src/core/NetworkManager" "$OUT/NetworkManager"
 install -m0755 "$T/build/src/core/devices/wifi/libnm-device-plugin-wifi.so" "$OUT/libnm-device-plugin-wifi.so"
