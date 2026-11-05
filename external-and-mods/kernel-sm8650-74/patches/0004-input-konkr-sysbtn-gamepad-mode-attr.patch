@@ -1,0 +1,82 @@
+From: SteamOS-ARM-SM8650
+Subject: [PATCH] input: konkr_sysbtn: add gamepad_mode attribute
+
+Lets userspace switch the built-in pad between the fake Xbox 360 mode
+(045e:028e) and the AYANEO default mode (4001:0428). Only the default
+mode reports the two back buttons. Uses the same frames ArmadaOS sends
+over the MCU UART; the pad re-enumerates on USB afterwards.
+
+  echo default > /sys/bus/serial/devices/serial1-0/gamepad_mode
+
+---
+--- a/drivers/input/misc/konkr_sysbtn.c
++++ b/drivers/input/misc/konkr_sysbtn.c
+@@ -503,7 +503,68 @@
+ KONKR_KEY_ATTR(key_lc_back, 18);
+ KONKR_KEY_ATTR(key_rc_back, 19);
+ 
++/*
++ * Controller mode, same UART. The SM8650 Pocket FIT pad can enumerate as a
++ * fake Xbox 360 pad (045e:028e, xpad) or in the AYANEO default mode
++ * (4001:0428 DirectInput + the "AYANEO DEVICE" aux node). Only the default
++ * mode reports the back buttons (LC1/RC1) and the extra aux keys; in Xbox
++ * mode they send nothing unless remapped onto another button. Frames as sent
++ * to the pad (ayaneo_{xbox,default}_mode): an E7 command
++ * frame, then the same command as ASCII hex, 100 ms apart. The pad
++ * re-enumerates on USB after the switch.
++ */
++static int konkr_gamepad_mode = -1;	/* -1 unknown, 0 default, 1 xbox */
++
++static ssize_t gamepad_mode_show(struct device *dev,
++				 struct device_attribute *a, char *buf)
++{
++	return sysfs_emit(buf, "%s\n", konkr_gamepad_mode == 1 ? "xbox" :
++			  konkr_gamepad_mode == 0 ? "default" : "unknown");
++}
++
++static ssize_t gamepad_mode_store(struct device *dev,
++				  struct device_attribute *a,
++				  const char *buf, size_t count)
++{
++	struct konkr_sysbtn *kb = dev_get_drvdata(dev);
++	u8 frame[11] = { 0xe7, 0x55, 0x05, 0x00, 0, 0, 0, 0, 0, 0x00, 0xed };
++	char ascii[17] = "5505000000000000";
++	int mode, i;
++	u8 sum = 0;
++
++	if (sysfs_streq(buf, "default"))
++		mode = 0;
++	else if (sysfs_streq(buf, "xbox"))
++		mode = 1;
++	else
++		return -EINVAL;
++
++	frame[3] = mode;
++	for (i = 1; i <= 8; i++)
++		sum += frame[i];
++	frame[9] = sum;
++	ascii[5] = mode ? '1' : '0';
++
++	mutex_lock(&kb->tx_lock);
++	if (kb->tx_inhibited) {
++		mutex_unlock(&kb->tx_lock);
++		return -EBUSY;
++	}
++	serdev_device_write_buf(kb->serdev, frame, sizeof(frame));
++	serdev_device_wait_until_sent(kb->serdev, msecs_to_jiffies(100));
++	msleep(100);
++	serdev_device_write_buf(kb->serdev, (const u8 *)ascii, 16);
++	serdev_device_wait_until_sent(kb->serdev, msecs_to_jiffies(100));
++	msleep(100);
++	mutex_unlock(&kb->tx_lock);
++
++	konkr_gamepad_mode = mode;
++	return count;
++}
++static DEVICE_ATTR_RW(gamepad_mode);
++
+ static struct attribute *konkr_attrs[] = {
++	&dev_attr_gamepad_mode.attr,
+ 	&dev_attr_key_lc_shoulder.attr,
+ 	&dev_attr_key_rc_shoulder.attr,
+ 	&dev_attr_key_lc_back.attr,

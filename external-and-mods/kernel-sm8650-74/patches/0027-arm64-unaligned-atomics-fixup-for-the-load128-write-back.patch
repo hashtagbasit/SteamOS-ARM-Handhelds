@@ -1,0 +1,25 @@
+Subject: [PATCH] arm64: unaligned atomics: fixup for the Load128 write-back
+
+The 128-bit load is made single-copy atomic by storing the pair straight
+back with stlxp. Only the ldaxp had an exception table entry, so when the
+page is mapped read-only (a copy-on-write page after fork, say) the store
+faults with no fixup and the kernel oopses instead of returning the fault
+to the emulation, which then kills the process. Add an entry for the
+store pointing at the same exit.
+
+---
+--- a/arch/arm64/kernel/unaligned_atomic.c
++++ b/arch/arm64/kernel/unaligned_atomic.c
+@@ -129,10 +129,11 @@
+ 
+   uaccess_enable_privileged();
+   asm volatile("1: ldaxp %[ResultLower], %[ResultUpper], [%[Addr]]\n"
+-               "   stlxp %w[Tmp], %[ResultLower], %[ResultUpper], [%[Addr]]\n"
++               "3: stlxp %w[Tmp], %[ResultLower], %[ResultUpper], [%[Addr]]\n"
+                "   cbnz %w[Tmp], 1b\n"
+                "2:\n"
+                _ASM_EXTABLE_UACCESS_ERR(1b, 2b, %w[ret])
++               _ASM_EXTABLE_UACCESS_ERR(3b, 2b, %w[ret])
+                : [Tmp] "=&r"(Tmp), [ResultLower] "=&r"(Lower), [ResultUpper] "=&r"(Upper), [ret] "+r"(ret)
+                : [Addr] "r"(Addr)
+                : "memory");

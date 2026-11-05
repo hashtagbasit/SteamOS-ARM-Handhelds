@@ -1,0 +1,32 @@
+
+/* --- SteamOS-ARM-SM8650 additions --------------------------------------- */
+
+/ {
+	chassis-type = "handheld";
+};
+
+/*
+ * Controller MCU UART (geni SE5 @894000). konkr_sysbtn binds here when the
+ * module is loaded (it is blacklisted by default — see konkr-mcu).
+ */
+&uart13 {
+	mcu {
+		compatible = "konkr,pocket-fit-mcu";
+	};
+};
+
+/*
+ * Adreno 750 top step. Mainline stops at 834 MHz; every Snapdragon 8 Gen 3
+ * (and Android on this handheld) runs the A750 at 903 MHz, on the TURBO
+ * voltage corner with the same ACD level as the steps below (the factory GPU
+ * table). TURBO_L1 was one corner too high: about 1 W more and 5 C hotter at
+ * 903 MHz for the same score. Bus vote kept equal to the 834 MHz step.
+ */
+&gpu_opp_table {
+	opp-903000000 {
+		opp-hz = /bits/ 64 <903000000>;
+		opp-level = <RPMH_REGULATOR_LEVEL_TURBO>;
+		opp-peak-kBps = <14398437>;
+		qcom,opp-acd-level = <0x882a5ffd>;
+	};
+};

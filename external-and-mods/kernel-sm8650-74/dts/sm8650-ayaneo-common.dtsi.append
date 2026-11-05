@@ -1,0 +1,79 @@
+
+/* --- SteamOS-ARM-SM8650 additions (Pocket FIT and Pocket S2) ------------- */
+
+/*
+ * Volume up is not a wake source: a press in a bag or while holding the
+ * device woke it from s2idle. The power key still wakes it.
+ */
+&{/gpio-keys/key-volume-up} {
+	/delete-property/ wakeup-source;
+};
+
+/*
+ * PCIe WAKE# is active low on both ports (Wi-Fi on pcie0, the USB host
+ * controller on pcie1). Read as active high it looks asserted all the time,
+ * which keeps the link from being treated as idle across suspend.
+ */
+&pcieport0 {
+	wake-gpios = <&tlmm 96 GPIO_ACTIVE_LOW>;
+};
+
+&pcie1_port0 {
+	wake-gpios = <&tlmm 99 GPIO_ACTIVE_LOW>;
+};
+
+/*
+ * The audio codec keeps these rails on through s2idle. Let RPMh drop them to
+ * low-power mode while asleep instead of holding full drive for nothing.
+ */
+&vreg_l15b_1p8 {
+	regulator-state-mem {
+		regulator-on-in-suspend;
+		regulator-mode = <RPMH_REGULATOR_MODE_LPM>;
+	};
+};
+
+&vreg_bob1 {
+	regulator-state-mem {
+		regulator-on-in-suspend;
+		regulator-mode = <RPMH_REGULATOR_MODE_LPM>;
+	};
+};
+
+&vreg_l3c_1p2 {
+	regulator-state-mem {
+		regulator-on-in-suspend;
+		regulator-mode = <RPMH_REGULATOR_MODE_LPM>;
+	};
+};
+
+/*
+ * The RTC offset (the PMIC counter runs from its own power-on, not 1970) was
+ * meant to come from a UEFI variable these boards can't reach, so the clock
+ * started wrong on every boot until the network set it. Keep it in a PMIC
+ * SDAM cell instead, like the Qualcomm laptops do: the kernel writes it when
+ * the time is set and reads it back at boot, power-off included.
+ */
+&pmk8550_rtc {
+	/delete-property/ qcom,uefi-rtc-info;
+	/*
+	 * And the alarm: the board marks it ADSP-owned, but nothing on the DSP
+	 * side uses it under Linux, and the low-battery check sets it to wake
+	 * a sleeping handheld before the battery runs flat.
+	 */
+	/delete-property/ qcom,no-alarm;
+	nvmem-cells = <&rtc_offset>;
+	nvmem-cell-names = "offset";
+};
+
+&pmk8550_sdam_2 {
+	rtc_offset: rtc-offset@bc {
+		reg = <0xbc 0x4>;
+	};
+};
+
+/*
+ * Linux 7.4's sm8650.dtsi has the IPA modem node, which uses the ipa_fw_mem
+ * carveout deleted at the top of this file (no modem on these boards).
+ */
+/delete-node/ &ipa;

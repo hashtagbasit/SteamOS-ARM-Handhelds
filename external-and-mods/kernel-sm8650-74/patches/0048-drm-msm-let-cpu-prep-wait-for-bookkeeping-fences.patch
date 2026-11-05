@@ -1,0 +1,64 @@
+From: hashtagbasit
+Subject: drm/msm: let MSM_GEM_CPU_PREP wait for bookkeeping fences
+
+A context in VM_BIND mode (Turnip on this kernel) attaches its job fences
+to every shared object in its VM as DMA_RESV_USAGE_BOOKKEEP only. Neither
+the dma-buf poll/sync-file paths nor MSM_GEM_CPU_PREP look at those, so
+nothing outside the GPU can tell when the GPU has finished reading a
+shared buffer.
+
+That matters for the V4L2 video decoder: a VA-API client (Chromium) hands
+a frame back for decoding as soon as its compositor job reading it was
+submitted, the decoder writes the next picture into it while the GPU is
+still sampling it, and the stream shows tearing. On a Pocket FIT none of
+1800 reused frames carried a visible fence.
+
+Add MSM_PREP_BOOKKEEP: CPU_PREP then waits for every fence on the object,
+bookkeeping ones included. Existing callers are unchanged.
+
+---
+--- a/drivers/gpu/drm/msm/msm_gem.c
++++ b/drivers/gpu/drm/msm/msm_gem.c
+@@ -1088,15 +1088,20 @@
+ 	bool write = !!(op & MSM_PREP_WRITE);
+ 	unsigned long remain =
+ 		op & MSM_PREP_NOSYNC ? 0 : timeout_to_jiffies(timeout);
++	/*
++	 * Contexts using VM_BIND attach their fences to shared objects as
++	 * bookkeeping fences only, which no READ/WRITE wait sees. A producer
++	 * outside the GPU (a video decoder writing into a frame the GPU still
++	 * samples) needs to wait for those too.
++	 */
++	enum dma_resv_usage usage = op & MSM_PREP_BOOKKEEP ?
++		DMA_RESV_USAGE_BOOKKEEP : dma_resv_usage_rw(write);
+ 	long ret;
+ 
+-	if (op & MSM_PREP_BOOST) {
+-		dma_resv_set_deadline(obj->resv, dma_resv_usage_rw(write),
+-				      ktime_get());
+-	}
++	if (op & MSM_PREP_BOOST)
++		dma_resv_set_deadline(obj->resv, usage, ktime_get());
+ 
+-	ret = dma_resv_wait_timeout(obj->resv, dma_resv_usage_rw(write),
+-				    true,  remain);
++	ret = dma_resv_wait_timeout(obj->resv, usage, true, remain);
+ 	if (ret == 0)
+ 		return remain == 0 ? -EBUSY : -ETIMEDOUT;
+ 	else if (ret < 0)
+--- a/include/uapi/drm/msm_drm.h
++++ b/include/uapi/drm/msm_drm.h
+@@ -200,11 +200,13 @@
+ #define MSM_PREP_WRITE       0x02
+ #define MSM_PREP_NOSYNC      0x04
+ #define MSM_PREP_BOOST       0x08
++#define MSM_PREP_BOOKKEEP    0x10 /* also wait for bookkeeping fences (VM_BIND users) */
+ 
+ #define MSM_PREP_FLAGS       (MSM_PREP_READ | \
+ 			      MSM_PREP_WRITE | \
+ 			      MSM_PREP_NOSYNC | \
+ 			      MSM_PREP_BOOST | \
++			      MSM_PREP_BOOKKEEP | \
+ 			      0)
+ 
+ struct drm_msm_gem_cpu_prep {

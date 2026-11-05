@@ -1,0 +1,47 @@
+From: lavachemist <48248311+lavachemist@users.noreply.github.com>
+Subject: [PATCH] hwmon: pwm-fan: cut the fan supply in system sleep
+
+pwm_fan_suspend() turns the PWM off, but in the default enable mode
+(pwm_disable_reg_enable) it keeps the fan's regulator enabled, so the fan
+stays powered for the whole system sleep. On the KONKR Pocket FIT that is
+the fan_pwr/fan_vdd 5 V pair (GPIO 125/124), and switching it off for the
+sleep window took deep sleep from about 47 mAh/h to about 10-18 mAh/h
+(~0.27 W). Disable the supply after the PWM in suspend, whatever the enable
+mode, and put it back on resume. A stopped fan used to get it back only
+once the fan spun up again, and the Pocket FIT's controller MCU runs from
+the same 5 V: after a sleep with the fan stopped the pad stayed dead until
+the fan's next start (or never, when the device stayed cool).
+---
+
+--- a/drivers/hwmon/pwm-fan.c
++++ b/drivers/hwmon/pwm-fan.c
+@@ -869,6 +869,13 @@
+ 		}
+ 	} else {
+ 		ret = pwm_fan_power_off(ctx, true);
++		/*
++		 * The default enable mode keeps the supply on with the PWM off,
++		 * which left the fan powered for the whole sleep. Resume turns it
++		 * back on when the fan runs.
++		 */
++		if (!ret)
++			ret = pwm_fan_switch_power(ctx, false);
+ 	}
+ 	mutex_unlock(&ctx->lock);
+ 
+@@ -882,6 +889,15 @@
+ 	mutex_lock(&ctx->lock);
+ 	ctx->suspended = false;
+ 	ret = __set_pwm(ctx, ctx->pwm_awake);
++	/*
++	 * A stopped fan doesn't power on here, but suspend cut the supply:
++	 * put it back when the enable mode keeps it on, other parts of the
++	 * device can hang off it.
++	 */
++	if (!ret && !ctx->pwm_awake &&
++	    (ctx->enable_mode == pwm_disable_reg_enable ||
++	     ctx->enable_mode == pwm_enable_reg_enable))
++		ret = pwm_fan_switch_power(ctx, true);
+ 	mutex_unlock(&ctx->lock);
+ 
+ 	return ret;

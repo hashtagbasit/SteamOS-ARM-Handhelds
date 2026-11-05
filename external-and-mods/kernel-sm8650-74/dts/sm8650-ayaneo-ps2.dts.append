@@ -1,0 +1,6 @@
+/* 3.5 mm jack switch polarity, as in the vendor DT (msm-mbhc-hphl-swh and
+ * msm-mbhc-gnd-swh are 0). Without it detection never completes. */
+&wcd939x {
+	qcom,hphl-jack-type-normally-closed;
+	qcom,ground-jack-type-normally-closed;
+};

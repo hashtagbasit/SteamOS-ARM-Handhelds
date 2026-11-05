@@ -1,0 +1,31 @@
+From: hashtagbasit
+Subject: Input: goodix: keep the DT size when the config is invalid
+
+When the config read back from the chip is unusable, the driver falls back
+to 4096x4096 for the touch area, even when touchscreen-size-x/-y in the
+device tree already said how big it is. The AYANEO Pocket S 2K's GT911
+returns a garbled config (no contact count), so its 1440x2560 coordinates
+were scaled as if they spanned 4096 and every touch landed in the wrong
+place. Only fall back for the sizes the device tree didn't give.
+
+diff -ru a/drivers/input/touchscreen/goodix.c b/drivers/input/touchscreen/goodix.c
+--- a/drivers/input/touchscreen/goodix.c
++++ b/drivers/input/touchscreen/goodix.c
+@@ -1232,8 +1232,15 @@
+ 		dev_err(&ts->client->dev,
+ 			"Invalid config (%d, %d, %d), using defaults\n",
+ 			ts->prop.max_x, ts->prop.max_y, ts->max_touch_num);
+-		ts->prop.max_x = GOODIX_MAX_WIDTH - 1;
+-		ts->prop.max_y = GOODIX_MAX_HEIGHT - 1;
++		/*
++		 * Keep a size the device tree gave: only the contact count may
++		 * be missing (a garbled config), and the chip still reports
++		 * in panel coordinates.
++		 */
++		if (!ts->prop.max_x)
++			ts->prop.max_x = GOODIX_MAX_WIDTH - 1;
++		if (!ts->prop.max_y)
++			ts->prop.max_y = GOODIX_MAX_HEIGHT - 1;
+ 		ts->max_touch_num = GOODIX_MAX_CONTACTS;
+ 		input_abs_set_max(ts->input_dev,
+ 				  ABS_MT_POSITION_X, ts->prop.max_x);

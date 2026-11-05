@@ -1,0 +1,60 @@
+From: hashtagbasit
+Subject: PCI: qcom / of: walk iommu-map by #iommu-cells, not a fixed 4 words
+
+On 7.2 the SM8550 device tree spells iommu-map out with the SMMU's
+#iommu-cells = <2>, so each entry is 5 words (rid-base, phandle, SID, mask,
+length). qcom_pcie_config_sid_1_9_0() and parse_iommu_maps() still stepped
+by 4, which programmed wrong SIDs into the BDF-to-SID table and linked the
+PCIe host to unrelated nodes. On the AYANEO Pocket EVO the Wi-Fi never came
+up (MHI not ready) and the Renesas USB controller carrying the gamepad
+stalled. Only for 7.2: the 7.1.2 tree still has 4-word entries.
+
+7.4 port: pcie-qcom already reads #iommu-cells upstream, so only the
+fw_devlink side (parse_iommu_maps in drivers/of/property.c) is kept.
+
+---
+ drivers/of/property.c |   28 +++++++++++++++++++++++++++-
+ 1 file changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/of/property.c b/drivers/of/property.c
+index 45e55f618..65a0831cb 100644
+--- a/drivers/of/property.c
++++ b/drivers/of/property.c
+@@ -1443,10 +1443,36 @@ static struct device_node *parse_gpios(struct device_node *np,
+ static struct device_node *parse_iommu_maps(struct device_node *np,
+ 					    const char *prop_name, int index)
+ {
++	const __be32 *map;
++	struct device_node *iommu;
++	u32 cells;
++	int len, i;
++
+ 	if (strcmp(prop_name, "iommu-map"))
+ 		return NULL;
+ 
+-	return of_parse_phandle(np, prop_name, (index * 4) + 1);
++	/*
++	 * Entries are <rid-base iommu-phandle specifier... length> with
++	 * #iommu-cells words of specifier, not a fixed 4 words: with 5-word
++	 * entries (#iommu-cells = <2>) the fixed stride took rid-base/length
++	 * values of later entries for phandles and linked the PCIe host to
++	 * unrelated nodes.
++	 */
++	map = of_get_property(np, prop_name, &len);
++	if (!map)
++		return NULL;
++	len /= sizeof(*map);
++	for (i = 0; i + 1 < len; i += 3 + cells) {
++		iommu = of_find_node_by_phandle(be32_to_cpup(map + i + 1));
++		if (!iommu)
++			return NULL;
++		cells = 1;
++		of_property_read_u32(iommu, "#iommu-cells", &cells);
++		if (index-- == 0)
++			return iommu;
++		of_node_put(iommu);
++	}
++	return NULL;
+ }
+ 
+ static struct device_node *parse_gpio_compat(struct device_node *np,

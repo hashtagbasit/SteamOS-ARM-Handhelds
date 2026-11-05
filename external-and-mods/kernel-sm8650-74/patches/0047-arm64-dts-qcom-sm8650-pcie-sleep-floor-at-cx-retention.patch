@@ -1,0 +1,32 @@
+From: hashtagbasit
+Subject: arm64: dts: qcom: sm8650: PCIe sleep floor at CX retention
+
+With no PCIe suspend OPP at all, a Pocket FIT never woke from s2idle (it had
+to be restarted), so the system needs PCIe's DDR vote in the sleep set to
+resume. The suspend OPP it got before also required CX at low_svs, and a CX
+level above retention for the whole sleep rules out CX collapse.
+
+Keep the floor's DDR vote and ask only for CX retention, the lowest level,
+which CX can still sleep at.
+
+---
+--- a/arch/arm64/boot/dts/qcom/sm8650.dtsi
++++ b/arch/arm64/boot/dts/qcom/sm8650.dtsi
+@@ -3761,6 +3761,17 @@
+ 					opp-peak-kBps = <1969000 1>;
+ 					opp-level = <3>;
+ 				};
++
++				/*
++				 * Sleep floor (s2idle): DDR stays voted so the system can
++				 * resume, CX only at retention so it can still collapse.
++				 */
++				opp-suspend-1 {
++					opp-hz = /bits/ 64 <1>;
++					required-opps = <&rpmhpd_opp_ret>;
++					opp-peak-kBps = <1000 1>;
++					opp-suspend;
++				};
+ 			};
+ 
+ 			pcieport0: pcie@0 {
