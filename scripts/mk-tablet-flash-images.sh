@@ -18,6 +18,7 @@
 #   userdata.simg  -> userdata: the system and /home in one ext4 filesystem,
 #                  Android sparse, grown to the whole partition on first boot
 # FLASH_WORK=DIR keeps the scratch files (a 14 GB userdata.img) off /work.
+# FLASH_CONSUME_IMAGE=1 deletes IMAGE once userdata.img is written.
 # KERNEL_OUT replaces the image's kernel and modules (a newer build of the
 # same kernel); the Gen 4 needs it, its boot.img is built from it.
 set -euo pipefail
@@ -227,6 +228,14 @@ mkdir -p "$U/var/lib/steamos-sm8550"; touch "$U/var/lib/steamos-sm8550/home-expa
 sync; umount "$U"
 e2fsck -fy "$OUT/userdata.img" >/dev/null 2>&1 || true
 e2fsck -fn "$OUT/userdata.img" >/dev/null || die "userdata.img doesn't check clean"
+
+# FLASH_CONSUME_IMAGE=1: the image is no longer needed once userdata.img is
+# written, so release and delete it before the sparse copy (short of disk).
+if [[ ${FLASH_CONSUME_IMAGE:-0} == 1 ]]; then
+  for m in "$W/root" "$W/home" "$W/boot"; do umount "$m"; done
+  losetup -d "$LOOP"; LOOP=""
+  rm -f "$IMG"
+fi
 
 log "userdata.simg (Android sparse)"
 img2simg "$OUT/userdata.img" "$OUT/userdata.simg"

@@ -14,7 +14,7 @@
 #                          own boot image)
 #   install-gen5.sh, boot-repack.py, firmware.tsv, switch-to-steamos/
 # Env: KO (kernel output; SKIP_KERNEL=1 uses one already built), LAD, M, CPIO,
-# ARCHIVE (archive name; default ...-v1.3.0-test<N>.7z) and ARCHIVE_DIR (where
+# CONSUME_BASE=1 (deletes BASE once unpacked), ARCHIVE (archive name; default ...-v1.3.0-test<N>.7z) and ARCHIVE_DIR (where
 # it goes; default next to OUT_DIR).
 set -euo pipefail
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -45,6 +45,7 @@ echo "== system $(date +%T)"
 if [ -z "${CHECKS_ONLY:-}" ]; then
 rm -rf "$O"; mkdir -p "$O"
 simg2img "$BASE" "$O/fs.img"
+[ -z "${CONSUME_BASE:-}" ] || rm -f "$BASE"   # CONSUME_BASE=1: the base is not needed again (short of disk)
 mount -o loop "$O/fs.img" $M
 R=$M
 bash scripts/install-baldur.sh $R $KO $LAD
