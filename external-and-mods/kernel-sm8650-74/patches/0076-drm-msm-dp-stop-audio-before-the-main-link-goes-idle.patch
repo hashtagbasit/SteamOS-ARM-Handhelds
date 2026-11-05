@@ -1,0 +1,31 @@
+From: SteamOS ARM port
+Subject: [PATCH] drm/msm/dp: stop audio before the main link goes idle
+
+On unplug, msm_dp_display_atomic_disable() pushes the main link to idle
+and only msm_dp_display_atomic_post_disable() waits for the audio stream
+to close. Userspace closes it a few hundred milliseconds later, so the
+ADSP's DisplayPort sink keeps running into an idle link. On SM8650
+(AudioReach) the next DisplayPort start then fails: GRAPH_START on the
+DisplayPort port answers late with an error and the APM stops answering
+for seconds. Plugs alternate with and without audio.
+
+Signal the unplug to audio and wait for the stream to stop in
+atomic_disable, before PUSH_IDLE. The wait in post_disable then returns
+at once because audio is already marked disabled.
+---
+--- a/drivers/gpu/drm/msm/dp/dp_display.c
++++ b/drivers/gpu/drm/msm/dp/dp_display.c
+@@ -1519,6 +1519,13 @@
+ 	if (!dp->power_on)
+ 		return;
+ 
++	/*
++	 * Let the audio stream stop while the main link still carries it. If
++	 * the link goes idle first, the ADSP's DisplayPort sink keeps running
++	 * into it and its next start times out.
++	 */
++	msm_dp_display_audio_notify_disable(msm_dp_display);
++
+ 	msm_dp_ctrl_push_idle(msm_dp_display->ctrl);
+ }
+ 
