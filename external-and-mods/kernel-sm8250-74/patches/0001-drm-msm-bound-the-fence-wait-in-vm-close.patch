@@ -1,0 +1,29 @@
+From: hashtagbasit
+Subject: drm/msm: bound the fence wait in msm_gem_vm_close()
+
+An exiting gamescope on the AYN Thor got stuck in D state waiting on the
+VM's last fence, became unkillable and blocked the next Game Mode start and
+reboot. Wait at most 3 s, warn, and carry on with the teardown.
+
+---
+--- a/drivers/gpu/drm/msm/msm_gem_vma.c
++++ b/drivers/gpu/drm/msm/msm_gem_vma.c
+@@ -916,8 +916,16 @@
+ 	if (vm->managed)
+ 		return;
+ 
+-	if (vm->last_fence)
+-		dma_fence_wait(vm->last_fence, false);
++	/*
++	 * Don't wait forever: on the AYN Thor an exiting gamescope sat here in
++	 * D state on a fence that never signalled, couldn't be killed, and
++	 * blocked the next Game Mode start and reboot. Give the GPU 3 s, then
++	 * tear down anyway (the scheduler is stopped right below).
++	 */
++	if (vm->last_fence &&
++	    dma_fence_wait_timeout(vm->last_fence, false, msecs_to_jiffies(3000)) <= 0)
++		pr_warn("msm: VM close: last fence %llu:%llu not signalled after 3 s\n",
++			vm->last_fence->context, vm->last_fence->seqno);
+ 
+ 	/* Kill the scheduler now, so we aren't racing with it for cleanup: */
+ 	drm_sched_stop(&vm->sched, NULL);

@@ -1,0 +1,55 @@
+
+/*
+ * SteamOS ARM additions for the AYN Thor Lite (appended to ROCKNIX's
+ * sm8250-ayn-thorlite.dts by kernel-common/build.sh).
+ */
+
+/*
+ * Touch: ROCKNIX pre-rotates both touchscreens (swap + invert) for its own
+ * compositor. gamescope and KWin rotate touch by the panel orientation
+ * themselves, so it ended up rotated twice. Report native panel coordinates,
+ * like our AYN Thor.
+ */
+&i2c0 {
+	touchscreen@38 {
+		/delete-property/ touchscreen-swapped-x-y;
+		/delete-property/ touchscreen-inverted-x;
+	};
+};
+
+&i2c13 {
+	touchscreen@38 {
+		/delete-property/ touchscreen-swapped-x-y;
+		/delete-property/ touchscreen-inverted-x;
+	};
+};
+
+/*
+ * The AYN key on the side (gpio92, active low as in the stock firmware) as
+ * KEY_F24 on its own gpio-keys-ayn device, the same as on the AYN Thor: it
+ * brings the bottom-screen dashboard to the front.
+ */
+&tlmm {
+	ayn_key_n: ayn-key-n-state {
+		pins = "gpio92";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
+	};
+};
+
+/ {
+	gpio-keys-ayn {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&ayn_key_n>;
+
+		ayn-key {
+			label = "AYN Key";
+			gpios = <&tlmm 92 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_F24>;
+			debounce-interval = <15>;
+			linux,can-disable;
+		};
+	};
+};

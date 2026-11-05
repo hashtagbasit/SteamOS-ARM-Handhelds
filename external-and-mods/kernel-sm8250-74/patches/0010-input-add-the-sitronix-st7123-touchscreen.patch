@@ -1,0 +1,367 @@
+From: hashtagbasit <53941105+hashtagbasit@users.noreply.github.com>
+Subject: [PATCH] Input: add the Sitronix ST7123 touchscreen (Pocket MICRO 2)
+
+The AYANEO Pocket MICRO 2's panel is a Sitronix ST7123 TDDI; its touch
+side speaks Sitronix's I2C protocol: 16-bit registers, a 4-byte header at
+0x10 and 7 bytes per contact, an optional checksum, and a reset request
+flag in the header. Interrupt driven, with the controller powered down
+over suspend unless it is a wakeup source.
+
+diff --git a/drivers/input/touchscreen/Kconfig b/drivers/input/touchscreen/Kconfig
+index d595ab9..c2a0665 100644
+--- a/drivers/input/touchscreen/Kconfig
++++ b/drivers/input/touchscreen/Kconfig
+@@ -1240,6 +1240,13 @@ config TOUCHSCREEN_SIS_I2C
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called sis_i2c.
+ 
++config TOUCHSCREEN_ST7123
++	tristate "Sitronix ST7123 touchscreen"
++	depends on I2C
++	help
++	  The touch controller of the Sitronix ST7123 TDDI, as in the AYANEO
++	  Pocket MICRO 2. To build it as a module, choose M: sitronix-st7123.
++
+ config TOUCHSCREEN_ST1232
+ 	tristate "Sitronix ST1232 or ST1633 touchscreen controllers"
+ 	depends on I2C
+diff --git a/drivers/input/touchscreen/Makefile b/drivers/input/touchscreen/Makefile
+index bfe0fbb..2cb53c1 100644
+--- a/drivers/input/touchscreen/Makefile
++++ b/drivers/input/touchscreen/Makefile
+@@ -82,6 +82,7 @@ obj-$(CONFIG_TOUCHSCREEN_S6SY761)	+= s6sy761.o
+ obj-$(CONFIG_TOUCHSCREEN_SILEAD)	+= silead.o
+ obj-$(CONFIG_TOUCHSCREEN_SIS_I2C)	+= sis_i2c.o
+ obj-$(CONFIG_TOUCHSCREEN_ST1232)	+= st1232.o
++obj-$(CONFIG_TOUCHSCREEN_ST7123)	+= sitronix-st7123.o
+ obj-$(CONFIG_TOUCHSCREEN_STMFTS)	+= stmfts.o
+ obj-$(CONFIG_TOUCHSCREEN_STMPE)		+= stmpe-ts.o
+ obj-$(CONFIG_TOUCHSCREEN_SUN4I)		+= sun4i-ts.o
+diff --git a/drivers/input/touchscreen/sitronix-st7123.c b/drivers/input/touchscreen/sitronix-st7123.c
+new file mode 100644
+index 0000000..ab0a1c1
+--- /dev/null
++++ b/drivers/input/touchscreen/sitronix-st7123.c
+@@ -0,0 +1,322 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Sitronix ST7123 TDDI touch controller (AYANEO Pocket MICRO 2).
++ *
++ * Sitronix's I2C protocol: 16-bit register addresses, a 4-byte status
++ * header at 0x10 followed by 7 bytes per contact slot, and an optional
++ * checksum byte after them when the controller says it sends one.
++ */
++
++#include <linux/bits.h>
++#include <linux/delay.h>
++#include <linux/gpio/consumer.h>
++#include <linux/i2c.h>
++#include <linux/input.h>
++#include <linux/input/mt.h>
++#include <linux/input/touchscreen.h>
++#include <linux/interrupt.h>
++#include <linux/module.h>
++#include <linux/mutex.h>
++
++#define ST_REG_STATUS		0x0001	/* low nibble 0 or 4: running */
++#define ST_REG_CONTROL		0x0002	/* bit 1: power down */
++#define ST_REG_RESOLUTION	0x0005	/* x hi, x lo, y hi, y lo (14 bit) */
++#define ST_REG_MAX_CONTACTS	0x0009
++#define ST_REG_REPORT		0x0010
++#define ST_REG_MISC		0x00f0	/* bit 4: report has a checksum */
++#define ST_REG_CHIP_ID		0x00f4
++
++#define ST_CONTROL_PDN		BIT(1)
++#define ST_MISC_CHECKSUM	BIT(4)
++#define ST_HDR_RESET_REQ	BIT(7)
++#define ST_HDR_HAS_CONTACTS	BIT(3)
++#define ST_CONTACT_VALID	BIT(7)
++
++#define ST_HDR_LEN		4
++#define ST_CONTACT_LEN		7
++#define ST_MAX_CONTACTS		10
++
++struct st7123 {
++	struct i2c_client *client;
++	struct input_dev *input;
++	struct gpio_desc *reset;
++	struct touchscreen_properties props;
++	struct mutex lock;		/* report reads vs. suspend */
++	unsigned int contacts;
++	bool checksum;
++	bool asleep;
++	u8 report[ST_HDR_LEN + ST_MAX_CONTACTS * ST_CONTACT_LEN + 1];
++};
++
++static int st7123_read(struct st7123 *ts, u16 reg, u8 *buf, u16 len)
++{
++	u8 addr[2] = { reg >> 8, reg & 0xff };
++	struct i2c_msg xfer[2] = {
++		{ .addr = ts->client->addr, .len = 2, .buf = addr },
++		{ .addr = ts->client->addr, .flags = I2C_M_RD, .len = len, .buf = buf },
++	};
++	int ret = i2c_transfer(ts->client->adapter, xfer, 2);
++
++	return ret == 2 ? 0 : ret < 0 ? ret : -EIO;
++}
++
++static int st7123_write_byte(struct st7123 *ts, u16 reg, u8 val)
++{
++	u8 buf[3] = { reg >> 8, reg & 0xff, val };
++	int ret = i2c_master_send(ts->client, buf, sizeof(buf));
++
++	return ret == sizeof(buf) ? 0 : ret < 0 ? ret : -EIO;
++}
++
++/* Sitronix report checksum: add each byte, then rotate the low byte left. */
++static u8 st7123_checksum(const u8 *buf, unsigned int len)
++{
++	u16 sum = 0x5a;
++
++	while (len--) {
++		u8 lo;
++
++		sum += *buf++;
++		lo = sum & 0xff;
++		sum = (sum & 0xff00) | (u8)((lo << 1) | (lo >> 7));
++	}
++	return sum & 0xff;
++}
++
++static void st7123_hw_reset(struct st7123 *ts)
++{
++	if (!ts->reset)
++		return;
++	gpiod_set_value_cansleep(ts->reset, 1);
++	fsleep(10000);
++	gpiod_set_value_cansleep(ts->reset, 0);
++	msleep(150);
++}
++
++static int st7123_wait_running(struct st7123 *ts)
++{
++	int tries, ret = -ETIMEDOUT;
++	u8 st;
++
++	for (tries = 0; tries < 100; tries++) {
++		ret = st7123_read(ts, ST_REG_STATUS, &st, 1);
++		if (!ret && ((st & 0x0f) == 0x0 || (st & 0x0f) == 0x4))
++			return 0;
++		usleep_range(1000, 2000);
++	}
++	return ret ?: -ETIMEDOUT;
++}
++
++static void st7123_release_all(struct st7123 *ts)
++{
++	unsigned int i;
++
++	for (i = 0; i < ts->contacts; i++) {
++		input_mt_slot(ts->input, i);
++		input_mt_report_slot_inactive(ts->input);
++	}
++	input_mt_sync_frame(ts->input);
++	input_sync(ts->input);
++}
++
++static void st7123_report(struct st7123 *ts)
++{
++	struct device *dev = &ts->client->dev;
++	unsigned int len = ST_HDR_LEN + ts->contacts * ST_CONTACT_LEN;
++	unsigned int i;
++	u8 *hdr = ts->report;
++
++	if (st7123_read(ts, ST_REG_REPORT, hdr, len + ts->checksum))
++		return;
++
++	if (hdr[0] & ST_HDR_RESET_REQ) {
++		dev_warn(dev, "controller asked for a reset\n");
++		st7123_release_all(ts);
++		st7123_hw_reset(ts);
++		return;
++	}
++
++	/* the checksum covers the contacts only when the header flags them */
++	if (ts->checksum) {
++		unsigned int sum_len = (hdr[0] & ST_HDR_HAS_CONTACTS) ? len : ST_HDR_LEN;
++
++		if (st7123_checksum(hdr, sum_len) != hdr[len]) {
++			dev_dbg(dev, "report checksum mismatch\n");
++			return;
++		}
++	}
++
++	for (i = 0; i < ts->contacts; i++) {
++		const u8 *c = hdr + ST_HDR_LEN + i * ST_CONTACT_LEN;
++		bool down = c[0] & ST_CONTACT_VALID;
++
++		input_mt_slot(ts->input, i);
++		input_mt_report_slot_state(ts->input, MT_TOOL_FINGER, down);
++		if (!down)
++			continue;
++		touchscreen_report_pos(ts->input, &ts->props,
++				       ((c[0] & 0x3f) << 8) | c[1],
++				       ((c[2] & 0x3f) << 8) | c[3], true);
++		input_report_abs(ts->input, ABS_MT_TOUCH_MAJOR, max_t(u8, c[4], 1));
++	}
++	input_mt_sync_frame(ts->input);
++	input_sync(ts->input);
++}
++
++static irqreturn_t st7123_irq(int irq, void *data)
++{
++	struct st7123 *ts = data;
++
++	mutex_lock(&ts->lock);
++	if (!ts->asleep)
++		st7123_report(ts);
++	mutex_unlock(&ts->lock);
++	return IRQ_HANDLED;
++}
++
++static void st7123_read_config(struct st7123 *ts, u16 *max_x, u16 *max_y)
++{
++	struct device *dev = &ts->client->dev;
++	u8 buf[4];
++
++	if (!st7123_read(ts, ST_REG_CHIP_ID, buf, 1) && buf[0] != 0x87 && buf[0] != 0x83)
++		dev_info(dev, "chip id 0x%02x, expected 0x87\n", buf[0]);
++
++	if (!st7123_read(ts, ST_REG_RESOLUTION, buf, 4)) {
++		u16 x = ((buf[0] & 0x3f) << 8) | buf[1];
++		u16 y = ((buf[2] & 0x3f) << 8) | buf[3];
++
++		if (x && y) {
++			*max_x = x;
++			*max_y = y;
++		}
++	}
++
++	if (!st7123_read(ts, ST_REG_MAX_CONTACTS, buf, 1) &&
++	    buf[0] && buf[0] <= ST_MAX_CONTACTS)
++		ts->contacts = buf[0];
++
++	if (!st7123_read(ts, ST_REG_MISC, buf, 1))
++		ts->checksum = buf[0] & ST_MISC_CHECKSUM;
++}
++
++static int st7123_probe(struct i2c_client *client)
++{
++	struct device *dev = &client->dev;
++	u16 max_x = 640, max_y = 960;	/* the Pocket MICRO 2 panel */
++	struct st7123 *ts;
++	int ret;
++
++	if (!client->irq)
++		return dev_err_probe(dev, -EINVAL, "no interrupt\n");
++
++	ts = devm_kzalloc(dev, sizeof(*ts), GFP_KERNEL);
++	if (!ts)
++		return -ENOMEM;
++	ts->client = client;
++	ts->contacts = ST_MAX_CONTACTS;
++	mutex_init(&ts->lock);
++	i2c_set_clientdata(client, ts);
++
++	ts->reset = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_LOW);
++	if (IS_ERR(ts->reset))
++		return dev_err_probe(dev, PTR_ERR(ts->reset), "reset GPIO\n");
++
++	st7123_hw_reset(ts);
++	ret = st7123_wait_running(ts);
++	if (ret)
++		return dev_err_probe(dev, ret, "controller not running\n");
++	st7123_read_config(ts, &max_x, &max_y);
++
++	ts->input = devm_input_allocate_device(dev);
++	if (!ts->input)
++		return -ENOMEM;
++	ts->input->name = "Sitronix ST7123 Touchscreen";
++	ts->input->id.bustype = BUS_I2C;
++	input_set_abs_params(ts->input, ABS_MT_POSITION_X, 0, max_x - 1, 0, 0);
++	input_set_abs_params(ts->input, ABS_MT_POSITION_Y, 0, max_y - 1, 0, 0);
++	input_set_abs_params(ts->input, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
++	touchscreen_parse_properties(ts->input, true, &ts->props);
++
++	ret = input_mt_init_slots(ts->input, ts->contacts,
++				  INPUT_MT_DIRECT | INPUT_MT_DROP_UNUSED);
++	if (ret)
++		return ret;
++
++	ret = devm_request_threaded_irq(dev, client->irq, NULL, st7123_irq,
++					IRQF_ONESHOT, client->name, ts);
++	if (ret)
++		return dev_err_probe(dev, ret, "irq\n");
++
++	return input_register_device(ts->input);
++}
++
++static int st7123_suspend(struct device *dev)
++{
++	struct st7123 *ts = dev_get_drvdata(dev);
++	bool wake = device_may_wakeup(dev);
++	u8 ctl;
++
++	if (wake)
++		enable_irq_wake(ts->client->irq);
++	else
++		disable_irq(ts->client->irq);
++
++	mutex_lock(&ts->lock);
++	ts->asleep = true;
++	st7123_release_all(ts);
++	if (!wake && !st7123_read(ts, ST_REG_CONTROL, &ctl, 1))
++		st7123_write_byte(ts, ST_REG_CONTROL, ctl | ST_CONTROL_PDN);
++	mutex_unlock(&ts->lock);
++	return 0;
++}
++
++static int st7123_resume(struct device *dev)
++{
++	struct st7123 *ts = dev_get_drvdata(dev);
++	bool wake = device_may_wakeup(dev);
++	u8 ctl;
++
++	mutex_lock(&ts->lock);
++	if (!wake) {
++		if (!st7123_read(ts, ST_REG_CONTROL, &ctl, 1))
++			st7123_write_byte(ts, ST_REG_CONTROL, ctl & ~ST_CONTROL_PDN);
++		st7123_hw_reset(ts);
++	}
++	ts->asleep = false;
++	mutex_unlock(&ts->lock);
++
++	if (wake)
++		disable_irq_wake(ts->client->irq);
++	else
++		enable_irq(ts->client->irq);
++	return 0;
++}
++
++static DEFINE_SIMPLE_DEV_PM_OPS(st7123_pm, st7123_suspend, st7123_resume);
++
++static const struct i2c_device_id st7123_ids[] = {
++	{ "st7123" },
++	{ }
++};
++MODULE_DEVICE_TABLE(i2c, st7123_ids);
++
++static const struct of_device_id st7123_of_match[] = {
++	{ .compatible = "sitronix,st7123" },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, st7123_of_match);
++
++static struct i2c_driver st7123_driver = {
++	.driver = {
++		.name = "sitronix-st7123",
++		.of_match_table = st7123_of_match,
++		.pm = pm_sleep_ptr(&st7123_pm),
++	},
++	.id_table = st7123_ids,
++	.probe = st7123_probe,
++};
++module_i2c_driver(st7123_driver);
++
++MODULE_DESCRIPTION("Sitronix ST7123 touchscreen");
++MODULE_LICENSE("GPL");

@@ -1,0 +1,83 @@
+From: hashtagbasit
+Subject: drm/msm/a6xx: stop GPU wake-ups losing GMU replies
+
+The screen froze for good after wake now and then: "Timeout waiting for
+GMU OOB set GPU_SET" or a GX_BW vote "timed out waiting for response"
+with the reply sitting in the queue, then a failed recovery. Three causes
+on the same path:
+
+- a6xx_hfi_irq() cleared every bit of GMU2HOST_INTR_INFO although it only
+  handles CM3_FAULT. The HFI reply and OOB ack bits there are polled for
+  by whoever sent the request, and when the handler ran in between, the
+  answer was gone and the poll timed out. Clear only CM3_FAULT, as kgsl
+  does.
+- The interrupt mask resets to 0 with the GMU power domain and is only set
+  again after HFI start, so every resume raised the HFI interrupt and a
+  late delivery hit the first case. Mask everything before the GMU boots.
+- After such a timeout the GMU and HFI paths wait for a pending fault
+  devcoredump with no limit. The devcoredump needs gpu->lock, which
+  recover_worker holds around these calls, so both waited for ever.
+  Wait at most 2 s and report the timeout.
+
+Found by gennro on the Odin 2 Portal (A740); the same code runs on every
+Adreno 6xx/7xx we ship.
+
+diff -ru a/drivers/gpu/drm/msm/adreno/a6xx_gmu.c b/drivers/gpu/drm/msm/adreno/a6xx_gmu.c
+--- a/drivers/gpu/drm/msm/adreno/a6xx_gmu.c
++++ b/drivers/gpu/drm/msm/adreno/a6xx_gmu.c
+@@ -64,7 +64,13 @@
+ 	struct a6xx_gmu *gmu = data;
+ 	u32 status;
+ 
+-	status = gmu_read(gmu, REG_A6XX_GMU_GMU2HOST_INTR_INFO);
++	/*
++	 * CM3_FAULT is the only bit this interrupt is unmasked for. The HFI
++	 * reply and OOB ack bits in the same register are polled for under
++	 * gmu->lock; clearing them here throws the GMU's answer away.
++	 */
++	status = gmu_read(gmu, REG_A6XX_GMU_GMU2HOST_INTR_INFO) &
++		 A6XX_GMU_GMU2HOST_INTR_INFO_CM3_FAULT;
+ 	gmu_write(gmu, REG_A6XX_GMU_GMU2HOST_INTR_CLR, status);
+ 
+ 	if (status & A6XX_GMU_GMU2HOST_INTR_INFO_CM3_FAULT) {
+@@ -439,7 +445,10 @@
+ 		 * pending faults from the GPU and we are taking a devcoredump.
+ 		 * Wait until the MMU is resumed and try again.
+ 		 */
+-		wait_for_completion(&a6xx_gpu->base.fault_coredump_done);
++		/* Bounded: the devcoredump takes gpu->lock, which recovery holds here. */
++		if (!wait_for_completion_timeout(&a6xx_gpu->base.fault_coredump_done,
++						 msecs_to_jiffies(2000)))
++			break;
+ 	} while (true);
+ 
+ 	if (ret)
+@@ -1336,6 +1345,13 @@
+ 	/* Set the bus quota to a reasonable value for boot */
+ 	a6xx_gmu_set_initial_bw(gpu, gmu);
+ 
++	/*
++	 * The interrupt mask comes back as 0 with the GMU power domain, so
++	 * until it is set below every HFI reply raises the interrupt and can
++	 * reach a6xx_hfi_irq() after it is enabled. Mask it all for the boot.
++	 */
++	gmu_write(gmu, REG_A6XX_GMU_GMU2HOST_INTR_MASK, ~0);
++
+ 	/* Enable the GMU interrupt */
+ 	gmu_write(gmu, REG_A6XX_GMU_AO_HOST_INTERRUPT_CLR, ~0);
+ 	gmu_write(gmu, REG_A6XX_GMU_AO_HOST_INTERRUPT_MASK, ~A6XX_GMU_IRQ_MASK);
+diff -ru a/drivers/gpu/drm/msm/adreno/a6xx_hfi.c b/drivers/gpu/drm/msm/adreno/a6xx_hfi.c
+--- a/drivers/gpu/drm/msm/adreno/a6xx_hfi.c
++++ b/drivers/gpu/drm/msm/adreno/a6xx_hfi.c
+@@ -129,7 +129,10 @@
+ 		 * pending faults from the GPU and we are taking a devcoredump.
+ 		 * Wait until the MMU is resumed and try again.
+ 		 */
+-		wait_for_completion(&a6xx_gpu->base.fault_coredump_done);
++		/* Bounded: the devcoredump takes gpu->lock, which recovery holds here. */
++		if (!wait_for_completion_timeout(&a6xx_gpu->base.fault_coredump_done,
++						 msecs_to_jiffies(2000)))
++			break;
+ 	} while (true);
+ 
+ 	if (ret) {

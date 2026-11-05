@@ -1,0 +1,12 @@
+
+/*
+ * SteamOS ARM additions for the Retroid Pocket Flip 2 (appended to ROCKNIX's
+ * sm8250-retroidpocket-flip2.dts by kernel-common/build.sh).
+ *
+ * Lid (hall sensor): only opening the lid wakes the device. Closing it is
+ * what sends it to sleep, so waking on that edge too woke it right back up.
+ * Same as our AYN Thor.
+ */
+&{/gpio-keys-lid/hall-sensor} {
+	wakeup-event-action = <2>; /* EV_ACT_DEASSERTED: lid opened */
+};

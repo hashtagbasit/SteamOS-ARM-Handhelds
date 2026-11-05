@@ -1,0 +1,49 @@
+From: hashtagbasit <53941105+hashtagbasit@users.noreply.github.com>
+Subject: [PATCH] input: mangmi-pocket-max: trigger travel from the fixed rest reading
+
+Same as the Retroid pad: the trigger samples were taken from the
+calibrated trigger_*_max, which calibration rewrites, so after one a full
+press fell short of the range. Measure from the MCU's rest reading
+(MCU_BRAKE_MAX / MCU_GAS_MAX) and stop clamping to the calibrated maximum,
+so the next calibration can measure the whole travel.
+
+--- a/drivers/input/joystick/mangmi-pocket-max.c	2026-10-10 02:07:01
++++ b/drivers/input/joystick/mangmi-pocket-max.c	2026-10-10 02:07:18
+@@ -211,13 +211,19 @@
+ 	return DIV_ROUND_CLOSEST(v * MCU_AXIS_OUT, MCU_MAP_ZONE);
+ }
+ 
+-static int mcu_trigger(u16 raw, int trigger_max, int deadzone, int antideadzone)
++/*
++ * rest is the raw reading with the trigger released (the MCU counts down as
++ * it is pressed), not the calibrated trigger_*_max: that one is only the
++ * reported range. Not clamped to it either, so a later calibration can see
++ * the full travel.
++ */
++static int mcu_trigger(u16 raw, int rest, int deadzone, int antideadzone)
+ {
+-	int v = trigger_max - (int)raw;
++	int v = rest - (int)raw;
+ 
+ 	if (v < deadzone)
+ 		return 0;
+-	return clamp(v - antideadzone, 0, trigger_max - antideadzone);
++	return max(v - antideadzone, 0);
+ }
+ 
+ struct mcu_gpio_btn {
+@@ -458,12 +464,12 @@
+ 
+ 	if (var->ch_tl >= 0)
+ 		input_report_abs(dev, ABS_HAT2X,
+-				 mcu_trigger(adc[var->ch_tl], trigger_left_max,
++				 mcu_trigger(adc[var->ch_tl], MCU_BRAKE_MAX,
+ 					     trigger_left_deadzone,
+ 					     trigger_left_antideadzone));
+ 	if (var->ch_tr >= 0)
+ 		input_report_abs(dev, ABS_HAT2Y,
+-				 mcu_trigger(adc[var->ch_tr], trigger_right_max,
++				 mcu_trigger(adc[var->ch_tr], MCU_GAS_MAX,
+ 					     trigger_right_deadzone,
+ 					     trigger_right_antideadzone));
+ 

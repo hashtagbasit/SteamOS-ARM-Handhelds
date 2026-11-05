@@ -1,0 +1,48 @@
+From: hashtagbasit <53941105+hashtagbasit@users.noreply.github.com>
+Subject: [PATCH] input: retroid: trigger travel from the fixed rest reading
+
+The MCU reports each trigger counting down from 0x610 at rest.
+trigger_left_max / trigger_right_max start at that value but are also the
+reported evdev range that calibration rewrites, and the sample was taken
+from them. After a calibration every sample moved by the correction, so a
+full press no longer reached the top of the range, and calibrating again
+made it worse. Measure from the fixed rest reading; the parameters stay
+the reported range only.
+
+--- a/drivers/input/joystick/retroid.c	2026-10-10 02:07:01
++++ b/drivers/input/joystick/retroid.c	2026-10-10 02:07:18
+@@ -64,11 +64,18 @@
+ 
+ static int update_params=0;
+ 
+-static int trigger_left_max=0x610;
++/*
++ * Raw MCU reading with the trigger released. The samples count down from
++ * here as the trigger is pressed; trigger_*_max below is only the reported
++ * range, which calibration changes.
++ */
++#define RETROID_TRIGGER_REST 0x610
++
++static int trigger_left_max=RETROID_TRIGGER_REST;
+ static int trigger_left_deadzone=0x0;
+ static int trigger_left_antideadzone=0x0;
+ 
+-static int trigger_right_max=0x610;
++static int trigger_right_max=RETROID_TRIGGER_REST;
+ static int trigger_right_deadzone=0x0;
+ static int trigger_right_antideadzone=0x0;
+ 
+@@ -245,11 +252,11 @@
+ 
+ 	int16_t value;
+ 
+-	value = (int16_t)(trigger_left_max - (data->data[2] | (data->data[3] << 8)));
++	value = (int16_t)(RETROID_TRIGGER_REST - (data->data[2] | (data->data[3] << 8)));
+ 	input_report_abs(indev, ABS_HAT2X,
+ 			 ( value < trigger_left_deadzone )? 0 : value - trigger_left_antideadzone);
+ 
+-	value = (int16_t)(trigger_right_max - (data->data[4] | (data->data[5] << 8)));
++	value = (int16_t)(RETROID_TRIGGER_REST - (data->data[4] | (data->data[5] << 8)));
+ 	input_report_abs(indev, ABS_HAT2Y,
+ 			 ( value < trigger_right_deadzone )? 0 : value - trigger_right_antideadzone);
+ 

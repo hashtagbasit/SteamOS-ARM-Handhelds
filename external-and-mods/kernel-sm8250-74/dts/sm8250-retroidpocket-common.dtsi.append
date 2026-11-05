@@ -1,0 +1,53 @@
+
+/*
+ * SteamOS ARM additions for the Retroid Pocket 5 / Flip 2 / Mini / Mini V2
+ * (appended to ROCKNIX's sm8250-retroidpocket-common.dtsi by
+ * kernel-common/build.sh).
+ */
+
+/*
+ * USB-C SuperSpeed goes through an ON Semi NB7VPQ904M redriver on i2c15
+ * between the PMIC's Type-C port and the QMP PHY. Without it in the graph
+ * the redriver is never configured: no USB 3 and no DisplayPort over USB-C
+ * (docks, external screens). Also how the other SM8250 Linux ports wire it.
+ */
+&i2c15 {
+	status = "okay";
+
+	usbc_redriver: typec-mux@1c {
+		compatible = "onnn,nb7vpq904m";
+		reg = <0x1c>;
+		vcc-supply = <&vreg_s4a_1p8>;
+
+		orientation-switch;
+		retimer-switch;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				usbc_redriver_con: endpoint {
+					remote-endpoint = <&pm8150b_typec_mux_in>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				usbc_redriver_phy: endpoint {
+					remote-endpoint = <&usb_1_qmpphy_out>;
+					data-lanes = <0 1 2 3>;
+				};
+			};
+		};
+	};
+};
+
+&pm8150b_typec_mux_in {
+	remote-endpoint = <&usbc_redriver_con>;
+};
+
+&usb_1_qmpphy_out {
+	remote-endpoint = <&usbc_redriver_phy>;
+};
