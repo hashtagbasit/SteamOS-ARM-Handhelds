@@ -1,0 +1,103 @@
+From: SteamOS ARM port
+Subject: [PATCH] media: iris: decode in stage 1 at the top clock by default
+
+Stage 2 and the lowest sustaining clock suit playback, which decodes
+ahead of display, but each frame comes back later than it could. Game
+streaming clients such as Steam Remote Play, Moonlight and Chiaki decode
+each frame as it arrives but do not request decode order output, so they
+do not get the low latency path.
+
+Treat decoder sessions up to the macroblock count of 4096x2160 as low
+latency: stage 1 and the top OPP, as for sessions that ask for decode
+order. Decode order itself stays opt-in, since it would return B-frame
+streams out of display order. Larger sessions keep stage 2 and the
+computed clock unless they ask for decode order. qcom_iris.low_latency=0
+restores the previous behaviour.
+
+On top of 0049, where decode order output is the DEC_OUTPUT_ORDER cap.
+---
+diff --git a/drivers/media/platform/qcom/iris/iris_ctrls.c b/drivers/media/platform/qcom/iris/iris_ctrls.c
+--- a/drivers/media/platform/qcom/iris/iris_ctrls.c
++++ b/drivers/media/platform/qcom/iris/iris_ctrls.c
+@@ -14,6 +14,11 @@
+ #define CABAC_MAX_BITRATE 160000000
+ #define CAVLC_MAX_BITRATE 220000000
+ 
++static bool iris_low_latency = true;
++module_param_named(low_latency, iris_low_latency, bool, 0444);
++MODULE_PARM_DESC(low_latency,
++		 "decode up to the macroblock count of 4096x2160 in stage 1 at the top clock (default: on)");
++
+ static inline bool iris_valid_cap_id(enum platform_inst_fw_cap_type cap_id)
+ {
+ 	return cap_id >= 1 && cap_id < INST_FW_CAP_MAX;
+@@ -511,6 +516,24 @@
+ 					     &hfi_value, sizeof(u32));
+ }
+ 
++bool iris_dec_decode_order(struct iris_inst *inst)
++{
++	return inst->domain == DECODER && inst->fw_caps[DEC_OUTPUT_ORDER].value;
++}
++
++bool iris_dec_low_latency(struct iris_inst *inst)
++{
++	struct v4l2_pix_format_mplane *f = &inst->fmt_src->fmt.pix_mp;
++
++	if (inst->domain != DECODER)
++		return false;
++
++	/* larger frames keep stage 2 for its throughput */
++	return iris_dec_decode_order(inst) ||
++		(iris_low_latency &&
++		 NUM_MBS_PER_FRAME(f->height, f->width) <= NUM_MBS_PER_FRAME(2160, 4096));
++}
++
+ int iris_set_stage(struct iris_inst *inst, enum platform_inst_fw_cap_type cap_id)
+ {
+ 	const struct iris_hfi_session_ops *hfi_ops = inst->hfi_session_ops;
+@@ -521,7 +544,8 @@
+ 	u32 work_mode = STAGE_2;
+ 
+ 	if (inst->domain == DECODER) {
+-		if (iris_res_is_less_than(width, height, 1280, 720))
++		if (iris_res_is_less_than(width, height, 1280, 720) ||
++		    iris_dec_low_latency(inst))
+ 			work_mode = STAGE_1;
+ 	}
+ 
+diff --git a/drivers/media/platform/qcom/iris/iris_ctrls.h b/drivers/media/platform/qcom/iris/iris_ctrls.h
+--- a/drivers/media/platform/qcom/iris/iris_ctrls.h
++++ b/drivers/media/platform/qcom/iris/iris_ctrls.h
+@@ -15,6 +15,8 @@
+ void iris_session_init_caps(struct iris_core *core);
+ int iris_set_u32_enum(struct iris_inst *inst, enum platform_inst_fw_cap_type cap_id);
+ int iris_set_stage(struct iris_inst *inst, enum platform_inst_fw_cap_type cap_id);
++bool iris_dec_decode_order(struct iris_inst *inst);
++bool iris_dec_low_latency(struct iris_inst *inst);
+ int iris_set_pipe(struct iris_inst *inst, enum platform_inst_fw_cap_type cap_id);
+ int iris_set_u32(struct iris_inst *inst, enum platform_inst_fw_cap_type cap_id);
+ int iris_set_profile(struct iris_inst *inst, enum platform_inst_fw_cap_type cap_id);
+diff --git a/drivers/media/platform/qcom/iris/iris_power.c b/drivers/media/platform/qcom/iris/iris_power.c
+--- a/drivers/media/platform/qcom/iris/iris_power.c
++++ b/drivers/media/platform/qcom/iris/iris_power.c
+@@ -8,6 +8,7 @@
+ #include <media/v4l2-mem2mem.h>
+ 
+ #include "iris_buffer.h"
++#include "iris_ctrls.h"
+ #include "iris_instance.h"
+ #include "iris_power.h"
+ #include "iris_resources.h"
+@@ -114,7 +115,10 @@
+ 	if (!inst->max_input_data_size)
+ 		return 0;
+ 
+-	inst->power.min_freq = vpu_ops->calc_freq(inst, inst->max_input_data_size);
++	if (iris_dec_low_latency(inst))
++		inst->power.min_freq = U32_MAX;
++	else
++		inst->power.min_freq = vpu_ops->calc_freq(inst, inst->max_input_data_size);
+ 
+ 	return iris_set_clocks(inst);
+ }
