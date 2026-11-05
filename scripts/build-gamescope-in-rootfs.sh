@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build our MSM gamescope *inside* the Frame rootfs (glibc 2.39, Frame
+# Build our MSM gamescope *inside* the Frame rootfs (Frame 0.6 glibc 2.43, Frame
 # wlroots/libdrm/vulkan), like build-box64-in-rootfs.sh.
 #
 # The vendored MSM port targets upstream 6edb42b (3.16.30 + 2 commits).
@@ -69,7 +69,7 @@ run meson setup "/build-parent/${bname}" \
 log "ninja"
 run ninja -C "/build-parent/${bname}"
 [[ -x "$BUILD/src/gamescope" ]] || die "no gamescope binary"
-if strings "$BUILD/src/gamescope" | grep -q 'GLIBC_2\.4[0-9]'; then
+if strings "$BUILD/src/gamescope" | grep -q 'GLIBC_2\.4[4-9]'; then
   die "gamescope links against a newer glibc than the Frame"
 fi
 log "OK: $BUILD/src/gamescope"
