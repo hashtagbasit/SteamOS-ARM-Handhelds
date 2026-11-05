@@ -1,0 +1,78 @@
+From: SteamOS ARM port
+Subject: [PATCH] scsi: ufs: qcom: reprogram ESI after a host controller reset
+
+ufs_qcom_config_esi() returns early once the ESI interrupts are set up.
+ufshcd_config_mcq() also calls it after every host controller reset,
+which clears the ESI base address, the vector mask and ESI enable. After
+the error handler has reset the controller, the completions then arrive
+only on the legacy interrupt while mcq_esi_enabled stays set.
+
+Allocate the MSIs and request their interrupts only once, but program
+the ESI registers on every call. The MSI message is not cached for
+platform MSIs, so keep the one written at allocation.
+---
+diff --git a/drivers/ufs/host/ufs-qcom.c b/drivers/ufs/host/ufs-qcom.c
+index a132b2f996..75e942dc58 100644
+--- a/drivers/ufs/host/ufs-qcom.c
++++ b/drivers/ufs/host/ufs-qcom.c
+@@ -2413,7 +2413,9 @@ static void ufs_qcom_write_msi_msg(struct msi_desc *desc, struct msi_msg *msg)
+ {
+ 	struct device *dev = msi_desc_to_dev(desc);
+ 	struct ufs_hba *hba = dev_get_drvdata(dev);
++	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
+ 
++	host->esi_msg = *msg;
+ 	ufshcd_mcq_config_esi(hba, msg);
+ }
+ 
+@@ -2440,8 +2442,10 @@ static int ufs_qcom_config_esi(struct ufs_hba *hba)
+ 	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
+ 	int nr_irqs, ret;
+ 
+-	if (host->esi_enabled)
+-		return 0;
++	if (host->esi_enabled) {
++		ufshcd_mcq_config_esi(hba, &host->esi_msg);
++		goto enable;
++	}
+ 
+ 	/*
+ 	 * 1. We only handle CQs as of now.
+@@ -2480,12 +2484,14 @@ static int ufs_qcom_config_esi(struct ufs_hba *hba)
+ 		}
+ 	}
+ 
++	host->esi_enabled = true;
++
++enable:
+ 	if (host->hw_ver.major >= 6) {
+ 		ufshcd_rmwl(hba, ESI_VEC_MASK, FIELD_PREP(ESI_VEC_MASK, MAX_ESI_VEC - 1),
+ 			    REG_UFS_CFG3);
+ 	}
+ 	ufshcd_mcq_enable_esi(hba);
+-	host->esi_enabled = true;
+ 	return 0;
+ }
+ 
+diff --git a/drivers/ufs/host/ufs-qcom.h b/drivers/ufs/host/ufs-qcom.h
+index 944b2e532a..d2647695ab 100644
+--- a/drivers/ufs/host/ufs-qcom.h
++++ b/drivers/ufs/host/ufs-qcom.h
+@@ -5,6 +5,7 @@
+ #ifndef UFS_QCOM_H_
+ #define UFS_QCOM_H_
+ 
++#include <linux/msi.h>
+ #include <linux/reset-controller.h>
+ #include <linux/reset.h>
+ #include <soc/qcom/ice.h>
+@@ -360,6 +361,7 @@ struct ufs_qcom_host {
+ 	u32 phy_gear;
+ 
+ 	bool esi_enabled;
++	struct msi_msg esi_msg;
+ 
+ 	u32 saved_tx_eq_g1_setting;
+ 	u32 boot_spare_cfg;
+-- 
+2.43.0
