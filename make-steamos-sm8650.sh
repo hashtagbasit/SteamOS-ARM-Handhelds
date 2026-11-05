@@ -39,11 +39,8 @@ esac
 # kernels so the same rootfs carries every SoC's modules.
 KOUT="${IMAGE_KERNEL_OUT:-${_kdef}}"
 export KERNEL_OUT="${KERNEL_OUT:-${KOUT}}"
-# 8 Gen 2: our Mesa with the Adreno 740 fixes (scripts/build-mesa.sh). The
-# 865 (Adreno 650) takes the same build.
-if [[ "$SOC" == sm8550 || "$SOC" == sm8250 ]]; then
-  export MESA_STACK="${MESA_STACK:-${WORKDIR}/mesa/out}"
-fi
+# Our Mesa (scripts/build-mesa.sh) on every chip this script builds.
+export MESA_STACK="${MESA_STACK:-${WORKDIR}/mesa/out}"
 BOX64_SRC="${BOX64_SRC:-${MOD}/BOX64/box64}"
 BOX64_BUILD="${BOX64_BUILD:-/tmp/box64-build-frame}"
 IMG="${STEAMOS_SM8650_IMG:-${WORKDIR}/steamos-${SOC}.img}"
