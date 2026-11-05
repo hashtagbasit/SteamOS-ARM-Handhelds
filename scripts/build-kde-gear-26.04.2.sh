@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Build one KDE Gear 26.04.2 app against Frame Qt 6.8 (not ALARM Qt 6.11).
+# Build one KDE Gear 26.04.2 app against the Frame's Qt 6.10 / KF 6.23 (not
+# Arch Linux ARM's Gear 26.08, which needs Qt 6.12).
 # Usage: build-kde-gear-26.04.2.sh <rootfs> <ark|kcalc|filelight|gwenview|okular>
 set -euo pipefail
 
@@ -10,9 +11,8 @@ NAME="${2:-}"
   exit 1
 }
 R="$(cd "$R" && pwd)"
-# 26.04.2 wants Poppler >= 24.08; Frame only has 24.03.0.
+# 26.04.2 wants Poppler >= 24.08; Frame 0.6 has 26.02.0.
 VER="26.04.2"
-[[ "$NAME" == okular ]] && VER="${OKULAR_VER:-24.12.3}"
 SRC_TGZ="/tmp/kde-gear-src/${NAME}-${VER}.tar.xz"
 SRC_DIR="/tmp/kde-gear-src/${NAME}-${VER}"
 BUILD="/tmp/kde-gear-build/${NAME}-${VER}"
@@ -25,15 +25,9 @@ if [[ ! -f "$SRC_DIR/CMakeLists.txt" ]]; then
   fi
   tar -xJf "$SRC_TGZ" -C /tmp/kde-gear-src
 fi
-# Frame Qt is 6.8.0. filelight 26.04.2 advertises 6.9 but does not need it.
-if [[ -f "$SRC_DIR/CMakeLists.txt" ]]; then
-  sed -i 's/set(QT_REQUIRED_VERSION "6.9.0")/set(QT_REQUIRED_VERSION "6.8.0")/' \
-    "$SRC_DIR/CMakeLists.txt"
-fi
 command -v bwrap >/dev/null 2>&1 || { echo "ERROR: bwrap required" >&2; exit 1; }
 
-# Frame/holo ships ECM 6.1.0 (plasma-extras may install it); Plasma 6.2.5
-# needs >= 6.5. ECM is build-time cmake only, so upgrading is safe.
+# Frame 0.6 ships ECM 6.23.0; Gear 26.04 needs >= 6.5 (cmake-only, build time).
 ecm_version() {
   sed -n 's/^set(PACKAGE_VERSION "\([0-9.]*\)").*/\1/p' \
     "$R/usr/share/ECM/cmake/ECMConfigVersion.cmake" 2>/dev/null | head -1
@@ -61,13 +55,13 @@ run() {
 
 # Okular needs KF6 ThreadWeaver (not in the stripped Frame extra).
 if [[ "$NAME" == okular && ! -f "$R/usr/lib/cmake/KF6ThreadWeaver/KF6ThreadWeaverConfig.cmake" ]]; then
-  TW_VER="6.14.0"
+  TW_VER="6.23.0"
   TW_SRC="/tmp/kf6-src/threadweaver-${TW_VER}"
   TW_BUILD="/tmp/kf6-build/threadweaver-${TW_VER}"
   mkdir -p /tmp/kf6-src /tmp/kf6-build
   if [[ ! -f "$TW_SRC/CMakeLists.txt" ]]; then
     curl -fsSL --max-time 120 -o "/tmp/kf6-src/threadweaver-${TW_VER}.tar.xz" \
-      "https://download.kde.org/stable/frameworks/6.14/threadweaver-${TW_VER}.tar.xz"
+      "https://download.kde.org/stable/frameworks/6.23/threadweaver-${TW_VER}.tar.xz"
     tar -xJf "/tmp/kf6-src/threadweaver-${TW_VER}.tar.xz" -C /tmp/kf6-src
   fi
   rm -rf "$TW_BUILD"
@@ -85,9 +79,9 @@ fi
 CMAKE_EXTRA=()
 # Annotation tools need kImageAnnotator (not on Frame). Viewer still works.
 [[ "$NAME" == gwenview ]] && CMAKE_EXTRA+=(-DGWENVIEW_IMAGEANNOTATOR=OFF)
-# Docs/PS/DjVu are optional; PDF stays required.
+# Docs, PS, DjVu, Mobipocket and audio/video (Phonon) are optional; PDF stays required.
 [[ "$NAME" == okular ]] && CMAKE_EXTRA+=(
-  -DFORCE_NOT_REQUIRED_DEPENDENCIES="KF6DocTools;LibSpectre;DjVuLibre;QMobipocket6"
+  -DFORCE_NOT_REQUIRED_DEPENDENCIES="KF6DocTools;LibSpectre;DjVuLibre;QMobipocket6;Phonon4Qt6"
 )
 
 echo "==> cmake ${NAME} ${VER}"
@@ -112,8 +106,12 @@ case "$NAME" in
     ;;
 esac
 run /usr/bin/cmake --install "$BUILD"
-if strings "$R/usr/bin/${NAME}" 2>/dev/null | grep 'Qt_6\.11' >/dev/null; then
-  echo "ERROR: ${NAME} still linked against Qt_6.11" >&2
+# Qt's own version symbols: the newest one libQt6Core exports, and the newest
+# the app asks for.
+qt_have="$(strings "$R/usr/lib/libQt6Core.so.6" | grep -oE '^Qt_6\.[0-9]+$' | sort -V | tail -1)"
+qt_need="$(strings "$R/usr/bin/${NAME}" | grep -oE '^Qt_6\.[0-9]+$' | sort -V | tail -1)"
+if [[ -n "$qt_need" && "$(printf '%s\n%s\n' "$qt_have" "$qt_need" | sort -V | tail -1)" != "$qt_have" ]]; then
+  echo "ERROR: ${NAME} needs ${qt_need}, the rootfs Qt has ${qt_have}" >&2
   exit 1
 fi
 echo "OK: ${NAME} ${VER} installed into $R"
