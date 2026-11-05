@@ -750,16 +750,10 @@ install_file "$OVL/usr/lib/udev/rules.d/70-steamos-arm-devcoredump.rules" \
 # This image never had it, so Desktop Mode had no way back but a restart.
 # Desktop Mode touch keyboard (GitHub #36): the same plasma-keyboard the
 # other images build, and KWin told to show it for a tapped text field.
-# Desktop Mode Wi-Fi applet (Syou, Gen 4): this image never built plasma-nm, so
-# the tray had no network entry. Same two builds as the 8 Gen 2 / 8 Gen 3 image.
-if [[ ! -f "$R/usr/lib/qt6/plugins/plasma/kcms/systemsettings_qwidgets/kcm_networkmanagement.so" ]]; then
-  log "== KF6 NetworkManagerQt 6.14 (plasma-nm needs >= 6.5)"
-  "${SCRIPT_DIR}/build-kf6-nm-qt-6.14.sh" "$R" \
-    || die "networkmanager-qt 6.14 is required"
-  log "== official Plasma plasma-nm 6.2.5 (Network Manager)"
-  "${SCRIPT_DIR}/build-plasma-nm-6.2.5.sh" "$R" \
-    || die "plasma-nm 6.2.5 is required (Network Manager)"
-fi
+# Desktop Mode Wi-Fi applet (Syou, Gen 4): the Frame's plasma-nm 6.6.2 and
+# networkmanager-qt 6.23.0 packages; nothing is built for it.
+[[ -f "$R/usr/lib/qt6/plugins/plasma/kcms/systemsettings_qwidgets/kcm_networkmanagement.so" ]] \
+  || die "the Frame's plasma-nm 6.6.2 is missing from this rootfs (Network Manager)"
 if [[ ! -x "$R/usr/bin/plasma-keyboard" ]]; then
   log "== plasma-keyboard 0.1.0 (desktop touch keyboard)"
   "${SCRIPT_DIR}/build-plasma-keyboard.sh" "$R" \
@@ -912,6 +906,11 @@ sed -i -e 's/^PercentageCritical=.*/PercentageCritical=6/' -e 's/^PercentageActi
 # abort on start, over and over: the Odin 3 test 1/2 black screen.
 find "$R" -xdev -name '._*' -type f -delete 2>/dev/null || true
 [[ -z "$(find "$R" -xdev -name '._*' -type f -print -quit 2>/dev/null)" ]] || die "._ files left in $R"
+
+# Nothing we install may need a library or Qt/glibc version this rootfs lacks
+# (scripts/check-rootfs-libs.sh). No KDE Gear on this image.
+log "== library check"
+"${SCRIPT_DIR}/check-rootfs-libs.sh" "$R" --no-gear | tee -a "$LOG"
 
 # Last: what this image installed, and which release it is (see apply-overlays.sh).
 python3 "$ROOT/external-and-mods/konkr-update/konkr-update.py" record-inventory --root "$R" \

@@ -1181,36 +1181,34 @@ rm -f "$HOME_DST/Desktop/Decky Loader.desktop" "$HOME_DST/Desktop/install-decky.
 # ---------------------------------------------------------------------------
 # Plasma extras + ARM-Manager + LSFG/Thor/Decky plugins
 # ---------------------------------------------------------------------------
-log "== plasma extras (holo kate/ark/networkmanager-qt/…)"
+log "== plasma extras (holo kate, small tools)"
 STEAMOS_HOME="$HOME_DST" "${SCRIPT_DIR}/install-plasma-extras.sh" "$R" \
   || log "WARN: plasma extras incomplete"
-if [[ ! -f "$R/usr/lib/qt6/plugins/plasma/kcms/systemsettings/kcm_kscreen.so" ]]; then
-  log "== official Plasma kscreen 6.2.5 KCM"
-  "${SCRIPT_DIR}/build-kscreen-6.2.5.sh" "$R" \
-    || die "kscreen 6.2.5 is required (Display Configuration)"
-fi
-if [[ ! -f "$R/usr/lib/qt6/plugins/plasma/kcms/systemsettings_qwidgets/kcm_networkmanagement.so" ]]; then
-  log "== KF6 NetworkManagerQt 6.14 (plasma-nm needs >= 6.5)"
-  "${SCRIPT_DIR}/build-kf6-nm-qt-6.14.sh" "$R" \
-    || die "networkmanager-qt 6.14 is required"
-  log "== official Plasma plasma-nm 6.2.5 (Network Manager)"
-  "${SCRIPT_DIR}/build-plasma-nm-6.2.5.sh" "$R" \
-    || die "plasma-nm 6.2.5 is required (Network Manager)"
-fi
+# Display Configuration (kscreen) and Bluetooth come from the kde-extras build
+# (install-kde-extras.sh above, scripts/build-kde-extras-in-rootfs.sh). Frame
+# 0.6 ships libkscreen 6.6.2, plasma-nm 6.6.2 and networkmanager-qt 6.23.0.
+[[ -f "$R/usr/lib/qt6/plugins/plasma/kcms/systemsettings/kcm_kscreen.so" ]] \
+  || die "kscreen is required (Display Configuration): run scripts/build-kde-extras-in-rootfs.sh"
+[[ -f "$R/usr/lib/qt6/plugins/plasma/kcms/systemsettings_qwidgets/kcm_networkmanagement.so" ]] \
+  || die "the Frame's plasma-nm 6.6.2 is missing from this rootfs (Network Manager)"
 if [[ ! -x "$R/usr/bin/plasma-keyboard" ]]; then
   log "== plasma-keyboard 0.1.0 (desktop touch keyboard)"
   "${SCRIPT_DIR}/build-plasma-keyboard.sh" "$R" \
     || die "plasma-keyboard is required (Desktop Mode touch keyboard)"
 fi
-# extras skip ALARM Gear (Qt_6.11). Build official 26.04.2 for Qt 6.8.
-needs_gear_qt68() {
-  local bin="$R/usr/bin/$1"
-  [[ ! -x "$bin" ]] && return 0
-  strings "$bin" 2>/dev/null | grep 'Qt_6\.11' >/dev/null
+# KDE Gear is built (26.04.2, Qt 6.10), never taken from Arch Linux ARM (26.08
+# needs Qt 6.12). Rebuild when the app is missing or needs a newer Qt than the
+# rootfs.
+needs_gear_build() {
+  local bin="$R/usr/bin/$1" have need
+  [[ -x "$bin" ]] || return 0
+  have="$(strings "$R/usr/lib/libQt6Core.so.6" | grep -oE '^Qt_6\.[0-9]+$' | sort -V | tail -1 || true)"
+  need="$(strings "$bin" | grep -oE '^Qt_6\.[0-9]+$' | sort -V | tail -1 || true)"
+  [[ -n "$need" && "$(printf '%s\n%s\n' "$have" "$need" | sort -V | tail -1)" != "$have" ]]
 }
 for _gear in ark kcalc filelight gwenview okular; do
-  if needs_gear_qt68 "$_gear"; then
-    log "== official ${_gear} 26.04.2 for Qt 6.8"
+  if needs_gear_build "$_gear"; then
+    log "== official ${_gear} 26.04.2 for Qt 6.10"
     "${SCRIPT_DIR}/build-kde-gear-26.04.2.sh" "$R" "$_gear" \
       || die "required desktop app ${_gear} build failed"
   fi
@@ -1279,6 +1277,11 @@ find "$R" -xdev -name '._*' -type f -delete 2>/dev/null || true
 # with its owner (uid 1001) made /usr unowned: polkit, D-Bus and sshd then
 # ignore their files, and Discover, Decky and more break.
 find "$R/usr" "$R/etc" -xdev \( -uid +999 -o -gid +999 \) -exec chown -h root:root {} + 2>/dev/null || true
+
+# Nothing we install may need a library or Qt/glibc version this rootfs lacks
+# (prebuilt parts from an older Frame release do, and fail only on the device).
+log "== library check"
+"${SCRIPT_DIR}/check-rootfs-libs.sh" "$R" | tee -a "$LOG"
 
 log "== summary"
 {
