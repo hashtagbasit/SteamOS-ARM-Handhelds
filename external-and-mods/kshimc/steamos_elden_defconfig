@@ -1,0 +1,43 @@
+# kShimC runtime for the Lenovo Legion Y700 Gen 4 (TB322FC, SM8750): the boot
+# menu with the stock Android and SteamOS. Nothing in it touches the UFS: no
+# native UFS I/O, no saved settings. The default entry and the timeout come
+# from the packed manifest.
+CONFIG_QCOM_KEYS=y
+CONFIG_QCOM_SPMI=y
+CONFIG_QCOM_KEY_DEBOUNCE_SAMPLES=2
+# CONFIG_KSHIM_QEMU_PLATFORM is not set
+CONFIG_KSHIM_FRAMEBUFFER=y
+CONFIG_KSHIM_LVGL=y
+# The panel is mounted rotated: draw the menu 270 degrees counterclockwise.
+CONFIG_KSHIM_UI_ROTATION_CCW=270
+CONFIG_KSHIM_MENU_ENTRY_DURATION_MS=0
+# 20 logical 3040-pixel rows, within the 4 MiB runtime slot.
+CONFIG_KSHIM_LVGL_BUFFER_BYTES=243712
+# CONFIG_KSHIM_TOUCH is not set
+# CONFIG_KSHIM_SMP is not set
+# CONFIG_KSHIM_UEFI_TEST_MENU is not set
+# CONFIG_ENABLE_BANNER is not set
+CONFIG_DEBUG_LEVEL_NONE=y
+# CONFIG_KSHIM_DEBUG_CONSOLE is not set
+CONFIG_ASSERT_HALT=y
+CONFIG_KSHIM_MENU_STYLE_STAR_CHART=y
+CONFIG_KSHIM_MENU_LANGUAGE_SWITCH=y
+CONFIG_KSHIM_MENU_CHINESE=y
+CONFIG_KSHIM_MENU_ENTRY_DETAILS=y
+CONFIG_KSHIM_MENU_BASE_ANDROID=y
+CONFIG_KSHIM_MENU_POWER_ACTIONS=y
+CONFIG_KSHIM_MENU_ADVANCED_ACTIONS=y
+CONFIG_KSHIM_QCOM_REBOOT=y
+CONFIG_KSHIM_EDL_DISABLE_SDI=y
+# CONFIG_KSHIM_BOOT_TIMING is not set
+
+# No device/default-entry settings and no storage access from the menu.
+# CONFIG_KSHIM_MENU_SESSION_SETTINGS is not set
+# CONFIG_KSHIM_STORAGE_ENTRY_PROBE is not set
+# CONFIG_KSHIM_UFS_NATIVE_IO is not set
+# CONFIG_KSHIM_UFS_READ_PROBE is not set
+# CONFIG_KSHIM_UFS_READ_SCREEN is not set
+# CONFIG_KSHIM_UFS_LINK_WAKE is not set
+# CONFIG_KSHIM_UFS_DEVICE_WAKE is not set
+# CONFIG_KSHIM_UFS_SETTINGS is not set
+# CONFIG_KSHIM_EDL_PROBE is not set
