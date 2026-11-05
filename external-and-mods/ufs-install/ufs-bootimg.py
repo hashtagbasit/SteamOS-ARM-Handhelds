@@ -92,7 +92,7 @@ def ramdisk_bytes(rd: bytes) -> bytes:
 
 def initramfs_bytes(img: BootImg) -> bytes:
     """The initramfs: the bootimg ramdisk, or with a dummy ramdisk (SM8550,
-    like ROCKNIX) the uncompressed cpio built into the gzipped kernel Image."""
+    like the base kernel) the uncompressed cpio built into the gzipped kernel Image."""
     raw = ramdisk_bytes(img.ramdisk)
     if raw[:6] == b"070701" or img.kernel[:2] != b"\x1f\x8b":
         return raw

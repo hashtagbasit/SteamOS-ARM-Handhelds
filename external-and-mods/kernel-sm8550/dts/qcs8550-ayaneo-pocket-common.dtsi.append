@@ -1,6 +1,6 @@
 
 /*
- * SteamOS ARM: let the SD card run at UHS-I speed (SDR50/SDR104). ROCKNIX
+ * SteamOS ARM: let the SD card run at UHS-I speed (SDR50/SDR104). The base DTS
  * masks both modes here, so cards fell back to plain high speed (~25 MB/s)
  * and loading games from the card took about 3x as long as on the prebuilt
  * 7.0.14 kernel, which ran the same cards at SDR104.
@@ -10,7 +10,7 @@
 };
 
 /*
- * s2idle (as ArmadaOS): both PCIe WAKE# lines are active low, read as active
+ * s2idle: both PCIe WAKE# lines are active low, read as active
  * high they can wake the SoC straight back up; the codec keeps this rail
  * enabled through s2idle, idle it in LPM.
  */

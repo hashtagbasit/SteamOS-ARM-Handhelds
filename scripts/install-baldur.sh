@@ -85,8 +85,7 @@ for f in sc4_1882.so fast_lookahead_limiter_1913.so; do
 done
 # The audio topology (generated, in the board project).
 install -Dm0644 "$W/firmware/audio/LENOVO-TB323FU-tplg.bin" "$R/usr/lib/firmware/qcom/kaanapali/LENOVO-TB323FU-tplg.bin"
-# Newer than the board project's (external-and-mods/baldur/rootfs, from
-# github.com/mydanyi/armadaos-freedom): USB-C routing that keeps a real host
+# Newer than the board project's (external-and-mods/baldur/rootfs): USB-C routing that keeps a real host
 # (dock, PC) on the controller and doesn't drop a pad on the side port when
 # a charger goes in the bottom one, plus a re-check on every role change;
 # speaker gain that waits for the sound card and falls back to the safe

@@ -1,10 +1,10 @@
 #!/bin/bash
 # Bring up the internal speakers once the ASoC card appears.
 #   SM8650 (KONKR Pocket FIT / AYANEO Pocket S2): card "SM8650-APS2",
-#     WSA884x speakers + WCD939x headphones, UCM from ROCKNIX.
+#     WSA884x speakers + WCD939x headphones, UCM from the base image.
 #   SM8550: card "AYN-Odin2" (Odin 2 / Mini / Portal, Retroid Pocket 6 / Nova:
 #     aw88166 amps on MI2S), "AYN-Thor", "SM8550-APS" (AYANEO Pockets:
-#     WSA884x), UCM from ROCKNIX.
+#     WSA884x), UCM from the base image.
 #   SM8350 (REDMAGIC 6): card "sm8250 - REDMAGIC 6", fully set up by its UCM
 #     (conf.d/sm8250/REDMAGIC 6.conf) when WirePlumber opens it.
 # Name kept as sm8550-audio-setup so the existing units/udev rule apply.

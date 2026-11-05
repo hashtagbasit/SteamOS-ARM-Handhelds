@@ -31,7 +31,7 @@ A performance profile keeps full device support (USB, Wi‑Fi, audio, storage) b
 | **Userspace power** | Default governors (schedutil / ondemand) | CPU and GPU held in performance while gaming | GPU especially often stays on a conservative governor unless something sets it for play. |
 | **Device tree / EAS** | Generic or mismatched CPU capacity values | Correct capacity numbers for A510 vs A715 cores | Scheduler sends work to the wrong cluster. |
 
-None of this is unique to one project. You see the same pattern on **Armbian, ROCKNIX ports, custom builds, and reference LinuxLoader images** — whenever one side uses stock defaults and the other applies the table above.
+None of this is unique to one project. You see the same pattern on **Armbian, other ports, custom builds, and reference LinuxLoader images** — whenever one side uses stock defaults and the other applies the table above.
 
 ---
 

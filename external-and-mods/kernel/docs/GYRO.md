@@ -25,10 +25,10 @@ sudo ./scripts/install-masi-motion.sh
 
 ## Patches / overlays in this tree
 
-- `patches/masi/1025-misc-fastrpc-adsp-sensor-pd-and-legacy-ioctl.patch`
-- `patches/masi/1026-dt-bindings-misc-qcom-fastrpc-pd-routing.patch`
-- `patches/masi/qcs8550-ayn-gyro-fastrpc.dtsi.frag` — remote heap + SensorsPD (all AYN SM8550)
-- `patches/masi/qcs8550-ayn-thor-gyro-fastrpc-pd.dtsi.frag` — `qcom,pd-type` on Thor only
+- `patches/rp6-base/1025-misc-fastrpc-adsp-sensor-pd-and-legacy-ioctl.patch`
+- `patches/rp6-base/1026-dt-bindings-misc-qcom-fastrpc-pd-routing.patch`
+- `patches/rp6-base/qcs8550-ayn-gyro-fastrpc.dtsi.frag` — remote heap + SensorsPD (all AYN SM8550)
+- `patches/rp6-base/qcs8550-ayn-thor-gyro-fastrpc-pd.dtsi.frag` — `qcom,pd-type` on Thor only
 - `lib/gyro-firmware.sh` — Thor ADSP overlay in `firmware/`
 - `vendor/qcom-gyro/firmware-thor-adsp/` — Thor ADSP blobs
 - `config/golden.config` — `CONFIG_UHID=y` (required for virtual Deck/DualSense userspace pads)

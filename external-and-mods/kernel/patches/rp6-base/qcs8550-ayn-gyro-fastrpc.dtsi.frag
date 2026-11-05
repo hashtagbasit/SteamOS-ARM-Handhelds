@@ -1,9 +1,9 @@
-/* MaSi: ADSP FastRPC remote heap + SensorsPD PDR for AYN SM8550 gyro.
+/* ADSP FastRPC remote heap + SensorsPD PDR for AYN SM8550 gyro.
  * Applied to qcs8550-ayn-common.dtsi (odin2 / mini / portal / thor).
  *
- * Do NOT put PD-type on compute-cbs here. Batocera only forces PD-type
- * routing on Thor's stock SH5001 ADSP; Odin 2 uses first-free session banks
- * with SensorsPD attach (INIT_ATTACH_SNS), matching their validated Odin 2 DT.
+ * Do NOT put PD-type on compute-cbs here. PD-type routing is only forced
+ * on Thor's stock SH5001 ADSP; Odin 2 uses first-free session banks
+ * with SensorsPD attach (INIT_ATTACH_SNS), matching its validated DT.
  */
 
 #include <dt-bindings/firmware/qcom,scm.h>

@@ -2,7 +2,7 @@
 # Userspace hooks for SM8550 deep suspend (systemd). Replaces fake-suspend / keepalive.
 set -euo pipefail
 
-# Devices validated for deep suspend in ROCKNIX PR #2954
+# Devices validated for deep suspend
 _suspend_device_allowed() {
     local model compat=""
     if [[ "${SUSPEND_DEEP_ALL:-0}" == "1" ]]; then

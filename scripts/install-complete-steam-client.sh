@@ -91,8 +91,7 @@ sanitize_steam_user_data() {
   # Steam shows its first-run setup (language, time zone, Wi-Fi, then sign-in)
   # while the CompletedOOBE / CompletedOOBEStage1 registry values are absent;
   # it writes them itself when setup finishes. Ship a registry.vdf without them
-  # (the earlier explicit "0" values images carried skipped the setup, and a
-  # registry-less home is what Armada ships). A neutral value keeps the file
+  # (the earlier explicit "0" values images carried skipped the setup). A neutral value keeps the file
   # non-empty.
   local home="${d%/.local/share/Steam}"
   if [[ "$home" != "$d" ]]; then

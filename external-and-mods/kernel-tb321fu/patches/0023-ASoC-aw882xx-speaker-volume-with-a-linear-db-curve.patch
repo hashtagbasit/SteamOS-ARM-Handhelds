@@ -8,8 +8,7 @@ step that matches its slider, while the amplifiers attenuate linearly in dB
 over the given range. The low half of the slider stays audible on small
 speakers.
 
-Taken from https://github.com/enij90/armada-tb321fu (Lenovo Legion Tab Gen 3 / Y700 2025,
-TB321FU, SM8650).
+Needed on the Lenovo Legion Tab Gen 3 / Y700 2025 (TB321FU, SM8650).
 ---
 --- a/sound/soc/codecs/aw882xx/aw882xx.c
 +++ b/sound/soc/codecs/aw882xx/aw882xx.c

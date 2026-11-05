@@ -41,7 +41,7 @@ It defines:
 - **Valve SteamOS Base:** Upstream rootfs build, bundle name, and CDN URL (`STEAMOS_BUILD`, `STEAMOS_BUNDLE`, `STEAMOS_URL`).
 - **Mesa Graphics Stack:** Mesa release version, sha256 checksum, Android NDK version, and NDK sha1 (`MESA_VERSION`, `MESA_SHA256`, `NDK_VERSION`, `NDK_SHA1`).
 - **Steam Client ARM Channel:** The beta channel bootstrapped in CI (`STEAM_ARM_CHANNEL`).
-- **Kernel & Distribution Pins:** Pinned ROCKNIX release tag and kernel version (`ROCKNIX_REF`, `KVER`).
+- **Kernel & Distribution Pins:** Pinned base release tag and kernel version (`ROCKNIX_REF`, `KVER`).
 
 ### How It Is Consumed
 - **Bash Scripts (`make-steamos-*.sh`, `scripts/build-mesa.sh`):** Automatically source `versions.env` if present, while allowing local environment variables to override them.
@@ -64,7 +64,7 @@ The Mesa stack requires four slices (`aarch64` native via rootfs bubblewrap, `x8
 3. Trigger the `.github/workflows/build-mesa-sm8750.yml` workflow via GitHub Actions `workflow_dispatch`.
 4. Once verified, publish the resulting `mesa-sm8750.tar.zst` artifact to a release asset tag and update the pointer.
 
-### C. Upgrading the Kernel & ROCKNIX Tree
+### C. Upgrading the Kernel & Base Tree
 The Odin 3 kernel is compiled from source with `CONFIG_FTRACE=y` (enabling tracefs for `mangoapp` and `steamos-manager`):
 1. Update `ROCKNIX_REF` or `KVER` in `versions.env` and `external-and-mods/kernel-sm8750/soc.env`.
 2. Trigger `.github/workflows/build-kernel-sm8750.yml` via `workflow_dispatch` on native `ubuntu-24.04-arm` runners.

@@ -67,7 +67,7 @@ prepare_firmware_masi() {
         echo "  OK   ADSP firmware for odin2/mini/portal/thor" >&2
     fi
 
-    # Overlay Rocknix/linux-firmware a740_sqe.fw (Armbian SQE causes RPCS3 glitches)
+    # Overlay linux-firmware a740_sqe.fw (Armbian SQE causes RPCS3 glitches)
     firmware_overlay_rocknix_sqe "${fw_out}" || return 1
 
     [[ "${n}" -gt 0 ]] || {
@@ -76,7 +76,7 @@ prepare_firmware_masi() {
     }
 }
 
-# Replace Armbian a740_sqe.fw with Rocknix/linux-firmware (md5 0211fdf6…).
+# Replace Armbian a740_sqe.fw with linux-firmware (md5 0211fdf6…).
 firmware_overlay_rocknix_sqe() {
     local fw_out="$1"
     local ov_sqe="${ROOT}/firmware-overrides/qcom/a740_sqe.fw"
@@ -84,7 +84,7 @@ firmware_overlay_rocknix_sqe() {
     local have=""
 
     [[ -f "${ov_sqe}" ]] || {
-        echo "ERROR: missing ${ov_sqe} (Rocknix SQE override)" >&2
+        echo "ERROR: missing ${ov_sqe} (SQE override)" >&2
         return 1
     }
     have="$(md5sum "${ov_sqe}" | awk '{print $1}')"
@@ -94,5 +94,5 @@ firmware_overlay_rocknix_sqe() {
     }
     mkdir -p "${fw_out}/qcom"
     cp -a "${ov_sqe}" "${fw_out}/qcom/a740_sqe.fw"
-    echo "  + qcom/a740_sqe.fw ← Rocknix/linux-firmware (RPCS3 fix)" >&2
+    echo "  + qcom/a740_sqe.fw ← linux-firmware (RPCS3 fix)" >&2
 }

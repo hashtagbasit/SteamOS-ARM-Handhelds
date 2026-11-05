@@ -9,4 +9,4 @@
 - `share-qcom/` and `src/` — leftovers from an old in-tree userspace bundle.  
   Live install path: **`vendor/giroscopio/`** (`./install.sh` or `scripts/install-giroscopio.sh`).
 
-Kernel gyro pieces (DT FastRPC / SensorsPD / `CONFIG_UHID`) live under `patches/masi/` and `config/golden.config`. See `docs/GYRO.md`.
+Kernel gyro pieces (DT FastRPC / SensorsPD / `CONFIG_UHID`) live under `patches/rp6-base/` and `config/golden.config`. See `docs/GYRO.md`.

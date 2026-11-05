@@ -2,7 +2,7 @@ Subject: [PATCH] drm/panel: icna35xx: cap the backlight below the boost range
 
 The backlight was registered with the full 12-bit range, so the top of
 the slider drove these panels (Thor top screen, Odin 3) into their boost
-codes. Cap the range at 3413, the same limit ROCKNIX uses now.
+codes. Cap the range at 3413.
 
 ---
 --- a/drivers/gpu/drm/panel/panel-chipone-icna35xx.c

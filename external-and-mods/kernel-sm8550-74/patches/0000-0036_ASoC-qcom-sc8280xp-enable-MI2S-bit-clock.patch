@@ -10,7 +10,7 @@ the SoC and BCLK-slaved amps never power up. Take the card-level "i2s_clk"
 prepare/enable it around MI2S BE startup/shutdown, refcounted across the
 MI2S links.
 
-Replaces ROCKNIX's Primary I2S support (SM8550 0036) and SM8750 0060 on
+Replaces the base tree's Primary I2S support (SM8550 0036) and SM8750 0060 on
 Linux 7.4, where the driver was restructured around per-board dai data.
 ---
 diff --git a/sound/soc/qcom/sc8280xp.c b/sound/soc/qcom/sc8280xp.c

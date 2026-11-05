@@ -1,4 +1,4 @@
-# AYANEO Pockets (SM8550): volume keys on the AYANEO DEVICE HID (from ROCKNIX).
+# AYANEO Pockets (SM8550): volume keys on the AYANEO DEVICE HID.
 evdev:name:AYANEO DEVICE*
  KEYBOARD_KEY_70068=volumeup
  KEYBOARD_KEY_70069=volumedown

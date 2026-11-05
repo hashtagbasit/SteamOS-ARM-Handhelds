@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Retroid Pocket 6 — adapted from LineageOS android_kernel_ayn_kernel-ack
- * (public git) for Armbian qcs8550-ayn-common.dtsi.
+ * Retroid Pocket 6 — adapted from the public vendor kernel DTS
+ * for Armbian qcs8550-ayn-common.dtsi.
  */
 
 /dts-v1/;

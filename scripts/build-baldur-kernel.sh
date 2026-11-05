@@ -2,7 +2,7 @@
 # Lenovo Legion Y700 Gen 5 (TB323FU, SM8850, board "baldur") kernel: mainline
 # v7.3-rc4 with the board's patch series, device tree, config fragments and
 # the out-of-tree aw882xx speaker amplifier driver from
-# github.com/joonhoekim/tb323fu-linux (pinned in
+# the pinned port tree (see
 # external-and-mods/kernel-baldur/release.env), plus our SteamOS options
 # (kernel-common/steamos.config, kernel-baldur/steamos.config) and our startup
 # code built in (kernel-common/initramfs, root=PARTLABEL=steamos-gen5).
@@ -41,7 +41,7 @@ for p in "$P"/patches/*.patch; do
 done
 echo "applied $n board patches"
 # Ours on top (kernel-baldur/patches: ath12k 5 GHz scanning and TX during
-# scans, from github.com/mydanyi/armadaos-freedom), and the GPU off the
+# scans), and the GPU off the
 # board-temperature throttle in the built-in device tree.
 K="$ROOT/external-and-mods/kernel-baldur"
 for p in "$K"/patches/*.patch; do

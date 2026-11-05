@@ -1,5 +1,5 @@
 Adreno 830 (Odin 3): the msm kernel reports the rev-1 id 0xffff44050001,
-which 26.2.3 doesn't list. Same ids ROCKNIX and Armada add for SM8750.
+which 26.2.3 doesn't list.
 
 --- a/src/freedreno/common/freedreno_devices.py	2026-09-30 14:14:20.658053629 +0200
 +++ b/src/freedreno/common/freedreno_devices.py	2026-09-30 14:14:20.668053739 +0200

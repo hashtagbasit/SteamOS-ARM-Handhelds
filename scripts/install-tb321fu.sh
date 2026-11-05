@@ -278,8 +278,7 @@ CalibrationMatrix=1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1
 CalibrationMatrix=1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1
 KCM
 
-# The Adreno 750's GMU fails to come back from runtime suspend on this tablet
-# (see github.com/enij90/armada-tb321fu): keep it powered until that is understood.
+# The Adreno 750's GMU fails to come back from runtime suspend on this tablet: keep it powered until that is understood.
 install -Dm0644 /dev/stdin "$R/usr/lib/systemd/system/steamos-arm-tb321fu-gpu-on.service" <<'UNIT'
 [Unit]
 Description=Lenovo Legion Y700 Gen 3: keep the GPU powered (its GMU doesn't resume)
@@ -460,8 +459,7 @@ RULES
 # systemd-tmpfiles then deleted files made before the sync as 28 days old.
 # Keep the offset in /var: set the clock from it early, save it again while
 # the clock is synchronised.
-# Taken from github.com/enij90/armada-tb321fu (its chrony check replaced by
-# systemd-timesyncd's).
+# Uses systemd-timesyncd's sync check.
 install -Dm0755 /dev/stdin "$R/usr/lib/steamos-arm/tb321fu-rtc-offset" <<'SH'
 #!/bin/bash
 #   restore: set the clock from the RTC counter and the saved offset

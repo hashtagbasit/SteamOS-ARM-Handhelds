@@ -7,10 +7,10 @@ from them that the images install over the kernel package's copies.
 | --- | --- | --- |
 | AYN Odin 3 | `sm8750/SM8750-AYN.m4` | `/usr/lib/firmware/qcom/sm8750/SM8750-AYN-tplg.bin` |
 
-The Odin 3 graph is the one ROCKNIX ships (speakers on SECONDARY MI2S SD0,
+The Odin 3 graph is the stock one (speakers on SECONDARY MI2S SD0,
 WCD939x headphones and headset mic) plus MultiMedia4 to DISPLAY_PORT_RX_0, so
 sound goes out over USB-C to a monitor. Built without DP (`-DWITH_DP=0`) it
-decompiles to the same graph as ROCKNIX's blob; the only difference is the
+decompiles to the same graph as the stock blob; the only difference is the
 module port counts (tokens 204/205) the current generator adds.
 
 Rebuild (the build VM, any Ubuntu with alsa-utils and m4):

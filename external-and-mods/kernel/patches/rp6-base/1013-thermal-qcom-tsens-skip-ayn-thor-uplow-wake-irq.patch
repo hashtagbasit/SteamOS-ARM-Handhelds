@@ -11,7 +11,7 @@ kernel, so runtime testing cannot disable this wake source.
 Keep normal TSENS interrupt handling active and keep critical TSENS wake
 enabled. Only skip enable_irq_wake() for the ordinary "uplow" TSENS IRQs on
 qcom,sm8550. Scoped to the SoC-level compatible (not a specific board) so it
-covers every SM8550 board (ROCKNIX PR #2954), not just AYN Thor.
+covers every SM8550 board, not just AYN Thor.
 
 Signed-off-by: jaewun <jaewun@users.noreply.github.com>
 ---

@@ -1,8 +1,7 @@
 From: MaSi-OS <masi@local>
 Subject: [PATCH] misc: fastrpc: ADSP sensor PD routing + legacy ioctl (linux 7.0)
 
-Adapted from Batocera Custom Qualcomm Builds (suckbluefrog) for AYN Thor/Odin2
-gyro via ADSP SensorsPD. Uses dma_addr (linux 7.0) instead of downstream phys.
+Routes AYN Thor/Odin2 gyro through the ADSP SensorsPD. Uses dma_addr (linux 7.0) instead of downstream phys.
 
 --- a/drivers/misc/Kconfig	2026-07-17 17:58:00.632946436 +0200
 +++ b/drivers/misc/Kconfig	2026-07-17 17:57:22.363744094 +0200

@@ -1,11 +1,11 @@
 
 /*
- * SteamOS ARM additions for the AYN Thor Lite (appended to ROCKNIX's
+ * SteamOS ARM additions for the AYN Thor Lite (appended to the base
  * sm8250-ayn-thorlite.dts by kernel-common/build.sh).
  */
 
 /*
- * Touch: ROCKNIX pre-rotates both touchscreens (swap + invert) for its own
+ * Touch: the base DTS pre-rotates both touchscreens (swap + invert) for its own
  * compositor. gamescope and KWin rotate touch by the panel orientation
  * themselves, so it ended up rotated twice. Report native panel coordinates,
  * like our AYN Thor.

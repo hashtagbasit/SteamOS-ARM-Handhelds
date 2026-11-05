@@ -3,7 +3,7 @@ Subject: [PATCH] input: konkr_sysbtn: add gamepad_mode attribute
 
 Lets userspace switch the built-in pad between the fake Xbox 360 mode
 (045e:028e) and the AYANEO default mode (4001:0428). Only the default
-mode reports the two back buttons. Uses the same frames ArmadaOS sends
+mode reports the two back buttons. Uses the same frames sent
 over the MCU UART; the pad re-enumerates on USB afterwards.
 
   echo default > /sys/bus/serial/devices/serial1-0/gamepad_mode

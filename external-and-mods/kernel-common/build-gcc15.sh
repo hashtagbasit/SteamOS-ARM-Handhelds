@@ -2,7 +2,7 @@
 # Run build.sh inside a Fedora 43 container, which has GCC 15. Same
 # arguments as build.sh, e.g. for the 8 Gen 2 test kernel on 7.2:
 #   SM8550_RECIPE=7.2 bash external-and-mods/kernel-common/build-gcc15.sh sm8550
-# The port tree, WORK and the ROCKNIX checkout all have to be under MOUNT
+# The port tree, WORK and the base distribution checkout all have to be under MOUNT
 # (default /work), which is mounted at the same path in the container.
 # On an x86_64 host it cross-compiles with Fedora's aarch64 GCC 15; BUSYBOX
 # then has to be a static aarch64 busybox (it goes into the initramfs).

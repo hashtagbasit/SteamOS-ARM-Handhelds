@@ -31,7 +31,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ufs-bootimg.sh"
 
 BOOT_SRC="/boot"
 
-# Partition constants (same as ROCKNIX installtointernal)
+# Partition constants (same as the ABL installtointernal)
 BOOT_PART_MIB=2048              # ROCKNIX boot partition (fixed)
 BOOT_PART_GIB=2
 MIN_ANDROID_GIB=16              # mandatory minimum for Android
@@ -576,7 +576,7 @@ partition_ufs() {
     sleep 2
   fi
 
-  # Match ROCKNIX installtointernal FAT layout (4096-byte clusters)
+  # Match the ABL installtointernal FAT layout (4096-byte clusters)
   if (( DRY_RUN )); then
     log "[dry-run] mkfs.vfat -F 32 -S 4096 -s 4 -n ROCKNIX ${RK_PART_DEV}"
   else

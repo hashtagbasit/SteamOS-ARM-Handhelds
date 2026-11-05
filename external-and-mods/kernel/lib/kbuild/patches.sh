@@ -190,11 +190,11 @@ apply_armbian_patches() {
     touch "${stamp}"
 }
 
-# HV haptics + gamepad rumble (Batocera-derived DT fragment for all AYN SM8550 boards).
+# HV haptics + gamepad rumble (DT fragment for all AYN SM8550 boards).
 apply_masi_haptics_dtsi() {
     local src_dir="$1"
     local dtsi="${src_dir}/arch/arm64/boot/dts/qcom/qcs8550-ayn-common.dtsi"
-    local frag="${ROOT}/patches/masi/qcs8550-ayn-haptics.dtsi.frag"
+    local frag="${ROOT}/patches/rp6-base/qcs8550-ayn-haptics.dtsi.frag"
     local tmp marker='&pm8550b_eusb2_repeater'
 
     [[ -f "${dtsi}" && -f "${frag}" ]] || return 0
@@ -231,11 +231,11 @@ apply_masi_haptics_dtsi() {
 }
 
 # ADSP FastRPC SensorsPD + remote heap for Qualcomm Sensor Core gyro (AYN SM8550).
-# Common: heap + PDR only. Thor: also qcom,pd-type banks (Batocera layout).
+# Common: heap + PDR only. Thor: also qcom,pd-type banks.
 apply_masi_gyro_fastrpc_dts() {
     local src_dir="$1"
-    local frag="${ROOT}/patches/masi/qcs8550-ayn-gyro-fastrpc.dtsi.frag"
-    local thor_frag="${ROOT}/patches/masi/qcs8550-ayn-thor-gyro-fastrpc-pd.dtsi.frag"
+    local frag="${ROOT}/patches/rp6-base/qcs8550-ayn-gyro-fastrpc.dtsi.frag"
+    local thor_frag="${ROOT}/patches/rp6-base/qcs8550-ayn-thor-gyro-fastrpc-pd.dtsi.frag"
     local dtsi="${src_dir}/arch/arm64/boot/dts/qcom/qcs8550-ayn-common.dtsi"
     local thor="${src_dir}/arch/arm64/boot/dts/qcom/qcs8550-ayn-thor.dts"
 
@@ -442,7 +442,7 @@ verify_masi_thor_top_touch_orientation() {
 }
 
 ensure_masi_suspend_patches() {
-    local patch_dir="${ROOT}/patches/masi"
+    local patch_dir="${ROOT}/patches/rp6-base"
     local p need_fetch=0
 
     [[ "${SUSPEND_DEEP_PATCHES:-1}" == "0" ]] && return 0
@@ -460,13 +460,13 @@ ensure_masi_suspend_patches() {
     done
     [[ "${need_fetch}" -eq 0 ]] && return 0
 
-    echo "==> Fetching ROCKNIX suspend patches (1006–1013)…" >&2
+    echo "==> Fetching deep-suspend patches (1006–1013)…" >&2
     if command -v python3 >/dev/null 2>&1; then
-        python3 "${ROOT}/scripts/fetch-rocknix-suspend-patches.py"
-    elif [[ -x "${ROOT}/scripts/fetch-rocknix-suspend-patches.sh" ]]; then
-        "${ROOT}/scripts/fetch-rocknix-suspend-patches.sh"
+        python3 "${ROOT}/scripts/fetch-suspend-patches.py"
+    elif [[ -x "${ROOT}/scripts/fetch-suspend-patches.sh" ]]; then
+        "${ROOT}/scripts/fetch-suspend-patches.sh"
     else
-        echo "ERROR: missing 1006/1011 — install python3 or run scripts/fetch-rocknix-suspend-patches.py" >&2
+        echo "ERROR: missing 1006/1011 — install python3 or run scripts/fetch-suspend-patches.py" >&2
         return 1
     fi
 
@@ -518,8 +518,8 @@ verify_masi_suspend_stack() {
     [[ "${failed}" -eq 0 ]]
 }
 
-# Deep-suspend stack (ROCKNIX PR #2952). 1011 before 1009/1010: those patches shift
-# ufs-qcom.c line numbers and break the upstream ROCKNIX LineCfg hunks on linux-7.0.
+# Deep-suspend stack. 1011 before 1009/1010: those patches shift
+# ufs-qcom.c line numbers and break the upstream LineCfg hunks on linux-7.0.
 _masi_suspend_patch_order() {
     cat <<'EOF'
 1006-scsi-ufs-drain-relink-completions-out-of-band-pm.patch
@@ -733,7 +733,7 @@ PY
 }
 
 apply_masi_kernel_patches() {
-    local src_dir="$1" patch_dir="${ROOT}/patches/masi"
+    local src_dir="$1" patch_dir="${ROOT}/patches/rp6-base"
     local patch base failed=0 applied=0 skipped=0 rc suspend_name
 
     [[ -d "${patch_dir}" ]] || return 0
@@ -1517,7 +1517,7 @@ verify_masi_haptics_stack() {
 # AYANEO SM8550 Pocket family (ACE/DMG/DS/EVO/S 2K) — Armbian sm8550-6.18 DTS + MaSi S1.
 apply_masi_ayaneo_dts() {
     local src_dir="$1"
-    local src="${ROOT}/patches/masi/ayaneo"
+    local src="${ROOT}/patches/rp6-base/ayaneo"
     local qcom="${src_dir}/arch/arm64/boot/dts/qcom"
     local mk="${qcom}/Makefile"
     local f dtb
@@ -1557,10 +1557,10 @@ apply_masi_ayaneo_dts() {
     echo "  OK   MaSi AYANEO Pocket ACE/DMG/DS/EVO/S1 DTS" >&2
 }
 
-# Retroid Pocket 6 DTB — public DTS (LineageOS kernel-ack, adapted for Armbian ayn-common).
+# Retroid Pocket 6 DTB — public vendor DTS, adapted for Armbian ayn-common.
 apply_masi_extra_dts() {
     local src_dir="$1"
-    local extra="${ROOT}/patches/masi/qcs8550-retroidpocket-rp6.dts"
+    local extra="${ROOT}/patches/rp6-base/qcs8550-retroidpocket-rp6.dts"
     local mk="${src_dir}/arch/arm64/boot/dts/qcom/Makefile"
     local dest="${src_dir}/arch/arm64/boot/dts/qcom/qcs8550-retroidpocket-rp6.dts"
 

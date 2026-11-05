@@ -34,7 +34,7 @@ Do **not** copy only `boot/KERNEL` from `output/` to testers’ SD cards.
 
 ### 3. DTB chain experiment (reverted)
 
-Putting Mini DTB at slot 0 broke Odin 2 units whose ABL picks index 0 → black screen. Standard ROCKNIX slot order is restored in `config/dtb-chain.map`.
+Putting Mini DTB at slot 0 broke Odin 2 units whose ABL picks index 0 → black screen. Standard slot order is restored in `config/dtb-chain.map`.
 
 ---
 

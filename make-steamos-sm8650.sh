@@ -477,7 +477,7 @@ EOF
   sudo_run python3 "${ROOT}/steamos-overlay/usr/lib/steamos-arm/kernel-efi-sync" --boot "${MNT}/boot" --force
   # Optional second kernel on BOOT for testers to swap in by renaming
   # (TEST_KERNEL_OUT; its modules must be in KERNEL_OUT too). SM8550: our own
-  # ROCKNIX build by default, so it gets the ROCKNIX cmdline; set
+  # source build by default, so it gets the source-build cmdline; set
   # TEST_SM8550_KERNEL=prebuilt when the spare one is the prebuilt 7.0.14.
   if [[ -n "${TEST_KERNEL_OUT:-}" ]]; then
     local ttmp

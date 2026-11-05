@@ -1,7 +1,7 @@
 From: hashtagbasit <53941105+hashtagbasit@users.noreply.github.com>
 Subject: [PATCH] input: qcom-hv-haptics: use the one-argument __assign_str()
 
-ROCKNIX builds SM8550 without tracing, so the haptics trace event never
+The base config builds SM8550 without tracing, so the haptics trace event never
 compiled. SteamOS needs CONFIG_FTRACE (tracefs for mangoapp and
 steamos-manager), and since Linux 6.10 __assign_str() takes only the
 destination; the source comes from the matching __string().

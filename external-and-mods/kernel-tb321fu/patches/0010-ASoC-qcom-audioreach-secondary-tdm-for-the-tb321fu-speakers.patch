@@ -2,11 +2,11 @@ From: enij90 <226572015+enij90@users.noreply.github.com>
 Subject: [PATCH] ASoC: qcom: AudioReach Secondary TDM support (Lenovo TB321FU speakers)
 
 GUF296's TB321FU-7.1.1 changes to sound/soc/qcom (delta against upstream 7.1.1),
-ported onto the Armada 7.2 tree: TDM ports in AudioReach/q6apm-lpass-dais, the
+ported onto the 7.2 tree: TDM ports in AudioReach/q6apm-lpass-dais, the
 Secondary TDM bit clocks in q6prm, and 8-slot/32-bit TDM setup in the sc8280xp
 machine driver. Upstream 7.2 has no TDM support at all, so the AW2308 smart PAs on
 SEC_TDM_RX_0 never get a bit clock (no_clks=1, start failed). GUF's TDM startup is
-chained in front of Armada's MI2S/SoundWire BE startup.
+chained in front of the MI2S/SoundWire BE startup.
 
 
 Rebased onto 7.2.8 for SteamOS ARM Port: the back-end startup chains to

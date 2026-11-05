@@ -7,7 +7,7 @@ ROCKNIX-ABL **`boot/KERNEL`** bootimg — with **strict multi-device install**.
 Technical breakdown: **[GAMING-PERFORMANCE.md](https://github.com/MaSieS4Fun/MaSi-OS-Kernel-Updater/blob/main/docs/GAMING-PERFORMANCE.md)**
 
 Default target is Armbian **edge (7.0.x)**. By default MaSi skips Armbian GPU ACD +
-SM8550 interconnect QoS, hardens A740 GMU HFI BW/perf votes (`patches/masi/1030-…`
+SM8550 interconnect QoS, hardens A740 GMU HFI BW/perf votes (`patches/rp6-base/1030-…`
 + `1031-…` forbid GMU runtime PM), and deep-suspend userspace — so
 `GX_BW_PERF_VOTE` responds instead of timing out. Max clocks unchanged.
 
@@ -73,7 +73,7 @@ This kernel is assembled from public upstream work. **Full attribution and
 | Project | Link | Role here |
 |---------|------|-----------|
 | ROCKNIX | https://github.com/ROCKNIX/distribution | ABL KERNEL model, UFS install pattern, AYANEO DTS |
-| ROCKNIX PR #2952 | https://github.com/ROCKNIX/distribution/pull/2952 | Deep-suspend UFS/wake patches → `patches/masi/1006`–`1013` |
+| ROCKNIX PR #2952 | https://github.com/ROCKNIX/distribution/pull/2952 | Deep-suspend UFS/wake patches → `patches/rp6-base/1006`–`1013` |
 | ROCKNIX-ABL | https://github.com/ROCKNIX/abl | Device index → DTB chain slot |
 | Reference image | community SM8550 image | Reference 14-slot DTB chain (`reference/`, `device-tree/vendored/`) |
 
@@ -90,7 +90,7 @@ This kernel is assembled from public upstream work. **Full attribution and
 | Project / author | Link or note | Role here |
 |------------------|--------------|-----------|
 | LineageOS AYN `kernel-ack` | public `android_kernel_ayn_kernel-ack` | Retroid Pocket 6 DTS → `qcs8550-retroidpocket-rp6.dts` |
-| Teguh Sobirin / ROCKNIX | https://github.com/ROCKNIX | AYANEO Pocket DTS under `patches/masi/ayaneo/` |
+| Teguh Sobirin / ROCKNIX | https://github.com/ROCKNIX | AYANEO Pocket DTS under `patches/rp6-base/ayaneo/` |
 | Philippe Simons | panel patch authorship | Pocket DMG / DS panel drivers (`1020`, `1021`) |
 | Qualcomm / Linux Foundation | HV haptics copyright in-driver | `qcom-hv-haptics` + AYN haptics DT fragment |
 
@@ -116,11 +116,11 @@ This kernel is assembled from public upstream work. **Full attribution and
   CREDITS.md       full upstream attribution
   config/          dtb-chain, golden.config, defaults
   lib/             build + install logic
-  patches/masi/    post-Armbian overlays (haptics, suspend, gyro, Thor, AYANEO…)
+  patches/rp6-base/    post-Armbian overlays (haptics, suspend, gyro, Thor, AYANEO…)
   payload/         fix-thor-screen (touch) — staged into output/
   reference/       reference DTB chain blobs
   hooks/           initramfs (dual-root SD/UFS)
-  scripts/         preflight, verify, ufs-linux, ROCKNIX suspend fetch
+  scripts/         preflight, verify, ufs-linux, suspend patch fetch
   vendor/qcom-gyro firmware-thor-adsp (ADSP overlay for Thor gyro)
 ```
 

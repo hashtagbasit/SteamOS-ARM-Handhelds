@@ -7,8 +7,7 @@ suspend therefore kept LPASS powered and CX could not collapse for the whole
 sleep. Drop the clock together with the graphs; prepare takes it back on
 resume.
 
-Taken from https://github.com/enij90/armada-tb321fu (Lenovo Legion Tab Gen 3 / Y700 2025,
-TB321FU, SM8650).
+Needed on the Lenovo Legion Tab Gen 3 / Y700 2025 (TB321FU, SM8650).
 ---
 --- a/sound/soc/qcom/qdsp6/q6apm-lpass-dais.c
 +++ b/sound/soc/qcom/qdsp6/q6apm-lpass-dais.c

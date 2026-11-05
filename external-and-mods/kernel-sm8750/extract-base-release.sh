@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stage the SM8750 kernel, modules, firmware and ABL bootloader from the official
-# ROCKNIX SM8750 release (Linux 7.2.0).
+# base SM8750 release (Linux 7.2.0).
 #
 # Target output structure matches KERNEL_OUT expected by make-steamos-sm8750.sh:
 #   <output>/

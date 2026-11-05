@@ -96,7 +96,7 @@ On boot (even if the screen stays black), the initramfs writes:
 
 After a failed boot:
   1. Power off
-  2. Boot ROCKNIX or another Linux image (same SD card)
+  2. Boot another Linux image (same SD card)
   3. Copy /boot/masi-boot.log and send it for analysis
 
 The file is plain text (dmesg + cmdline + device-tree model).

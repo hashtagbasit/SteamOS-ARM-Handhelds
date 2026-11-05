@@ -385,7 +385,7 @@ PY
 
 bridge_72_ufshcd_1006_intr() {
     local src_dir="$1" f="${src_dir}/drivers/ufs/core/ufshcd.c"
-    local patch="${ROOT}/patches/masi/1006-scsi-ufs-drain-relink-completions-out-of-band-pm.patch"
+    local patch="${ROOT}/patches/rp6-base/1006-scsi-ufs-drain-relink-completions-out-of-band-pm.patch"
     [[ -f "${f}" ]] || return 1
 
     if ! grep -q 'ufshcd_pm_drain_completions' "${f}" && [[ -f "${patch}" ]]; then

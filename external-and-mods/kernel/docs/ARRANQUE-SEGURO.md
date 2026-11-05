@@ -14,7 +14,7 @@ En cada consola: `sudo ./update.sh` (desde `kernel-new-base`).
 - Solución: Vol Abajo → Set the Device → modelo exacto → Linux → START
 - **Odin 2 Mini:** el slot 3 del `KERNEL` MaSi usa el DTB de referencia (no el DTB kbuild Armbian), porque hubo reportes de pantalla negra sin log solo en Mini. Tras `./make.sh` + `update.sh`, reprobar Mini.
 - **Mini + GPU / gamescope:** el DTB de referencia pide ZAP en `qcom/sm8550/a740_zap.mbn`. El árbol Armbian/MaSi solo trae `qcom/sm8550/ayn/a740_zap.mbn`. Sin el alias que crea `./make.sh` en `output/.../firmware/`, Turnip falla (`could not get GPU ID`) y gamescope cae a **llvmpipe**. Solución: reinstalar firmware con `sudo ./update.sh` (o `ln -sfn ayn/a740_zap.mbn /lib/firmware/qcom/sm8550/a740_zap.mbn`).
-- **Glitches / freezes (RPCS3, etc.):** en 7.0 el dmesg muestra timeouts GMU `HFI_H2F_MSG_GX_BW_PERF_VOTE` (GPU colgada → stutter + teclas “retrasadas”). Mitigación MaSi: omite ACD + QoS interconnect Armbian, reintenta espera HFI (`patches/masi/1030-…`), keepalive GPU/GMU `power/control=on`, aliases ZAP. Rebuild: `./make.sh && sudo ./update.sh`. Re-activar ACD/QoS: `PATCH_SKIP=none ./make.sh`.
+- **Glitches / freezes (RPCS3, etc.):** en 7.0 el dmesg muestra timeouts GMU `HFI_H2F_MSG_GX_BW_PERF_VOTE` (GPU colgada → stutter + teclas “retrasadas”). Mitigación MaSi: omite ACD + QoS interconnect Armbian, reintenta espera HFI (`patches/rp6-base/1030-…`), keepalive GPU/GMU `power/control=on`, aliases ZAP. Rebuild: `./make.sh && sudo ./update.sh`. Re-activar ACD/QoS: `PATCH_SKIP=none ./make.sh`.
 
 ### B) Initramfs no encuentra root (a veces pantalla negra con `quiet`)
 
@@ -39,9 +39,9 @@ Necesita otro proyecto base (`kernel-new-base-sm8650` — no incluido).
 Funciona con `masi.ufsroot=PARTLABEL=STORAGE` + `update.sh` + `masi-install-to-ufs`.  
 Otros usuarios con la misma consola pero **solo SD** deben igualmente repack UUID de **su** SD.
 
-## ROCKNIX vs MaSi
+## Imagen por dispositivo vs kernel universal
 
-ROCKNIX flashea imagen completa por dispositivo. MaSi compila un kernel universal con 14 DTBs; el operador debe:
+Otras distribuciones flashean imagen completa por dispositivo. MaSi compila un kernel universal con 14 DTBs; el operador debe:
 
 - Elegir modelo en ABL  
 - Repack UUID por dispositivo  

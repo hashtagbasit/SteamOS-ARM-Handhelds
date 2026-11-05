@@ -37,7 +37,7 @@ The log is **plain text**, suitable for email or GitHub issue attachment.
 2. ABL → correct device model → boot MaSi kernel.
 3. Wait ~30 s (even if screen is black).
 4. Power off.
-5. Boot **ROCKNIX** or another Linux image on the **same SD card**.
+5. Boot another Linux image on the **same SD card**.
 6. Copy the log:
 
 ```bash

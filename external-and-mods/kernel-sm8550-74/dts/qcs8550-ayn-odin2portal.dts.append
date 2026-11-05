@@ -1,6 +1,6 @@
 
 /*
- * SteamOS ARM additions for the AYN Odin 2 Portal (appended to ROCKNIX's
+ * SteamOS ARM additions for the AYN Odin 2 Portal (appended to the base
  * qcs8550-ayn-odin2portal.dts by kernel-common/build.sh).
  *
  * The two buttons on the back (M1 left, M2 right) are not on the gamepad

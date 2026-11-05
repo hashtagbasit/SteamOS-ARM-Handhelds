@@ -7,8 +7,7 @@ controllers are force-suspended but keep their device links, so the pin
 controller stays active with its LPASS votes through s2idle. Force the
 runtime suspend across system sleep like the macros and the controller.
 
-Taken from https://github.com/enij90/armada-tb321fu (Lenovo Legion Tab Gen 3 / Y700 2025,
-TB321FU, SM8650).
+Needed on the Lenovo Legion Tab Gen 3 / Y700 2025 (TB321FU, SM8650).
 ---
 diff --git a/drivers/pinctrl/qcom/pinctrl-sm8650-lpass-lpi.c b/drivers/pinctrl/qcom/pinctrl-sm8650-lpass-lpi.c
 index bc7889c99..e33d4360c 100644

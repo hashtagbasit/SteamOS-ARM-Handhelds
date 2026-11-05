@@ -61,7 +61,7 @@ log "card ${card_id} speaker mixers applied"
 # card in pro-audio, so nothing does. Capture then fails with EIO and PipeWire
 # spins on it until it gets killed, taking all sound with it. Set the path up
 # here; any control this kernel names differently just fails quietly.
-# Gain 92, not 100: a test recording peaked at full scale at 100 (PB-OS 6f0ead23).
+# Gain 92, not 100: a test recording peaked at full scale at 100.
 if grep -qa 'ayn,thor' /sys/firmware/devicetree/base/compatible 2>/dev/null; then
   for c in "MultiMedia3 Mixer TX_CODEC_DMA_TX_3=1" "TX DEC0 MUX=SWR_MIC" \
            "TX SMIC MUX0=SWR_MIC7" "DMIC3 Switch=1" "DMIC3_MIXER Switch=1" \

@@ -14,12 +14,12 @@ match. The 8 Gen 3 image keeps Valve's Mesa.
 
 ## Patches
 
-| Patch | From | Why |
-|---|---|---|
-| `0001-turnip-a740-disable-sparse-sync.patch` | ArmadaOS (originally Batocera) | A740 GPU translation fault storms from the graphics/sparse queue cross sync added in Mesa `0cc0e786` |
-| `0002-ir3-a740-disable-bindless-ubo-const-lowering.patch` | ROCKNIX SM8550, offsets for 26.2 from ArmadaOS | ir3 shader bug on the A740 |
-| `0004-tu-z-mutable-ubwc.patch` | ArmadaOS, from Vauzi-17 | Keeps mutable images tiled with UBWC on A740. `TU_Z_MUTABLE=0` restores upstream |
-| `0005-tu-z-mutable-ubwc-copy-format.patch` | ArmadaOS | Copies use the written format: black or white overlays and water |
-| `0006-ir3-array-to-ssa-resolve-trivial-phi-chains.patch` | ArmadaOS issue 748 | Shader compile crash in Enshrouded and Onimusha |
+| Patch | Why |
+|---|---|
+| `0001-turnip-a740-disable-sparse-sync.patch` | A740 GPU translation fault storms from the graphics/sparse queue cross sync added in Mesa `0cc0e786` |
+| `0002-ir3-a740-disable-bindless-ubo-const-lowering.patch` | ir3 shader bug on the A740 |
+| `0004-tu-z-mutable-ubwc.patch` | Keeps mutable images tiled with UBWC on A740. `TU_Z_MUTABLE=0` restores upstream |
+| `0005-tu-z-mutable-ubwc-copy-format.patch` | Copies use the written format: black or white overlays and water |
+| `0006-ir3-array-to-ssa-resolve-trivial-phi-chains.patch` | Shader compile crash in Enshrouded and Onimusha |
 
 Build: `scripts/build-mesa.sh` (all three architectures).

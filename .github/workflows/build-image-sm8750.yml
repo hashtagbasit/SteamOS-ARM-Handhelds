@@ -9,7 +9,7 @@ on:
     inputs:
       kernel_source:
         description: >-
-          Kernel source: 'source' (custom SteamOS kernel with tracefs, verified) or 'prebuilt' (ROCKNIX 7.2.0 fallback)
+          Kernel source: 'source' (custom SteamOS kernel with tracefs, verified) or 'prebuilt' (base 7.2.0 release fallback)
         required: false
         default: 'source'
         type: choice
@@ -209,7 +209,7 @@ jobs:
             echo "Using custom built kernel from source"
           else
             export SM8750_KERNEL=prebuilt
-            echo "Using official verified ROCKNIX prebuilt kernel"
+            echo "Using official verified prebuilt kernel"
           fi
           export MESA_STACK="${STEAMOS_WORK}/mesa-stack"
           export STEAM_ARM_CHANNEL="${STEAM_ARM_CHANNEL:-steamdeck_publicbeta}"

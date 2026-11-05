@@ -3,7 +3,7 @@ Subject: [PATCH] drm/panel: st7703: optional avee-supply for the AYANEO Pocket D
 
 The AYANEO Pocket DS lower panel (ayaneo,pocket-ds-lower-panel, in 7.4)
 takes its negative rail from the other output of the SGM3804 that feeds vcc.
-ROCKNIX's Pocket DS patch (SM8550 0053) adds an optional avee-supply that is
+The base tree's Pocket DS patch (SM8550 0053) adds an optional avee-supply that is
 sequenced with the panel; the panel itself is upstream in 7.4, the supply is
 not. Only the supply is carried here.
 ---

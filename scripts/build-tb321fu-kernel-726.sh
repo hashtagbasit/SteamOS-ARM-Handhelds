@@ -1,7 +1,7 @@
 #!/bin/bash
 # Lenovo Legion Y700 Gen 3 (TB321FU) kernel from the 7.2.6 tree that boots on
 # the tablet: kernel.org 7.2.6, the tablet patch series and device trees from
-# github.com/enij90/armada-tb321fu (packages/kernel, pinned below), arm64
+# the pinned port tree (packages/kernel; SRC_URL below), arm64
 # defconfig plus its config fragment. On top: our startup code built in (the
 # GRUB entry passes no initrd), the CSOT device tree (upstream ships it; older
 # packages only select BOE, then it is generated) and a

@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ShadowBlip/InputPlumber/main/rootfs/usr/share/inputplumber/schema/composite_device_v1.json
 # AYANEO Pocket ACE / DMG (SM8550, Japanese A/B layout) → virtual Steam Deck controller.
 # XInput pad (045e:028e) plus the "AYANEO DEVICE" (1c4f:0002) for the extra
-# keys, same device list ROCKNIX uses. Untested on hardware so far.
+# keys. Untested on hardware so far.
 version: 1
 kind: CompositeDevice
 name: AYANEO Pocket ACE-DMG

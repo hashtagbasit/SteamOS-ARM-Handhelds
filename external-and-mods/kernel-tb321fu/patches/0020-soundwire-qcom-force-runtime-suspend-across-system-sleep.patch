@@ -6,8 +6,7 @@ The controller only has runtime PM ops. A peripheral kept runtime-active
 macro clocks it uses. Force the runtime suspend across system sleep so the
 ADSP can release LPASS while the system sleeps.
 
-Taken from https://github.com/enij90/armada-tb321fu (Lenovo Legion Tab Gen 3 / Y700 2025,
-TB321FU, SM8650).
+Needed on the Lenovo Legion Tab Gen 3 / Y700 2025 (TB321FU, SM8650).
 ---
 diff --git a/drivers/soundwire/qcom.c b/drivers/soundwire/qcom.c
 index d34aff92e..5fd0a56d8 100644

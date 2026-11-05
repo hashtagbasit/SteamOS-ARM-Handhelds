@@ -1,9 +1,9 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ShadowBlip/InputPlumber/main/rootfs/usr/share/inputplumber/schema/capability_map_v2.json
 # KONKR Pocket FIT built-in pad (USB XInput from the controller MCU) →
-# virtual Steam Deck controller. Based on ROCKNIX ayaneo_mcu_xbox_standard;
+# virtual Steam Deck controller. Based on the ayaneo_mcu_xbox_standard map;
 # changed for SteamOS:
 #   BTN_MODE  (KONKR / home)  → Steam button
-#   BTN5      (extra front)   → Quick Access (…)   [ROCKNIX: F1]
+#   BTN5      (extra front)   → Quick Access (…)   [stock: F1]
 #   BTN_Z/C   (LC1/RC1 back)  → L5 / R5 (L4/R4 are the LC/RC buttons by the
 #                                bumpers, konkr_pocketfit_sysbtn)
 version: 2

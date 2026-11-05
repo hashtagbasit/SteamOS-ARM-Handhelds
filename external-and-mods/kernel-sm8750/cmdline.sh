@@ -26,9 +26,9 @@ build_cmdline() {
     parts+=(console=tty0 loglevel=4)
   fi
   parts+=(
-    # ROCKNIX's init mounts these before post-flash.sh runs. By UUID when the
+    # The base's init mounts these before post-flash.sh runs. By UUID when the
     # image build knows them, so another card's or install's BOOT/home can't
-    # be picked (Armada boots the Odin 3 by UUID too).
+    # be picked.
     "boot=${boot_src}"
     "disk=${disk_src}"
     rw rootwait

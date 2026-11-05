@@ -2,7 +2,7 @@ From: SteamOS ARM port
 Subject: [PATCH] arm64: dts: qcom: sm8550: add the pcieport0 label
 
 Linux 7.4 already has the PCIe root port nodes (and moves the PHY into
-them), labelled pcie0_port0. The ROCKNIX board dts files reference the
+them), labelled pcie0_port0. The board dts files reference the
 root port as pcieport0, so give the node both labels.
 ---
  arch/arm64/boot/dts/qcom/sm8550.dtsi | 2 +-

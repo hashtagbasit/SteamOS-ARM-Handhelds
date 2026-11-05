@@ -5,8 +5,7 @@ The init sequence set the panel to its maximum brightness (0x0d75) before
 any frame was sent, so the Nova flashed white or grey on every mode set
 (boot, power off, switching between Game and Desktop Mode) until
 drm_panel_enable() put the user's brightness back. Start at 0; the
-backlight comes up to the user's level once video flows. Found by
-lavachemist (PB OS).
+backlight comes up to the user's level once video flows..
 
 --- a/drivers/gpu/drm/panel/panel-ilitek-il97680a.c
 +++ b/drivers/gpu/drm/panel/panel-ilitek-il97680a.c

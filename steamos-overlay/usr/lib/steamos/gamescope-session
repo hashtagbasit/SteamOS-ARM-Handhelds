@@ -108,7 +108,7 @@ export GAMESCOPE_DISABLE_ASYNC_FLIPS=1
 # MSM: KMS plane rotation is EINVAL on Adreno. Shader path is already in
 # DRMBackend.cpp; keep it forced so a 0° probe cannot skip it.
 # Portrait panel: rotate in the composite shader (safe everywhere). SM8650
-# DPU can rotate UBWC buffers inline (ROCKNIX 0066); opt in with
+# DPU can rotate UBWC buffers inline; opt in with
 # `konkrctl`-managed flag /var/lib/konkrd/kms-rotation, which lets gamescope
 # scan games out directly instead of compositing every frame. Two failed
 # starts in a row turn the flag off again.
@@ -231,7 +231,7 @@ fi
 NW="${GAMESCOPE_NESTED_WIDTH:-$NW}"
 NH="${GAMESCOPE_NESTED_HEIGHT:-$NH}"
 # Highest refresh the panel lists (Pocket FIT: 144/120/90/60 at one pixel
-# clock, via kernel patch kernel-sm8650/patches/0003; ROCKNIX's driver alone
+# clock, via kernel patch kernel-sm8650/patches/0003; the stock driver alone
 # lists only 144). gamescope collects every listed rate into its dynamic refresh
 # table; --generate-drm-mode fixed keeps the pixel clock and stretches the
 # vertical front porch for rates in between, like the listed modes do.
@@ -271,16 +271,16 @@ DEVICE_MODEL="$(tr -d '\0' </sys/firmware/devicetree/base/model 2>/dev/null)"
 # first backlight: the bottom panel on both of these.
 case "$DEVICE_MODEL" in
   "AYN Thor")
-    # ROCKNIX names it bottom_touchscreen; the 7.0.14 kernel calls both
+    # The base DT names it bottom_touchscreen; the 7.0.14 kernel calls both
     # "generic ft5x06 (8d)", so also match the bottom one's I2C address
-    # (top is 4-0038 on i2c4, bottom 1-0038, same as Armada's Thor tree).
+    # (top is 4-0038 on i2c4, bottom 1-0038).
     export GAMESCOPE_IGNORE_TOUCH="${GAMESCOPE_IGNORE_TOUCH:-bottom_touchscreen,path:/1-0038/}"
     # Top panel is DSI-2 on dsi1 (ae96000), the bottom DSI-1 on dsi0 (ae94000),
-    # same as Armada's Thor. Beta 7 had these the other way round.
+    # Beta 7 had these the other way round.
     TOP_BACKLIGHT=/sys/class/backlight/ae96000.dsi.0 ;;
   "AYN Thor Lite")
     # Same layout as the Thor on the 865: top panel on dsi1 (ae96000), the
-    # bottom one on dsi0 (ae94000), touchscreens labelled like ROCKNIX's Thor.
+    # bottom one on dsi0 (ae94000), touchscreens labelled like the Thor's.
     export GAMESCOPE_IGNORE_TOUCH="${GAMESCOPE_IGNORE_TOUCH:-bottom_touchscreen}"
     TOP_BACKLIGHT=/sys/class/backlight/ae96000.dsi.0 ;;
   "AYANEO Pocket DS")
@@ -288,7 +288,7 @@ case "$DEVICE_MODEL" in
     TOP_BACKLIGHT=/sys/class/backlight/ae94000.dsi.0 ;;
 esac
 # Only point gamescope at it when this kernel's device tree has that name
-# (the paths are ROCKNIX's); otherwise leave gamescope's default.
+# (the paths are the base DT's); otherwise leave gamescope's default.
 if [[ -z "${GAMESCOPE_BACKLIGHT_PATH:-}" && -n "${TOP_BACKLIGHT:-}" && -e "$TOP_BACKLIGHT" ]]; then
   export GAMESCOPE_BACKLIGHT_PATH="$TOP_BACKLIGHT"
 fi

@@ -1,9 +1,8 @@
 # How SteamOS ARM runs on the KONKR Pocket FIT
 
 Valve's SteamOS ARM (unofficial port) on the **KONKR Pocket FIT (Snapdragon G3 Gen 3 = SM8650, Adreno 750)**, with
-some groundwork from [MaSi's SM8550 project](https://github.com/MaSieS4Fun/SteamOS-ARM-SM8550), plus
 Pocket FIT-specific controls and a set of native performance fixes. The
-AYANEO Pocket S2 shares the ROCKNIX dtsi and gets a DTB too (untested).
+AYANEO Pocket S2 shares the base dtsi and gets a DTB too (untested).
 
 ## Why this works at all
 
@@ -11,7 +10,7 @@ AYANEO Pocket S2 shares the ROCKNIX dtsi and gets a DTB too (untested).
   **Steam Frame** image, and the Steam Frame *is* SM8650 / Adreno 750. Valve's
   own Turnip, zink and GPU firmware target this exact GPU, so this build keeps
   the Frame Mesa untouched.
-- Everything device-specific comes from ROCKNIX, which already boots Linux on
+- Everything device-specific comes from the base distribution, which already boots Linux on
   this handheld: kernel patches, DTS, kernel config, AYANEO-signed
   ADSP/CDSP/GPU-zap firmware, audio topology + UCM, ChipOne touch driver.
 
@@ -30,7 +29,7 @@ AYANEO Pocket S2 shares the ROCKNIX dtsi and gets a DTB too (untested).
 | front-bottom-right | F13 → cycle stick RGB preset | MCU link* |
 | Hall triggers (either trigger mode), sticks, D-pad, ABXY, Start/Select | as on a Deck | USB pad |
 
-\*The **MCU link** is the ROCKNIX `konkr_sysbtn` UART driver (written for the
+\*The **MCU link** is the `konkr_sysbtn` UART driver (written for the
 Pocket FIT Elite), bound to the FIT's controller UART (`uart13 @894000`). It
 works on the regular FIT and is on by default. `konkrctl mcu disable` turns it
 off; `konkrctl monitor` shows which button sends what. Button actions live in
@@ -39,7 +38,7 @@ off; `konkrctl monitor` shows which button sends what. Button actions live in
 The pad boots as a fake Xbox 360 pad (`045e:028e`), and in that mode the back
 buttons send nothing. konkrd switches it to the AYANEO default mode
 (`4001:0428`) at startup via the `gamepad_mode` attribute that kernel patch
-0004 adds to `konkr_sysbtn` (same MCU frames ArmadaOS uses). To keep the Xbox
+0004 adds to `konkr_sysbtn` (same MCU frames). To keep the Xbox
 mode, set `mode = xbox` under `[controller]` in `/etc/konkrd.conf`.
 
 ### Performance: why Linux was slower than GameNative on Android, and the fixes
@@ -49,9 +48,9 @@ same model as the ARM Proton builds here. The gap was the **platform**:
 
 | Bottleneck (verified in source/config) | Fix |
 |---|---|
-| **Fan pinned at 70/255 (~27%) forever.** ROCKNIX `0500-set-boot-fanspeed` sets it once, and the DT fan trips have no `cooling-maps`. The SoC heat-soaks and Qualcomm LMh throttles CPU and GPU under sustained load. Android's thermal HAL ramps the fan to 100%. | `konkrd` runs a real temperature curve per profile (hysteresis, failsafe 180/255 if it ever stops). |
+| **Fan pinned at 70/255 (~27%) forever.** The base kernel's `0500-set-boot-fanspeed` patch sets it once, and the DT fan trips have no `cooling-maps`. The SoC heat-soaks and Qualcomm LMh throttles CPU and GPU under sustained load. Android's thermal HAL ramps the fan to 100%. | `konkrd` runs a real temperature curve per profile (hysteresis, failsafe 180/255 if it ever stops). |
 | **GPU capped at 834 MHz.** Mainline's SM8650 OPP table stops there; the 8 Gen 3 runs its A750 at **903 MHz** on Android. | `opp-903000000` at the fused `TURBO_L1` corner is added to the Pocket FIT DTB. |
-| **`performance` governor on all 8 cores** (ROCKNIX default), including the Cortex-A520 little cores that games barely use. Pure heat, feeding the throttling. | `schedutil` by default; Turbo pins only the big clusters to `performance`. |
+| **`performance` governor on all 8 cores** (the base default), including the Cortex-A520 little cores that games barely use. Pure heat, feeding the throttling. | `schedutil` by default; Turbo pins only the big clusters to `performance`. |
 | **No game-aware scheduling** (`CONFIG_UCLAMP_TASK` was off). Android's game mode keeps game threads on big cores. | uclamp enabled. `konkrd` keeps threads of Steam-launched games off the A520s and gives them a `uclamp.min` boost (Balanced 25%, Turbo 50%). |
 | GPU devfreq samples every 50 ms, so clocks lag frame load. | 16 ms polling. |
 | Windows sync primitives via esync/fsync. | `CONFIG_NTSYNC` + `/dev/ntsync` autoloaded and accessible (Proton ntsync). |
@@ -96,14 +95,14 @@ which would fight `konkrd` over the fan and drive AYN-only LEDs.
 
 ## Compared with the SM8550 setup, in short
 
-| Area | SM8550 (MaSi) | Pocket FIT (this project) |
+| Area | SM8550 build | Pocket FIT (this project) |
 |------|---------------|--------------------|
-| Kernel | 7.0.14 + Armbian sm8550 | **7.1.2** (ROCKNIX 20260801 SM8650 recipe) + Pocket FIT patches (`external-and-mods/kernel-sm8650/`) |
+| Kernel | 7.0.14 + Armbian sm8550 | **7.1.2** (base 20260801 SM8650 recipe) + Pocket FIT patches (`external-and-mods/kernel-sm8650/`) |
 | DTB selection | 14-slot index chain | ROCKNIX ABL ≥ 1.1.8 matches the DTB `model` string |
 | Root | initramfs + `root=UUID=` | tiny busybox initramfs (writes `bootlog.txt` to the FAT partition), `root=PARTUUID=` patched at image pack |
 | GPU userspace | patched A740 Turnip | Frame's stock Turnip/zink (A750) |
 | Controller | `rsinput` serial MCU | USB XInput pad → InputPlumber `deck-uhid` (+ optional MCU link) |
-| Audio | `AYN-Odin2` | `SM8650-APS2`: WSA884x speakers + WCD939x, ROCKNIX UCM |
+| Audio | `AYN-Odin2` | `SM8650-APS2`: WSA884x speakers + WCD939x, base UCM |
 | UFS installer | SM8550 layouts | rewritten for the Pocket FIT: keeps Android, backs up the partition table |
 
 ## Build (Mac → Colima, native arm64)

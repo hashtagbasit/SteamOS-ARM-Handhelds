@@ -8,7 +8,6 @@ takes the maximum of the host and GMU votes. DDR could not drop below the
 resume level for a whole gaming session. Drop the host vote once the GMU
 has acked its own.
 
-Taken from https://github.com/enij90/armada-tb321fu (0623, by ouroboros420).
 ---
 diff --git a/drivers/gpu/drm/msm/adreno/a6xx_gmu.c b/drivers/gpu/drm/msm/adreno/a6xx_gmu.c
 index db36249..51a7531 100644

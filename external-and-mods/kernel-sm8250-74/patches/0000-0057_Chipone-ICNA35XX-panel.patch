@@ -1,5 +1,5 @@
 From: SteamOS ARM port
-Subject: [PATCH] drm/panel: chipone-icna35xx: use ROCKNIX's driver for the icna3512/3520 and Pocket Max panels
+Subject: [PATCH] drm/panel: chipone-icna35xx: use the base tree's driver for the icna3512/3520 and Pocket Max panels
 
 ---
 diff --git a/drivers/gpu/drm/panel/panel-chipone-icna35xx.c b/drivers/gpu/drm/panel/panel-chipone-icna35xx.c

@@ -283,8 +283,7 @@ void mangoapp_output_update( uint64_t vblanktime )
 {
 	// Only a base-plane commit newer than any shown before is a new frame
 	// (commit IDs only grow), so going back to an older commit (focus moving
-	// between windows) isn't counted as a frame. Idea from PB-OS's gamescope
-	// fork (project-barry/gamescope d509c434).
+	// between windows) isn't counted as a frame.
 	static uint64_t s_uNewestCommitID = 0;
 	if ( g_uCurrentBasePlaneCommitID > s_uNewestCommitID )
 	{

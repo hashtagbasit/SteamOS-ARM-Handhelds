@@ -54,7 +54,7 @@ and have wildly different build times.
 
 ### Why from-source?
 
-ROCKNIX's prebuilt kernel ships without `CONFIG_FTRACE`. Without ftrace/tracefs:
+The base release's prebuilt kernel ships without `CONFIG_FTRACE`. Without ftrace/tracefs:
 - mangoapp (Performance Overlay) crashes immediately
 - steamos-manager stalls Game Mode boot by ~3 minutes
 - "Switch to Desktop" and update checks don't work

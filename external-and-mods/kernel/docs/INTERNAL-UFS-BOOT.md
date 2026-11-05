@@ -1,6 +1,6 @@
 # Internal UFS boot (ROCKNIX ABL dual-boot)
 
-**One `KERNEL` file** — same bootimg on microSD `/boot` and on the UFS `ROCKNIX` partition (like ROCKNIX `installtointernal`: `cp -a /flash/.` with no cmdline patch).
+**One `KERNEL` file** — same bootimg on microSD `/boot` and on the UFS `ROCKNIX` partition (`cp -a /flash/.` with no cmdline patch).
 
 ## How it works
 
@@ -39,7 +39,7 @@ sudo /usr/lib/masi/ufs-linux/ufs-fix-internal-boot.sh   # rescue only
 
 ## Internal boot with microSD inserted
 
-If both SD and UFS MaSi layouts exist, prefer **removing the SD card** for the first internal Linux boot test (same as ROCKNIX docs).
+If both SD and UFS MaSi layouts exist, prefer **removing the SD card** for the first internal Linux boot test.
 
 If the SD must stay in: add `masi.root=ufs` to the kernel cmdline (advanced) or remove SD when booting internal Linux.
 

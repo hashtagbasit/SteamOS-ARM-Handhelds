@@ -1,7 +1,7 @@
 From: SteamOS ARM port
 Subject: [PATCH] drm/msm/a6xx: Enable IFPC on Adreno 740, same as the overclocked Adreno 741
 
-Linux 7.4 moved the Adreno 7xx entries to a7xx_catalog.c; the ROCKNIX patch
+Linux 7.4 moved the Adreno 7xx entries to a7xx_catalog.c; the original patch
 (map220v) targeted a6xx_catalog.c.
 ---
 diff --git a/drivers/gpu/drm/msm/adreno/a7xx_catalog.c b/drivers/gpu/drm/msm/adreno/a7xx_catalog.c

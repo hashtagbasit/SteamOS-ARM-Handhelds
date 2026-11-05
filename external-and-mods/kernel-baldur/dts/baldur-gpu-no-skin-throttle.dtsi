@@ -10,8 +10,7 @@
  * limits; here the GPU maps go, the CPU steps stay (they cut most of the
  * heat), and the GPU keeps its own 105 C junction trip from kaanapali.dtsi.
  *
- * After github.com/mydanyi/armadaos-freedom
- * devices/lenovo-tb323fu/boot/quiet-thermal-no-gpu.dtsi (GPL-2.0).
+ * Derived from a GPL-2.0 quiet-thermal include.
  */
 
 &{/thermal-zones/quiet-thermal/cooling-maps} {

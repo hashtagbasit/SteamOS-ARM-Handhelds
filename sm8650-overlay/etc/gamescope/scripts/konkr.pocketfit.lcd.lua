@@ -3,7 +3,7 @@
 -- Kernel patch 0003 makes the panel list 144/120/90/60 Hz; this profile is
 -- a fallback. Without either, gamescope only knows the panel's single
 -- 144 Hz mode, so Steam offers 144/n frame limits but no refresh-rate slider
--- and 60 fps content judders on 144 Hz. The panel (ROCKNIX panel-ar14-144hz)
+-- and 60 fps content judders on 144 Hz. The panel (panel-ar14-144hz)
 -- runs 144/120/90/60 Hz at one pixel clock by stretching the vertical front
 -- porch, like the Deck OLED / ROG Ally profiles do.
 --

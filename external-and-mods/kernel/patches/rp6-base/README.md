@@ -1,4 +1,4 @@
-# MaSi kernel overlays (post-Armbian)
+# Kernel overlays (post-Armbian)
 
 Applied after the Armbian `sm8550-7.0` patch set via `lib/kbuild/patches.sh`.
 
@@ -22,7 +22,7 @@ Applied after the Armbian `sm8550-7.0` patch set via `lib/kbuild/patches.sh`.
 | `qcs8550-ayn-haptics.dtsi.frag` | Device-tree nodes for `pm8550b` haptics (all AYN boards) |
 | `qcs8550-retroidpocket-rp6.dts` | Retroid Pocket 6 board DTS |
 
-Patches `1006`–`1013` are the deep-suspend stack (ROCKNIX PR [#2952](https://github.com/ROCKNIX/distribution/pull/2952) / [#2954](https://github.com/ROCKNIX/distribution/pull/2954)). `1013` uses SoC-wide `qcom,sm8550` (not Thor-only). Re-fetch with `scripts/fetch-rocknix-suspend-patches.py` only for **missing** files (`--force` replaces vendored copies — avoid unless intentional). Set `SUSPEND_DEEP_PATCHES=0` to skip.
+Patches `1006`–`1013` are the deep-suspend stack. `1013` uses SoC-wide `qcom,sm8550` (not Thor-only). Re-fetch with `scripts/fetch-suspend-patches.py` only for **missing** files (`--force` replaces vendored copies — avoid unless intentional). Set `SUSPEND_DEEP_PATCHES=0` to skip.
 
 **Apply order:** `1011` (QMP RX LineCfg) runs before `1009`/`1010` so `ufs-qcom.c` hunks still match linux-7.0. The vendored `1011` also anchors on `qmp_ufs_init_registers()` (upstream name) instead of downstream `qmp_ufs_init()`.
 

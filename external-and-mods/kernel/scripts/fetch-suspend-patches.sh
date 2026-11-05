@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# One-time helper: fetch deep-suspend patches from ROCKNIX PR #2952 into patches/masi/.
+# One-time helper: fetch the deep-suspend patches into patches/rp6-base/.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BASE="https://raw.githubusercontent.com/ROCKNIX/distribution/abcc2bc87ea41416e88ba2c15557842c460193f9/projects/ROCKNIX/devices/SM8550/patches/linux"
-DEST="${ROOT}/patches/masi"
+DEST="${ROOT}/patches/rp6-base"
 FORCE=0
 
 [[ "${1:-}" == "--force" ]] && FORCE=1

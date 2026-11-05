@@ -6,7 +6,7 @@ instead: low enough for ACD to calibrate against real levels, alive
 enough for the GMU's first ramp. Skip the retention level so the
 floor is a corner logic can run at.
 
-[Modified: Armada scopes the flags to dedicated SM8550/SM8750
+[Modified: the flags are scoped to dedicated SM8550/SM8750
 descriptors so other Qualcomm SoCs keep stock clamp behavior.]
 [Rebased onto 7.1.2: no gfx1 domain there yet, gfx is followed by lcx.]
 

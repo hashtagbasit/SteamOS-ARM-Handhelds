@@ -74,7 +74,7 @@ for f in qcom/sm8550 qcom/a740_sqe.fw qcom/gmu_gen70200.bin qcom/vpu; do
 done
 
 # The image links whole device dirs to the Odin 2's files (ayaneo -> ayn/odin2,
-# ayn/odin2mini|odin2portal -> odin2). The rootfs already has ROCKNIX's real
+# ayn/odin2mini|odin2portal -> odin2). The rootfs already has real
 # per-device dirs there (own amp tuning, AYANEO's own DSP split as .mdt), and
 # rsync can't put a link over a dir. So: keep the real dirs, and give AYANEO
 # the names its DTBs ask for, resolving to what that image loads.
@@ -117,8 +117,8 @@ print(f"dtb fixup: {n} x {bad.decode()} -> {good.decode()}")
 # Touch: the RP6 and Thor trees pre-rotate their touchscreens (swapped-x-y +
 # inverted-x) for a compositor that doesn't rotate touch itself. gamescope
 # and KWin rotate touch by the panel orientation, so it got rotated twice
-# (RP6 tester: taps land in the wrong place). Keep panel-native coordinates
-# like Armada's trees: the RP6 keeps inverted-y (its sensor is flipped),
+# (RP6 tester: taps land in the wrong place). Keep panel-native coordinates:
+# the RP6 keeps inverted-y (its sensor is flipped),
 # the Odin 2 Mini keeps its flags (its sensor is mounted sideways).
 import re, subprocess, tempfile
 TOUCH_FIX = {b"Retroid Pocket 6", b"AYN Thor"}
@@ -182,7 +182,7 @@ python3 "$kc/mkbootimg-v0.py" --kernel "$work/kernel.bin" --ramdisk "$rd/initrd.
 (cd "$out/boot" && md5sum KERNEL >KERNEL.md5)
 # Extra modules this kernel lacks, built against a vanilla tree of the same
 # release with its own config (no MODVERSIONS/signing, so vermagic is all it
-# checks): sgm3804 powers the Pocket DMG / ACE panel (ROCKNIX's driver).
+# checks): sgm3804 powers the Pocket DMG / ACE panel (the base tree's driver).
 kver="${krel%%-*}"
 ksrc="/work/sgm/linux-$kver"
 if [[ ! -d "$ksrc" ]]; then

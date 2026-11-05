@@ -1866,7 +1866,7 @@
 
 /*
  * SteamOS ARM Port changes on top of the GUF296 tree, from the TB321FU
- * notes of the Armada port (github.com/enij90/armada-tb321fu):
+ * port notes:
  *  - the microphones need MIC BIAS4 on AMIC4 and SoundWire port 1 for capture
  *    (fixed above)
  *  - held in landscape, 0x5a is the left motor and 0x5b the right one

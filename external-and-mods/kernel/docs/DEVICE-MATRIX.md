@@ -1,6 +1,6 @@
 # Device matrix — ABL DTB chain (14 slots)
 
-MaSi builds a single `KERNEL` whose zImage embeds **14 concatenated DTBs** in ROCKNIX index order.
+MaSi builds a single `KERNEL` whose zImage embeds **14 concatenated DTBs** in the ABL index order.
 Rocknix-ABL / LinuxLoader picks `chain[device_index]`.
 
 | Slot | Device | SoC | Source |
@@ -21,7 +21,7 @@ Rocknix-ABL / LinuxLoader picks `chain[device_index]`.
 
 ## AYANEO SM8550 bring-up notes
 
-- DTS/common: `patches/masi/ayaneo/` (ported from Armbian `sm8550-6.18` + MaSi Pocket S 2K).
+- DTS/common: `patches/rp6-base/ayaneo/` (ported from Armbian `sm8550-6.18` + MaSi Pocket S 2K).
 - Panel drivers: ACE (`DRM_PANEL_AR06_4INCH` from Armbian 7.0), DMG (`1020` AR02), DS lower (`1021` AR11), EVO (`ICNA3512`), S 2K (`1022` R63419 / `ayaneo,wt0600-2k`).
 - ADSP firmware: staged as `qcom/sm8550/ayaneo` → `ayn/odin2` (Armbian firmware has no separate ayaneo tree yet).
 

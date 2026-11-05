@@ -1,10 +1,10 @@
 
 /*
- * SteamOS ARM additions for the Retroid Pocket 6 (appended to ROCKNIX's
+ * SteamOS ARM additions for the Retroid Pocket 6 (appended to the base
  * qcs8550-retroidpocket-rp6.dts by kernel-common/build.sh; the TOP-DPAD
  * tree includes this one).
  *
- * ROCKNIX 20260901 moved the panel to the vtdr6130 driver, which asks for
+ * The 20260901 base release moved the panel to the vtdr6130 driver, which asks for
  * vdd/vddio/vci/vdd18/vdd28, while this tree only names vddio and avdd.
  * Nothing claimed the 2.8 V rail, the fixed regulator switched it off at
  * probe (GPIO 142 low), and the panel stayed black with Game Mode running
@@ -23,7 +23,7 @@
 
 /*
  * Touch at the panel's 120 Hz instead of ~28 Hz: read each touch frame in
- * one I2C transfer and run the bus at 400 kHz (ROCKNIX 3829f7c, measured
+ * one I2C transfer and run the bus at 400 kHz (measured
  * 118.8 Hz on hardware, same as Android).
  */
 &i2c_hub_3 {

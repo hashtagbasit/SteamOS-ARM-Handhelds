@@ -79,7 +79,7 @@ STEAMOS_BUILD="${STEAMOS_BUILD:-20261104.6131433}"
 STEAMOS_BUNDLE="deckard-${STEAMOS_BUILD}-${STEAMOS_VERSION:-0.6.0}"
 STEAMOS_URL="https://steamdeck-images.steamos.cloud/vr/${STEAMOS_BUILD}"
 
-# SM8750_KERNEL=prebuilt (default): ROCKNIX's binary release, no tracefs.
+# SM8750_KERNEL=prebuilt (default): the base binary release, no tracefs.
 # SM8750_KERNEL=source: build via kernel-sm8750/build.sh, has tracefs.
 # Needs a native aarch64 host (e.g. the Odin 3 itself).
 ensure_kernel() {
@@ -99,8 +99,8 @@ ensure_kernel() {
     log "SM8750 kernel already staged in ${KOUT}"
     return 0
   fi
-  log "Staging SM8750 kernel from ROCKNIX release"
-  "${MOD}/kernel-sm8750/extract-rocknix.sh" "${KOUT}"
+  log "Staging SM8750 kernel from the base release"
+  "${MOD}/kernel-sm8750/extract-base-release.sh" "${KOUT}"
 }
 
 ensure_official_rootfs() {

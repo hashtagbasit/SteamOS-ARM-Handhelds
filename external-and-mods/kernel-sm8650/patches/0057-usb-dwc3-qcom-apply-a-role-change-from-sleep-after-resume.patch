@@ -9,8 +9,8 @@ PM status still says active, so pm_runtime_resume_and_get() returns at
 once and the QSCRATCH VBUS override writes hit an unclocked block.
 
 Keep a role change that arrives during system sleep and apply it in
-dwc3_qcom_pm_resume() once the clocks are back. Found by lavachemist (PB
-OS: Retroid Pocket 6 and KONKR Pocket FIT).
+dwc3_qcom_pm_resume() once the clocks are back. Seen on the Retroid Pocket 6
+and KONKR Pocket FIT.
 
 --- a/drivers/usb/dwc3/dwc3-qcom.c
 +++ b/drivers/usb/dwc3/dwc3-qcom.c

@@ -8,8 +8,7 @@ firmware's range boundary (only on this hardware configuration), and run
 the batches while associated one channel at a time with TX paused and
 drained first, so a scan doesn't drop traffic.
 
-danyi's two patches from github.com/mydanyi/armadaos-freedom (as in
-kernel-baldur 1022/1023), ported to our scan timeout, which is a wiphy
+The same two patches as kernel-baldur 1022/1023, ported to our scan timeout, which is a wiphy
 delayed work here (0036): it is cancelled in the vdev clean work only once
 the last batch is done, and the next batch starts with finish_queued
 cleared.

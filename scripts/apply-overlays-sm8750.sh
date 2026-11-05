@@ -94,7 +94,7 @@ ONLY_UFS=1 STEAMOS_HOME="$R/home/steamos" "${ROOT}/scripts/install-vendor-apps.s
 # Merge SM8750 firmware
 cp -a "$KOUT/firmware/." "$R/usr/lib/firmware/"
 # The Odin 3's audio topology with DisplayPort (external-and-mods/audio-topology;
-# the Pocket FIT Elite's from ROCKNIX already has it).
+# the Pocket FIT Elite's already has it).
 install_file "${ROOT}/external-and-mods/audio-topology/sm8750/SM8750-AYN-tplg.bin" \
   "$R/usr/lib/firmware/qcom/sm8750/SM8750-AYN-tplg.bin" 0644
 

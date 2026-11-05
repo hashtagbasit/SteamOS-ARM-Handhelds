@@ -5,10 +5,10 @@
 #
 # Sources (pinned in kernel-<soc>/soc.env):
 #   linux-${KVER}             kernel.org
-#   ROCKNIX distribution      per-SoC patches, DTS, kernel config
-#   ROCKNIX extra-firmware    vendor-signed ADSP/CDSP/zap, WCN7850, audio tplg
-#   linux-firmware            Adreno microcode where ROCKNIX takes it from upstream
-#   ROCKNIX chipone_tddi      out-of-tree touchscreen driver
+#   base distribution         per-SoC patches, DTS, kernel config
+#   base extra-firmware       vendor-signed ADSP/CDSP/zap, WCN7850, audio tplg
+#   linux-firmware            Adreno microcode where the base takes it from upstream
+#   base chipone_tddi         out-of-tree touchscreen driver
 # Our own patches/DTS appends live in kernel-<soc>/{patches,dts}, the SteamOS
 # config fragment (steamos.config) and initramfs are shared.
 #
@@ -16,7 +16,7 @@
 #
 # KERNEL is a ROCKNIX-ABL bootimg (header v0): gzip(Image) + appended DTBs
 # + a busybox initramfs (initramfs/init), as the bootimg ramdisk or, with
-# EMBED_INITRAMFS=1 in soc.env, built into the Image like ROCKNIX does. ABL v1.1.8+ reads `model` from each
+# EMBED_INITRAMFS=1 in soc.env, built into the Image like the base kernel does. ABL v1.1.8+ reads `model` from each
 # DTB and boots the one matching "Set device model".
 # The image builder patches the real root=PARTUUID= into the cmdline.
 #
@@ -89,12 +89,12 @@ rocknix_path() { echo "${ROCKNIX_DIR}/$1"; }
 
 prepare_source() {
   if [[ -e "$ROCKNIX_DIR/.git" ]]; then  # a directory, or a file in a worktree
-    [[ "$(git -C "$ROCKNIX_DIR" rev-parse HEAD)" == "$(git -C "$ROCKNIX_DIR" rev-parse "${ROCKNIX_REF}^{commit}")" ]] || die "ROCKNIX checkout does not match pinned ${ROCKNIX_REF}"
+    [[ "$(git -C "$ROCKNIX_DIR" rev-parse HEAD)" == "$(git -C "$ROCKNIX_DIR" rev-parse "${ROCKNIX_REF}^{commit}")" ]] || die "base distribution checkout does not match pinned ${ROCKNIX_REF}"
   else
-    die "ROCKNIX source needs Git metadata to verify the pinned revision"
+    die "base distribution source needs Git metadata to verify the pinned revision"
   fi
   # KSRC_URL (soc.env): a kernel tree's source tarball instead of kernel.org's
-  # release, for a device whose support isn't in mainline or ROCKNIX yet.
+  # release, for a device whose support isn't in mainline or the base yet.
   local tarball="${CACHE}/linux-${KVER}.tar.xz"
   if [[ -n "${KSRC_URL:-}" ]]; then
     tarball="${CACHE}/linux-${KNAME}-${KSRC_URL##*/}"
@@ -126,7 +126,7 @@ prepare_source() {
     tar -C "$WORK" -xf "$tarball"
   fi
 
-  # ROCKNIX patch dirs in soc.env order, then ours.
+  # Base patch dirs in soc.env order, then ours.
   local d p
   local -a dirs
   read -ra dirs <<<"$PATCH_DIRS"
@@ -150,14 +150,14 @@ prepare_source() {
   done
 
   # SKIP_ROCKNIX_DTS=1 (soc.env): a device tree's own source tree, where
-  # ROCKNIX's trees for that SoC don't belong.
+  # the base trees for that SoC don't belong.
   if [[ "${SKIP_ROCKNIX_DTS:-0}" != 1 ]]; then
-    log "install ROCKNIX ${ROCKNIX_DEVICE} DTS"
+    log "install base ${ROCKNIX_DEVICE} DTS"
     cp -v "$(rocknix_path "projects/ROCKNIX/devices/${ROCKNIX_DEVICE}/linux/dts/qcom")"/*.dts* \
       "${SRC}/arch/arm64/boot/dts/qcom/" >&2
   fi
-  # Whole device trees of our own (a device ROCKNIX doesn't carry), then the
-  # appends onto ROCKNIX's or our trees.
+  # Whole device trees of our own (a device the base doesn't carry), then the
+  # appends onto the base or our trees.
   local app f
   for pd in "${PORT_DIRS_A[@]}"; do
     for f in "$(port_dir "$pd")"/dts/*.dts "$(port_dir "$pd")"/dts/*.dtsi; do
@@ -184,7 +184,7 @@ prepare_source() {
 
 stage_builtin_firmware() {
   # GPU microcode + zap and the regulatory db are needed before the rootfs
-  # is mounted, so they go into the kernel image (like ROCKNIX does).
+  # is mounted, so they go into the kernel image (like the base does).
   local fwtar="${CACHE}/extra-firmware-${EXTRA_FW_REF}.tar.gz"
   fetch "https://github.com/ROCKNIX/extra-firmware/archive/${EXTRA_FW_REF}.tar.gz" "$fwtar"
   EXTRA_FW_SRC="${WORK}/extra-firmware"
@@ -225,7 +225,7 @@ stage_builtin_firmware() {
 
 configure() {
   # KCONFIG (soc.env): the base config of a device's own source tree, a file
-  # in kernel-<device>/, instead of ROCKNIX's for the SoC.
+  # in kernel-<device>/, instead of the base one for the SoC.
   local cfg
   if [[ -n "${KCONFIG:-}" ]]; then
     cfg="${SOC_DIR}/${KCONFIG}"
@@ -237,7 +237,7 @@ configure() {
   # --keep-case: scripts/config upper-cases names otherwise, and options like
   # FONT_TER16x32 then never get set.
   local sc="${SRC}/scripts/config --file ${SRC}/.config --keep-case"
-  # ROCKNIX embeds its own initramfs through this placeholder; ours goes
+  # The base kernel embeds its own initramfs through this placeholder; ours goes
   # there too with EMBED_INITRAMFS (uncompressed: the whole Image is gzipped
   # for ABL anyway, and konkr-update can then find the recovery hook in it).
   if [[ "${EMBED_INITRAMFS:-0}" == 1 ]]; then
@@ -256,7 +256,7 @@ configure() {
     $sc --enable CMDLINE_FORCE
     $sc --disable CMDLINE_FROM_BOOTLOADER
   fi
-  # FW_BUILTIN=0 (soc.env): like ROCKNIX, nothing built in; the same files
+  # FW_BUILTIN=0 (soc.env): like the base, nothing built in; the same files
   # still go to the rootfs (install_output) and load from there.
   if [[ "${FW_BUILTIN:-1}" == 1 ]]; then
     $sc --set-str EXTRA_FIRMWARE "$(cat "${WORK}/extra-firmware.list")"
@@ -350,7 +350,7 @@ pack_kernel_img() {
   local cmdline
   cmdline="$(bash -c "source '${SOC_DIR}/soc.env'; source '${HERE}/cmdline.sh'; build_cmdline 00000000-02")"
   local rd=(--ramdisk "$INITRD")
-  [[ "${EMBED_INITRAMFS:-0}" == 1 ]] && rd=()  # dummy ramdisk, like ROCKNIX
+  [[ "${EMBED_INITRAMFS:-0}" == 1 ]] && rd=()  # dummy ramdisk, like the base kernel
   python3 "${HERE}/mkbootimg-v0.py" --kernel "$payload" "${rd[@]}" \
     --cmdline "$cmdline" --out "$out"
   rm -f "$payload"
@@ -410,7 +410,7 @@ main() {
   fi
   check_deps
   [[ -d "$ROCKNIX_DIR/projects/ROCKNIX/devices/${ROCKNIX_DEVICE}" ]] \
-    || die "ROCKNIX tree not found at ${ROCKNIX_DIR} (sparse clone of ROCKNIX/distribution@${ROCKNIX_REF})"
+    || die "base distribution tree not found at ${ROCKNIX_DIR} (sparse clone of ROCKNIX/distribution@${ROCKNIX_REF})"
   mkdir -p "$CACHE"
   prepare_source
   stage_builtin_firmware

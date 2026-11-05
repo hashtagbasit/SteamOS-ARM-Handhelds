@@ -2,7 +2,7 @@ From: SteamOS ARM port
 Subject: [PATCH] drm/panel: wt0600-2k: of_drm_get_panel_orientation is now drm_of_get_panel_orientation
 
 Linux 7.4 renamed the helper to drm_of_get_panel_orientation() (declared in
-<drm/drm_of.h>); the ROCKNIX WT0600/WT0630 panel driver still calls the old name.
+<drm/drm_of.h>); the base tree's WT0600/WT0630 panel driver still calls the old name.
 
 ---
 --- a/drivers/gpu/drm/panel/panel-wt0600-2k.c

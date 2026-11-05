@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ShadowBlip/InputPlumber/main/rootfs/usr/share/inputplumber/schema/capability_map_v2.json
-# Event codes from ROCKNIX / ArmadaOS; Steam Deck targets are ours.
+# Event codes as the device reports them; Steam Deck targets are ours.
 version: 2
 kind: CapabilityMap
 name: AYANEO Pocket (SM8550) to Steam Deck

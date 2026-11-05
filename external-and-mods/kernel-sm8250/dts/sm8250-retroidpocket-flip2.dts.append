@@ -1,6 +1,6 @@
 
 /*
- * SteamOS ARM additions for the Retroid Pocket Flip 2 (appended to ROCKNIX's
+ * SteamOS ARM additions for the Retroid Pocket Flip 2 (appended to the base
  * sm8250-retroidpocket-flip2.dts by kernel-common/build.sh).
  *
  * Lid (hall sensor): only opening the lid wakes the device. Closing it is

@@ -33,7 +33,7 @@ respective projects (kernel = GPL-2.0; build scripts here = MIT — see `LICENSE
 | Source | URL | What we use |
 |--------|-----|-------------|
 | **ROCKNIX distribution** | https://github.com/ROCKNIX/distribution | Multi-device ABL `KERNEL` concept; UFS/`ROCKNIX` partition install pattern; deep-suspend kernel patches (see below); AYANEO Pocket DTS copyrights / board ids. |
-| **ROCKNIX PR #2952 (deep suspend)** | https://github.com/ROCKNIX/distribution/pull/2952 | Vendored as `patches/masi/1006`–`1013` (UFS hibern8/relink, QMP RX LineCfg, IPCC wake, Thor tsens). Authors include **jaewun**. Re-fetch: `scripts/fetch-rocknix-suspend-patches.py`. |
+| **ROCKNIX PR #2952 (deep suspend)** | https://github.com/ROCKNIX/distribution/pull/2952 | Vendored as `patches/rp6-base/1006`–`1013` (UFS hibern8/relink, QMP RX LineCfg, IPCC wake, Thor tsens). Authors include **jaewun**. Re-fetch: `scripts/fetch-suspend-patches.py`. |
 | **ROCKNIX-ABL** | https://github.com/ROCKNIX/abl | Boot model selection (“Set the Device”) that picks DTB chain index; dual Linux/Android boot. We do **not** ship the ABL binary; we document and package for it. |
 | **Reference SM8550 image** | (community SM8550 image; local extract) | Reference DTB chain layout / slot sizes in `reference/dtb-chain` and `device-tree/vendored/` (14-slot order matching ABL indices). |
 
@@ -43,8 +43,8 @@ respective projects (kernel = GPL-2.0; build scripts here = MIT — see `LICENSE
 
 | Source | URL / author | What we use |
 |--------|--------------|-------------|
-| **LineageOS AYN kernel-ack** | Public tree cited as `android_kernel_ayn_kernel-ack` | Retroid Pocket 6 board DTS → `patches/masi/qcs8550-retroidpocket-rp6.dts` (adapted onto Armbian `qcs8550-ayn-common.dtsi`). |
-| **ROCKNIX + Teguh Sobirin** | https://github.com/ROCKNIX · copyright in DTS | AYANEO Pocket ACE / DMG / DS / EVO / S1 DTS under `patches/masi/ayaneo/`. |
+| **LineageOS AYN kernel-ack** | Public tree cited as `android_kernel_ayn_kernel-ack` | Retroid Pocket 6 board DTS → `patches/rp6-base/qcs8550-retroidpocket-rp6.dts` (adapted onto Armbian `qcs8550-ayn-common.dtsi`). |
+| **ROCKNIX + Teguh Sobirin** | https://github.com/ROCKNIX · copyright in DTS | AYANEO Pocket ACE / DMG / DS / EVO / S1 DTS under `patches/rp6-base/ayaneo/`. |
 | **Philippe Simons** | `simons.philippe@gmail.com` (panel patches) | Pocket DMG panel driver (`1020-drm-panel-ar02-pocket-dmg.patch`); related DS secondary panel work (`1021`). |
 | **Armbian sm8550 (historical)** | https://github.com/armbian/build | Base for AYANEO common dtsi port notes (`docs/DEVICE-MATRIX.md`: Armbian `sm8550-6.18` + MaSi Pocket S 2K). |
 | **Qualcomm / Linux Foundation** | Downstream PMIC haptics (Copyright Linaro / QuIC in driver) | `qcom-hv-haptics` driver landed via `1000`–`1004` (+ Steam FF deadlock fix); DT fragment `qcs8550-ayn-haptics.dtsi.frag` (Batocera-derived wiring on AYN boards). |

@@ -5,7 +5,7 @@ The MCU streams reports over the UART for as long as it is powered, and
 each one is an interrupt that wakes the SoC out of s2idle (or, once the
 UART has suspended, gets its IRQ disabled as spurious). Stop it, hold it in
 reset and drop its supply on suspend; resume powers it back up before the
-init commands. Same approach as ArmadaOS, written for this driver, which
+init commands. Written for this driver, which
 has no suspend callback of its own.
 
 --- a/drivers/input/joystick/rsinput.c	2026-10-02 05:53:52.522054838 +0200

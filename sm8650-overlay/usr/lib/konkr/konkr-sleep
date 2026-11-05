@@ -260,7 +260,7 @@ pad_watch_start() {
 }
 
 # 8 Gen 3 on our 7.2 kernel: the kernel itself handles Wi-Fi, audio graphs,
-# touch and the PMIC wake sources across s2idle (Armada's suspend series).
+# touch and the PMIC wake sources across s2idle.
 # Unloading ath12k and unbinding touch on top of that hung the Pocket FIT on
 # the first sleep; with only the report and the UFS step it sleeps and wakes
 # every time (2026-10-04). The full preparation stays for older kernels and

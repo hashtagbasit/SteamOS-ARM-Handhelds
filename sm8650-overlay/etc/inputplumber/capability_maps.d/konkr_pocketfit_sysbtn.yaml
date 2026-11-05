@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ShadowBlip/InputPlumber/main/rootfs/usr/share/inputplumber/schema/capability_map_v2.json
 # MCU "system" buttons from konkr_sysbtn (only present after
-# `konkr-mcu enable`). IDs follow the Elite driver (ROCKNIX 0069):
+# `konkr-mcu enable`). IDs follow the Elite driver:
 #   HAPPY1 front-bottom-right   HAPPY2 KONKR   HAPPY3/4 LC/RC shoulder extras
 #   HAPPY5 front-top-right
 # Buttons without a Deck equivalent become F13/F14, which konkr-controls

@@ -6,7 +6,7 @@
 # keeps a copy of the owner's own Android boot image, recorded by the
 # installer as /etc/steamos-arm/android-boot.sha256. Going back to Android
 # means copying boot_b into boot_a; Android's "Switch to SteamOS" (a KernelSU
-# module) writes SteamOS back. Same model as github.com/joonhoekim/tb323fu-linux.
+# module) writes SteamOS back.
 #
 #   gen5-android          check, copy boot_b -> boot_a, verify, restart
 #   gen5-android --check  only the checks

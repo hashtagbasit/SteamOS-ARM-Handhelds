@@ -7,8 +7,7 @@ s2idle and keep their q6prm clock, so the ADSP keeps LPASS powered and CX
 never collapses. Force the runtime suspend across system sleep so the votes
 that kernel-sm8650 0060 drops in runtime suspend are dropped for s2idle too.
 
-Taken from https://github.com/enij90/armada-tb321fu (Lenovo Legion Tab Gen 3 / Y700 2025,
-TB321FU, SM8650).
+Needed on the Lenovo Legion Tab Gen 3 / Y700 2025 (TB321FU, SM8650).
 ---
 diff --git a/sound/soc/codecs/lpass-rx-macro.c b/sound/soc/codecs/lpass-rx-macro.c
 index 343073970..56eb67cbb 100644

@@ -725,7 +725,7 @@ ln -sfn ../konkr-flatpak-appstream.timer \
 # runtime are not seen at boot on SteamOS (overlay mounted late).
 mkdir -p "$R/usr/lib/systemd/user/default.target.wants"
 ln -sfn ../konkr-volume.service "$R/usr/lib/systemd/user/default.target.wants/konkr-volume.service"
-# konkrd: fan curve (ROCKNIX leaves the fan at 70/255), profiles, game-thread
+# konkrd: fan curve (the stock DT leaves the fan at 70/255), profiles, game-thread
 # boost, extra buttons, LEDs. ExecCondition keeps it off non-KONKR devices.
 mkdir -p "$R/etc/systemd/system/multi-user.target.wants" "$R/var/lib/konkrd"
 ln -sfn /usr/lib/systemd/system/konkrd.service \
@@ -831,7 +831,7 @@ chmod 0644 "$R/usr/lib/udev/hwdb.d/10-ayaneo.hwdb"
 # and newer firmware (WLAN.HMT.1.1.c7). regdb.bin stays as it is. The 8 Gen 3
 # images keep the Frame's set, which is what the Pocket FIT was tuned on.
 # Off by default since beta 8: with it the Odin 2 (7.0.14 kernel) found no
-# networks at all. Beta 7's set (the Frame's files + ROCKNIX's board.bin)
+# networks at all. Beta 7's set (the Frame's files + the stock board.bin)
 # worked, so that's what ships; WIFI_FW_UPSTREAM=1 brings this back.
 WIFI_FW_TAG=20260916
 WIFI_FW_CACHE="${WORKDIR}/kernel-sm8550/cache/lfw-ath12k-${WIFI_FW_TAG}/WCN7850/hw2.0"

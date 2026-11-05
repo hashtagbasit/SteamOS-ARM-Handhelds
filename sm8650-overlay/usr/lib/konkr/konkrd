@@ -4,7 +4,7 @@
 Fixes the platform-side gaps that make Linux slower than Android on this
 handheld and wires up the extra buttons:
 
-  fan      ROCKNIX pins the pwm-fan at 70/255 forever (0500-set-boot-fanspeed)
+  fan      The stock DT pins the pwm-fan at 70/255 forever (0500-set-boot-fanspeed)
            and the DT trips are not bound to it, so the SoC heat-soaks and
            LMh throttles CPU/GPU. konkrd runs a real temperature curve.
   profiles silent / balanced / turbo: fan curve, GPU floor/ceiling, how hard
@@ -159,7 +159,7 @@ def load_conf() -> configparser.ConfigParser:
 
 
 # ------------------------------------------------------------------ fan ----
-# pwmfan: ROCKNIX DT fans (Pocket FIT, SM8550). nx669j_fan: REDMAGIC 6 fan MCU.
+# pwmfan: stock DT fans (Pocket FIT, SM8550). nx669j_fan: REDMAGIC 6 fan MCU.
 FAN_HWMON_NAMES = ("pwmfan", "nx669j_fan")
 
 
@@ -515,7 +515,7 @@ def fanless() -> bool:
 
 
 def apply_cpu(profile: str) -> None:
-    """schedutil everywhere (the ROCKNIX default is `performance`, which
+    """schedutil everywhere (the stock default is `performance`, which
     holds all eight cores — little A520s included — at max clock: heat for
     nothing). Turbo pins only the big clusters to `performance`, except on a
     fanless tablet, where Turbo keeps only its higher GPU floor."""
@@ -751,8 +751,8 @@ KONKR_CEF_OLD_EXEC = 'exec taskset 0x7c $(pwd)/steamwebhelper "$@" $KONKR_CEF_FL
 
 
 # The Adreno 740 GMU can wedge when a GPU interrupt wakes one of the little
-# cores out of power collapse (found by ArmadaOS). The kernel boots with
-# ROCKNIX's irqaffinity (little cores), so only the GPU/GMU interrupts move
+# cores out of power collapse. The kernel boots with
+# the stock irqaffinity (little cores), so only the GPU/GMU interrupts move
 # to the big cores, after boot. SM8550 only; the Pocket FIT's A750 is fine.
 GPU_IRQ_NAMES = ("gpu", "gmu", "hfi", "adreno", "kgsl")
 

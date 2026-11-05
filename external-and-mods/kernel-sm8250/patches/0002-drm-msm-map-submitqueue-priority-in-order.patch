@@ -7,8 +7,7 @@ userspace priority became DRM_SCHED_PRIORITY_KERNEL. A game's Turnip queue
 then outranked Steam's GL clients (Xwayland, the Steam UI, mangoapp) on the
 same ring and starved them while the game kept the GPU busy: Quick Access
 not drawn, the UI freezing and then catching up. Map 0..2 onto HIGH..LOW and
-index the entity array from HIGH. VM_BIND queues keep KERNEL. Same issue
-ArmadaOS found.
+index the entity array from HIGH. VM_BIND queues keep KERNEL.
 
 ---
 --- a/drivers/gpu/drm/msm/msm_gpu.h

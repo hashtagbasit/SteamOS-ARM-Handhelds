@@ -1,5 +1,5 @@
-/* MaSi: Thor-only FastRPC PD-type context banks (stock SH5001 ADSP).
- * Appended to qcs8550-ayn-thor.dts. Matches Batocera suckbluefrog gyro DT.
+/* Thor-only FastRPC PD-type context banks (stock SH5001 ADSP).
+ * Appended to qcs8550-ayn-thor.dts.
  */
 
 &remoteproc_adsp {

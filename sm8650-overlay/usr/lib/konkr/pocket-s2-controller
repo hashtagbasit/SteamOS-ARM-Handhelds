@@ -1,5 +1,5 @@
 #!/bin/bash
-# Matches ArmadaOS's AYANEO default-mode startup frames. Pocket S2 only.
+# Sends the AYANEO default-mode startup frames. Pocket S2 only.
 set -euo pipefail
 model=$(tr -d '\0' </sys/firmware/devicetree/base/model)
 [[ "$model" == 'AYANEO Pocket S2' ]] || exit 0

@@ -2,7 +2,7 @@ From: SteamOS ARM port
 Subject: [PATCH] drm/panel: use drm_of_get_panel_orientation
 
 Linux 7.4 renamed of_drm_get_panel_orientation to drm_of_get_panel_orientation
-(declared in drm/drm_of.h). Applies to the ROCKNIX panel drivers that still
+(declared in drm/drm_of.h). Applies to the base tree's panel drivers that still
 use the old name.
 ---
 diff --git a/drivers/gpu/drm/panel/panel-ar16-4inch.c b/drivers/gpu/drm/panel/panel-ar16-4inch.c

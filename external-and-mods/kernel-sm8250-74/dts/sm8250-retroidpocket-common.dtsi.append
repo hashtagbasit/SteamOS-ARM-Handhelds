@@ -1,7 +1,7 @@
 
 /*
  * SteamOS ARM additions for the Retroid Pocket 5 / Flip 2 / Mini / Mini V2
- * (appended to ROCKNIX's sm8250-retroidpocket-common.dtsi by
+ * (appended to the base sm8250-retroidpocket-common.dtsi by
  * kernel-common/build.sh).
  */
 

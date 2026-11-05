@@ -3,7 +3,7 @@
 # The DS pad runs in DirectInput mode ("AYANEO Controller" 4001:0428) with its
 # own button layout (Home on BTN_START, Start on BTN6, see
 # ayaneo_pocketds_deck); its extra keys arrive on "AYANEO DEVICE" 1c4f:0002.
-# Button codes as found by ArmadaOS. Untested on hardware so far.
+# Untested on hardware so far.
 version: 1
 kind: CompositeDevice
 name: AYANEO Pocket DS

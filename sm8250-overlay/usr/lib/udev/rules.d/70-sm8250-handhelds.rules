@@ -20,5 +20,5 @@ ACTION=="bind", SUBSYSTEM=="soundwire", KERNEL=="sdw:*:0217:010d:*", ATTR{power/
 ACTION=="bind", SUBSYSTEM=="soundwire", KERNEL=="sdw:*:0217:2010:*", ATTR{power/control}="on"
 
 # MANGMI Pocket Max: the audio codec's runtime suspend pops in the headphones.
-# Keep it powered (from ArmadaOS 992a4ec / 678333b).
+# Keep it powered.
 ACTION=="bind", SUBSYSTEM=="platform", KERNEL=="audio-codec", PROGRAM="/usr/bin/grep -q 'MANGMI Pocket Max' /sys/firmware/devicetree/base/model", ATTR{power/control}="on"

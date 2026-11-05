@@ -4,7 +4,7 @@
 #           dtbs/, config, System.map.
 #
 # Requires native aarch64 — the kernel build.sh enforces uname -m == aarch64.
-# The ROCKNIX/distribution checkout is sparse-cloned to save bandwidth.
+# The base distribution checkout is sparse-cloned to save bandwidth.
 name: Build SM8750 (8 Elite) Kernel
 
 on:
@@ -38,10 +38,10 @@ jobs:
       # The build needs a git checkout of ROCKNIX/distribution at the
       # pinned tag. The repo is huge so we sparse-checkout only the paths
       # that build.sh + soc.env actually reference.
-      - name: Sparse-clone ROCKNIX distribution
+      - name: Sparse-clone base distribution
         run: |
           ROCKNIX_REF=$(grep '^ROCKNIX_REF=' external-and-mods/kernel-sm8750/soc.env | cut -d= -f2)
-          echo "Pinned ROCKNIX ref: $ROCKNIX_REF"
+          echo "Pinned base ref: $ROCKNIX_REF"
           git clone --depth 1 --branch "$ROCKNIX_REF" --sparse \
             https://github.com/ROCKNIX/distribution.git "$ROCKNIX_DIR"
           cd "$ROCKNIX_DIR"

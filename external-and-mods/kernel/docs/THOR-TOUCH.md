@@ -2,7 +2,7 @@
 
 El Thor es el único handheld SM8550 de este árbol que necesita **tres capas** para el táctil (kernel + udev + KWin). Solo cambiar la rotación en KDE **no basta** si faltan udev y el mapeo DBus de KWin.
 
-Basado en [thorch-os/thorch](https://github.com/thorch-os/thorch) (ROCKNIX + KDE).
+Basado en [thorch-os/thorch](https://github.com/thorch-os/thorch) (KDE).
 
 ## Problema
 
@@ -55,4 +55,4 @@ Opciones: `--check-only`, `--force`.
 - `payload/fix-thor-screen/` — bundle que se copia al output en cada build
 - `lib/fix-thor-screen.sh` — staging + verify en build
 - `lib/kbuild/patches.sh` — `apply_masi_thor_touch_dts`
-- `patches/masi/1024-input-edt-ft5x06-retain-power-in-suspend.patch`
+- `patches/rp6-base/1024-input-edt-ft5x06-retain-power-in-suspend.patch`

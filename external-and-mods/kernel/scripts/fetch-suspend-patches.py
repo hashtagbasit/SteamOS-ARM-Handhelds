@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch ROCKNIX PR #2952 deep-suspend kernel patches into patches/masi/."""
+"""Fetch the deep-suspend kernel patches into patches/rp6-base/."""
 from __future__ import annotations
 
 import argparse
@@ -53,12 +53,12 @@ def main() -> int:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Re-download even when patches/masi/ already has vendored copies",
+        help="Re-download even when patches/rp6-base/ already has vendored copies",
     )
     args = parser.parse_args()
 
     root = Path(__file__).resolve().parents[1]
-    dest = root / "patches" / "masi"
+    dest = root / "patches" / "rp6-base"
     dest.mkdir(parents=True, exist_ok=True)
 
     for src, dst in MAP.items():

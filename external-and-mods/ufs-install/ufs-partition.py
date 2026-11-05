@@ -50,8 +50,8 @@ OURS = ("ROCKNIX", "STORAGE", "HOME")
 # ROCKNIX: an EFI System Partition. The ABL boots Linux from it whatever
 # its type (our initramfs finds it by name), but Android only came up again
 # with an ESP there: with a "basic data" FAT after userdata, two Pocket FIT
-# and one Pocket S2 install lost Android, while Armada's layout (same ABL,
-# ESP first) keeps it.
+# and one Pocket S2 install lost Android, while an ESP-first layout (same ABL)
+# keeps it.
 TYPE_ESP = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
 TYPE_BASIC_DATA = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"
 TYPE_LINUX = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
@@ -269,7 +269,7 @@ def new_dump(disk: str, t: dict, p: dict) -> str:
 
 def new_numbers(disk: str, t: dict) -> list[int]:
     """GPT slots for our three: right after userdata when those are free (the
-    usual case, and what Armada does), otherwise the first free ones."""
+    usual case), otherwise the first free ones."""
     stale = {q["node"] for q in leftovers(t)}
     used = {part_num(disk, q["node"]) for q in t["partitions"] if q["node"] not in stale}
     n = part_num(disk, userdata(t)["node"])

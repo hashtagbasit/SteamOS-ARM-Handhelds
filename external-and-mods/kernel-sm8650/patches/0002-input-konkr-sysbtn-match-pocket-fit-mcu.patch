@@ -2,7 +2,7 @@ From: SteamOS-ARM-SM8650
 Subject: [PATCH] input: konkr_sysbtn: also bind the Pocket FIT (SM8650) MCU
 
 The non-Elite Pocket FIT has its controller MCU on the same geni SE
-(uart13 @894000, "AYANEO Controller serial interface" in the ROCKNIX
+(uart13 @894000, "AYANEO Controller serial interface" in the base
 dtsi). Whether it speaks the Elite's KR02 frames is unverified, so the
 image ships the module blacklisted and the user opts in (konkr-mcu).
 An MCU that ignores the enable frame simply produces no events.
