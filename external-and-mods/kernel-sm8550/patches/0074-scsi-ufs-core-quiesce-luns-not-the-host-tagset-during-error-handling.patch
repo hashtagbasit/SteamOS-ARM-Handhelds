@@ -1,0 +1,51 @@
+From: Daniil Teterin <theweaklessone@gmail.com>
+Subject: [PATCH] scsi: ufs: core: quiesce LUNs, not the host tagset, during error handling
+
+Backport of Stanley Jhu's fix (stable list, 2026-09). Error recovery
+quiesced the whole tagset, including pseudo_sdev, and then issued internal
+commands (NOP OUT in ufshcd_verify_dev_init()) that could never dispatch.
+
+Fixes: 08b12cda6c44 ("scsi: ufs: core: Switch to scsi_get_internal_cmd()")
+---
+--- a/drivers/ufs/core/ufshcd.c	2026-11-04 03:19:50.898083575 +0100
++++ b/drivers/ufs/core/ufshcd.c	2026-11-04 03:19:50.899353617 +0100
+@@ -6729,6 +6729,23 @@
+ 	}
+ }
+ 
++static void ufshcd_quiesce_all_sdevs(struct ufs_hba *hba)
++{
++	struct scsi_device *sdev;
++
++	shost_for_each_device(sdev, hba->host)
++		blk_mq_quiesce_queue_nowait(sdev->request_queue);
++	blk_mq_wait_quiesce_done(&hba->host->tag_set);
++}
++
++static void ufshcd_unquiesce_all_sdevs(struct ufs_hba *hba)
++{
++	struct scsi_device *sdev;
++
++	shost_for_each_device(sdev, hba->host)
++		blk_mq_unquiesce_queue(sdev->request_queue);
++}
++
+ static void ufshcd_err_handling_prepare(struct ufs_hba *hba)
+ {
+ 	/*
+@@ -6764,13 +6781,13 @@
+ 		ufshcd_clk_scaling_allow(hba, false);
+ 	}
+ 	/* Wait for ongoing ufshcd_queuecommand() calls to finish. */
+-	blk_mq_quiesce_tagset(&hba->host->tag_set);
++	ufshcd_quiesce_all_sdevs(hba);
+ 	cancel_work_sync(&hba->eeh_work);
+ }
+ 
+ static void ufshcd_err_handling_unprepare(struct ufs_hba *hba)
+ {
+-	blk_mq_unquiesce_tagset(&hba->host->tag_set);
++	ufshcd_unquiesce_all_sdevs(hba);
+ 	ufshcd_release(hba);
+ 	if (ufshcd_is_clkscaling_supported(hba))
+ 		ufshcd_clk_scaling_suspend(hba, false);
