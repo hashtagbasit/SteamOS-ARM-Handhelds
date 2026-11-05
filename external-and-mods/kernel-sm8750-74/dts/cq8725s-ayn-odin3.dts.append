@@ -1,0 +1,92 @@
+/*
+ * SteamOS ARM additions for the AYN Odin 3 (appended to cq8725s-ayn-odin3.dts
+ * by kernel-common/build.sh). s2idle (as the reference portOS): the codec keeps these
+ * rails enabled through the sleep, idle them in LPM.
+ */
+
+&vreg_bob1 {
+	regulator-state-mem {
+		regulator-on-in-suspend;
+		regulator-mode = <RPMH_REGULATOR_MODE_LPM>;
+	};
+};
+
+&vreg_l15b_1p8 {
+	regulator-state-mem {
+		regulator-on-in-suspend;
+		regulator-mode = <RPMH_REGULATOR_MODE_LPM>;
+	};
+};
+
+&vreg_l2i_1p2 {
+	regulator-state-mem {
+		regulator-on-in-suspend;
+		regulator-mode = <RPMH_REGULATOR_MODE_LPM>;
+	};
+};
+
+&vreg_s3g_1p8 {
+	regulator-state-mem {
+		regulator-on-in-suspend;
+		regulator-mode = <RPMH_REGULATOR_MODE_LPM>;
+	};
+};
+
+&vreg_s7i_1p2 {
+	regulator-state-mem {
+		regulator-on-in-suspend;
+		regulator-mode = <RPMH_REGULATOR_MODE_LPM>;
+	};
+};
+
+/*
+ * The Wi-Fi WAKE# line is active low; read as active high it can wake the
+ * SoC straight back out of s2idle (same as the Odin 2 and Pocket FIT Elite).
+ */
+&pcieport0 {
+	wake-gpios = <&tlmm 104 GPIO_ACTIVE_LOW>;
+};
+
+/* Only the power key wakes the device, not volume up pressed in a bag. */
+&{/gpio-keys/key-volume-up} {
+	/delete-property/ wakeup-source;
+};
+
+/* 8bpc panel: dither the 10-bit output instead of truncating it (banding) */
+&display_panel {
+	steamos-arm,dither-8bpc;
+};
+
+/*
+ * The Wi-Fi/BT power unit's supplies stay on across sleep: turning them back
+ * on at resume could hang the SoC, and Wi-Fi didn't come back without them.
+ */
+&vreg_s4d_0p85 {
+	regulator-always-on;
+};
+
+&vreg_s5f_0p85 {
+	regulator-always-on;
+};
+
+&vreg_l2f_1p2 {
+	regulator-always-on;
+};
+
+&vreg_l3f_1p8 {
+	regulator-always-on;
+};
+
+/*
+ * Sound over USB-C to a monitor: the DisplayPort controller's audio codec on
+ * the DSP's DISPLAY_PORT_RX_0, fed from MultiMedia4 in the topology. This
+ * link also creates the "DP0 Jack" control the UCM HDMI device keys off.
+ */
+&{/sound} {
+	dp-dai-link {
+		link-name = "DisplayPort Playback";
+		cpu { sound-dai = <&q6apmbedai DISPLAY_PORT_RX_0>; };
+		codec { sound-dai = <&mdss_dp0>; };
+		platform { sound-dai = <&q6apm>; };
+	};
+};

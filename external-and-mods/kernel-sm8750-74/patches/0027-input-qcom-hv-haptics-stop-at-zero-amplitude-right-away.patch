@@ -1,0 +1,73 @@
+Subject: [PATCH] input: qcom-hv-haptics: stop at zero amplitude right away
+
+Lowering a playing effect to zero amplitude dropped the gain to 1 and left
+a stop for five seconds later. That stop runs the brake pattern, so every
+rumble ended with a small knock about five seconds after it faded. End the
+effect at once instead, and ignore a play request while nothing is loaded
+(some emulators send one right after the zero update), which would
+otherwise restart the motor with stale settings.
+
+Where the upload path takes a runtime PM reference, the gain-change early
+return never dropped it, so every gain change while playing leaked one and
+the chip stopped autosuspending. Drop it on both early returns.
+
+---
+--- a/drivers/input/misc/qcom-hv-haptics.c
++++ b/drivers/input/misc/qcom-hv-haptics.c
+@@ -3194,6 +3194,7 @@
+ 	pm_runtime_autosuspend(chip->dev);
+ }
+ 
++static int haptics_erase(struct input_dev *dev, int effect_id);
+ static int haptics_upload_effect(struct input_dev *dev,
+ 		struct ff_effect *effect, struct ff_effect *old);
+ 
+@@ -3255,25 +3256,20 @@
+ 		pr_debug("tried to upload an effect while the chip was busy playing, setting gain...\n");
+ 
+ 		if (gain == 0) {
+-			//The purpose of scheduling a stop_work work is that if the program calls playback afterwards, it will play
+-			// for a very short time using the previous gain
+-			// ( Like Aethersx2, it likes to call playback with zero value EVEN when amplitude is zero)
+-			//We cant stop the playback now, so schedule rumble stop after 5s
+-			//and set the gain to a low value (essentially zero)
+-
+-			dev_dbg(chip->dev, "scheduling stop after 500ms, because gain is zero\n");
+-
+-			dev->ff->set_gain(dev, 1);
+-			schedule_delayed_work(&chip->stop_work, msecs_to_jiffies(5000));
+-		} else {
+-			dev_dbg(chip->dev, "Setting gain to %hu...\n", gain);
+-
+-			dev->ff->set_gain(dev, gain);
+-
+-			//Also, reschedule the stop_work timer
+-			schedule_delayed_work(&chip->stop_work, msecs_to_jiffies(effect->replay.length));
++			/*
++			 * The game wants silence now. A stop left for later ends
++			 * with the brake pattern, felt as a knock seconds after the
++			 * rumble faded, so end the effect here.
++			 */
++			haptics_runtime_autosuspend_put(chip);
++			return haptics_erase(dev, effect->id);
+ 		}
+ 
++		dev_dbg(chip->dev, "Setting gain to %hu...\n", gain);
++		dev->ff->set_gain(dev, gain);
++		schedule_delayed_work(&chip->stop_work, msecs_to_jiffies(effect->replay.length));
++		/* the effect that is playing holds its own reference */
++		haptics_runtime_autosuspend_put(chip);
+ 		return 0;
+ 	}
+ 
+@@ -3378,8 +3374,9 @@
+ 
+ 	dev_dbg(chip->dev, "playback val = %d\n", val);
+ 	if (!!val && !chip->chip_is_playing) {
++		/* nothing loaded, e.g. just stopped at zero amplitude */
+ 		if (!chip->chip_effect_loaded)
+-			dev_warn(chip->dev, "Trying to playback while no effect is loaded!\n");
++			return 0;
+ 
+ 		if (chip->config.measure_lra_impedance && chip->visense_enabled)
+ 			chip->pattern_start_time = ktime_get_boottime();

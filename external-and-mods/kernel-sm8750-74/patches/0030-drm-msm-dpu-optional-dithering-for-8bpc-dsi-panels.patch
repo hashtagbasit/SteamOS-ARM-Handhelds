@@ -1,0 +1,71 @@
+Subject: [PATCH] drm/msm/dpu: optional dithering for 8bpc DSI panels
+
+The DPU blends at 10 bits and only dithers the output for 6bpc panels.
+8bpc panels get the low bits cut off, which shows as banding in dark
+gradients. Let a panel opt in to the ordered dither at 8 bits with a
+steamos-arm,dither-8bpc property on its devicetree node. Temporal dither
+stays off, and panels without the property are unchanged.
+
+---
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.c
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.c
+@@ -10,9 +10,11 @@
+ #define pr_fmt(fmt)	"[drm:%s:%d] " fmt, __func__, __LINE__
+ #include <linux/debugfs.h>
+ #include <linux/kthread.h>
++#include <linux/of.h>
+ #include <linux/seq_file.h>
+ 
+ #include <drm/drm_atomic.h>
++#include <drm/drm_bridge.h>
+ #include <drm/drm_crtc.h>
+ #include <drm/drm_file.h>
+ #include <drm/drm_probe_helper.h>
+@@ -386,6 +388,21 @@
+ 	return entries_added;
+ }
+ 
++/*
++ * Only 6bpc panels get dithered by default. The pipeline runs at 10 bits,
++ * so an 8bpc panel shows bands in dark gradients when the extra bits are
++ * simply cut off; a panel can opt in to the same ordered dither with
++ * steamos-arm,dither-8bpc on its devicetree node.
++ */
++static bool dpu_encoder_panel_dithers_8bpc(struct drm_encoder *drm_enc)
++{
++	struct drm_bridge *last __free(drm_bridge_put) =
++		drm_bridge_chain_get_last_bridge(drm_enc);
++
++	return last && last->of_node &&
++	       of_property_read_bool(last->of_node, "steamos-arm,dither-8bpc");
++}
++
+ static void _dpu_encoder_setup_dither(struct dpu_hw_pingpong *hw_pp, unsigned bpc)
+ {
+ 	struct dpu_hw_dither_cfg dither_cfg = { 0 };
+@@ -395,10 +412,11 @@
+ 
+ 	switch (bpc) {
+ 	case 6:
+-		dither_cfg.c0_bitdepth = 6;
+-		dither_cfg.c1_bitdepth = 6;
+-		dither_cfg.c2_bitdepth = 6;
+-		dither_cfg.c3_bitdepth = 6;
++	case 8:
++		dither_cfg.c0_bitdepth = bpc;
++		dither_cfg.c1_bitdepth = bpc;
++		dither_cfg.c2_bitdepth = bpc;
++		dither_cfg.c3_bitdepth = bpc;
+ 		dither_cfg.temporal_en = 0;
+ 		break;
+ 	default:
+@@ -1321,6 +1339,9 @@
+ 	if (dpu_enc->disp_info.intf_type == INTF_DSI &&
+ 			!WARN_ON(dpu_enc->num_phys_encs == 0)) {
+ 		unsigned bpc = dpu_enc->connector->display_info.bpc;
++
++		if (bpc == 8 && !dpu_encoder_panel_dithers_8bpc(drm_enc))
++			bpc = 0;
+ 		for (i = 0; i < ARRAY_SIZE(dpu_enc->hw_pp); i++) {
+ 			if (!dpu_enc->hw_pp[i])
+ 				continue;

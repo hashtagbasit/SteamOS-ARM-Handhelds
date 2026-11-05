@@ -1,0 +1,127 @@
+From: hashtagbasit
+Subject: drm/msm/dpu: real vblank timestamps on command mode panels
+
+With a command mode panel the scanout position came from INTF_LINE_COUNT,
+the video timing engine's counter, which doesn't run in command mode. The
+position never moved, so every vblank timestamp taken after the vblank
+interrupt had been off was simply the time of asking. Page flip events
+carry that timestamp and gamescope paces from it: on these panels a 60 fps
+limit let ~65 through and frame pacing wandered.
+
+Read the tear check counter, lines since the panel's last TE, the way the
+pingpong path already does, and report it as the position from vblank
+start. A failed read now gives no timestamp instead of a wrong one.
+
+diff -ru a/drivers/gpu/drm/msm/disp/dpu1/dpu_crtc.c b/drivers/gpu/drm/msm/disp/dpu1/dpu_crtc.c
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_crtc.c
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_crtc.c
+@@ -303,6 +303,24 @@
+ 
+ 	line = dpu_encoder_get_linecount(encoder);
+ 
++	if (etime)
++		*etime = ktime_get();
++
++	/* no position means no timestamp, not one taken at the time of asking */
++	if (line < 0)
++		return false;
++
++	*hpos = 0;
++
++	/*
++	 * A command mode panel has no porches: its counter is the tear check
++	 * one, lines since the panel's last TE, which is where vblank starts.
++	 */
++	if (dpu_encoder_get_intf_mode(encoder) == INTF_MODE_CMD) {
++		*vpos = line;
++		return true;
++	}
++
+ 	if (line < vactive_start)
+ 		line -= vactive_start;
+ 	else if (line > vactive_end)
+@@ -311,10 +329,6 @@
+ 		line -= vactive_start;
+ 
+ 	*vpos = line;
+-	*hpos = 0;
+-
+-	if (etime)
+-		*etime = ktime_get();
+ 
+ 	return true;
+ }
+diff -ru a/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder_phys_cmd.c b/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder_phys_cmd.c
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder_phys_cmd.c
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder_phys_cmd.c
+@@ -523,9 +523,10 @@
+ 
+ 	if (phys_enc->has_intf_te) {
+ 		hw_intf = phys_enc->hw_intf;
+-		if (!hw_intf || !hw_intf->ops.get_line_count)
++		/* INTF_LINE_COUNT is the video timing engine's: it stands still here */
++		if (!hw_intf || !hw_intf->ops.get_te_line_count)
+ 			return -EINVAL;
+-		return hw_intf->ops.get_line_count(hw_intf);
++		return hw_intf->ops.get_te_line_count(hw_intf);
+ 	}
+ 
+ 	hw_pp = phys_enc->hw_pp;
+diff -ru a/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_intf.c b/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_intf.c
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_intf.c
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_intf.c
+@@ -356,6 +356,26 @@
+ 	return DPU_REG_READ(c, INTF_LINE_COUNT);
+ }
+ 
++/* Lines since the last TE, from the tear check counter (as pingpong does). */
++static u32 dpu_hw_intf_get_te_line_count(struct dpu_hw_intf *intf)
++{
++	struct dpu_hw_blk_reg_map *c = &intf->hw;
++	u32 height, init, line;
++
++	init = DPU_REG_READ(c, INTF_TEAR_VSYNC_INIT_VAL) & 0xffff;
++	height = DPU_REG_READ(c, INTF_TEAR_SYNC_CONFIG_HEIGHT) & 0xffff;
++	if (height < init)
++		return 0xffff;
++
++	line = DPU_REG_READ(c, INTF_TEAR_INT_COUNT_VAL) & 0xffff;
++	if (line < init)
++		line += 0xffff - init;
++	else
++		line -= init;
++
++	return line;
++}
++
+ static void dpu_hw_intf_setup_misr(struct dpu_hw_intf *intf)
+ {
+ 	dpu_hw_setup_misr(&intf->hw, INTF_MISR_CTRL, 0x1);
+@@ -654,6 +674,7 @@
+ 		c->ops.enable_tearcheck = dpu_hw_intf_enable_te;
+ 		c->ops.disable_tearcheck = dpu_hw_intf_disable_te;
+ 		c->ops.connect_external_te = dpu_hw_intf_connect_external_te;
++		c->ops.get_te_line_count = dpu_hw_intf_get_te_line_count;
+ 		if (mdss_rev->core_major_ver >= 8)
+ 			c->ops.vsync_sel = dpu_hw_intf_vsync_sel_v8;
+ 		else
+diff -ru a/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_intf.h b/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_intf.h
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_intf.h
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_intf.h
+@@ -64,6 +64,7 @@
+  * @enable_timing: enable/disable timing engine
+  * @get_status: returns if timing engine is enabled or not
+  * @get_line_count: reads current vertical line counter
++ * @get_te_line_count: lines since the panel's last TE (command mode)
+  * @bind_pingpong_blk: enable/disable the connection with pingpong which will
+  *                     feed pixels to this interface
+  * @setup_misr: enable/disable MISR
+@@ -100,6 +101,8 @@
+ 
+ 	// Tearcheck on INTF since DPU 5.0.0
+ 
++	u32 (*get_te_line_count)(struct dpu_hw_intf *intf);
++
+ 	int (*enable_tearcheck)(struct dpu_hw_intf *intf, struct dpu_hw_tear_check *cfg);
+ 
+ 	int (*disable_tearcheck)(struct dpu_hw_intf *intf);

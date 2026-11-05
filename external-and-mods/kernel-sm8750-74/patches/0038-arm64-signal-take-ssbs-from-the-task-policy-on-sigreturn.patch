@@ -1,0 +1,57 @@
+From: hashtagbasit
+Subject: arm64: signal: take SSBS from the task's policy on sigreturn
+
+rt_sigreturn restores PSTATE.SSBS from the signal frame. Wine's arm64
+signal code fills that frame from a Windows CONTEXT, which carries no SSBS
+bit, so a Proton thread came back from its first signal with speculative
+store bypass disabled, and every thread it started after that inherited
+it. Oryon (8 Elite) slows down a lot in that state, so every Proton game
+ran slower than it should.
+
+After restoring the registers, apply the task's Spectre v4 policy to SSBS
+the way exec and the prctl do. Tasks that asked for the mitigation keep
+it. ssbs_sigreturn=0 on the command line restores the old behaviour.
+
+diff -ru a/arch/arm64/kernel/signal.c b/arch/arm64/kernel/signal.c
+--- a/arch/arm64/kernel/signal.c
++++ b/arch/arm64/kernel/signal.c
+@@ -34,6 +34,7 @@
+ #include <asm/ptrace.h>
+ #include <asm/syscall.h>
+ #include <asm/signal32.h>
++#include <asm/spectre.h>
+ #include <asm/traps.h>
+ #include <asm/vdso.h>
+ 
+@@ -1010,6 +1011,22 @@
+ 	return -EINVAL;
+ }
+ 
++/*
++ * Wine (Proton) returns from its signal handlers through frames it filled
++ * from a Windows CONTEXT, which has no SSBS bit, so the thread came back
++ * with speculative store bypass disabled and every thread it started
++ * inherited that. Oryon runs much slower that way. Take SSBS from the
++ * task's Spectre v4 policy instead of the frame. ssbs_sigreturn=0 turns
++ * this off.
++ */
++static bool ssbs_sigreturn __ro_after_init = true;
++
++static int __init parse_ssbs_sigreturn(char *str)
++{
++	return kstrtobool(str, &ssbs_sigreturn);
++}
++early_param("ssbs_sigreturn", parse_ssbs_sigreturn);
++
+ static int restore_sigframe(struct pt_regs *regs,
+ 			    struct rt_sigframe __user *sf,
+ 			    struct user_access_state *ua_state)
+@@ -1037,6 +1054,8 @@
+ 	fpsimd_save_and_flush_current_state();
+ 
+ 	err |= !valid_user_regs(&regs->user_regs, current);
++	if (err == 0 && ssbs_sigreturn)
++		spectre_v4_enable_task_mitigation(current);
+ 	if (err == 0)
+ 		err = parse_user_sigframe(&user, sf);
+ 
