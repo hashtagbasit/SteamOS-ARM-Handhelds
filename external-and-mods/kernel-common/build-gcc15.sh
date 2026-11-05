@@ -6,7 +6,8 @@
 # (default /work), which is mounted at the same path in the container.
 # On an x86_64 host it cross-compiles with Fedora's aarch64 GCC 15; BUSYBOX
 # then has to be a static aarch64 busybox (it goes into the initramfs).
-# DOCKER=podman works too.
+# DOCKER=podman works too. EXTRA_MOUNTS="/path ..." mounts more folders at the
+# same path (WORK or OUT_BASE on another disk).
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,6 +28,7 @@ env_args=()
 for v in SM8250_RECIPE SM8550_RECIPE SM8650_RECIPE SM8750_RECIPE WORK ROCKNIX_DIR JOBS OUT_BASE LOCALVERSION DTBS_OVERRIDE INITRAMFS_HOTFIX CROSS_COMPILE FRAME_FW_DIR NO_CURRENT; do
   [[ -n "${!v:-}" ]] && env_args+=(-e "$v=${!v}")
 done
+for m in ${EXTRA_MOUNTS:-}; do env_args+=(-v "$m:$m"); done
 exec "$DOCKER" run --rm --security-opt label=disable -v "$MOUNT:$MOUNT" -v "$BUSYBOX:/bin/busybox:ro" "${env_args[@]}" \
   "$IMAGE" bash -c "
     set -e

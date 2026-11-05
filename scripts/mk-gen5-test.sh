@@ -13,16 +13,19 @@
 #   Image-gen5             the kernel (the installer packs it into the owner's
 #                          own boot image)
 #   install-gen5.sh, boot-repack.py, firmware.tsv, switch-to-steamos/
+# Env: KO (kernel output; SKIP_KERNEL=1 uses one already built), LAD, M, CPIO,
+# ARCHIVE (archive name; default ...-v1.3.0-test<N>.7z) and ARCHIVE_DIR (where
+# it goes; default next to OUT_DIR).
 set -euo pipefail
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BASE="${1:?base userdata.simg}"; O="${2:?out dir}"; N="${3:?test number}"
-KO=/work/kernel-baldur/kout; LAD=/work/kernel-baldur/ladspa; M=/mnt/gen5
+KO="${KO:-/work/kernel-baldur/kout}"; LAD="${LAD:-/work/kernel-baldur/ladspa}"; M="${M:-/mnt/gen5}"
 fail() { echo "CHECK FAILED: $*"; mountpoint -q $M && umount $M; exit 1; }
 umount $M 2>/dev/null || true; mkdir -p $M
 cd "$SRC"
 
 echo "== kernel $(date +%T)"
-cpio=/work/kernel-elden/initramfs/initrd.cpio
+cpio="${CPIO:-/work/kernel-elden/initramfs/initrd.cpio}"
 grep -aq "microSD dual boot" "$cpio" || fail "initramfs without root=/dev support (rebuild kernel-elden first)"
 if [ -z "${SKIP_KERNEL:-}" ]; then
   bash scripts/build-baldur-kernel.sh $KO "$cpio" > /work/kbaldur.log 2>&1 || { tail -40 /work/kbaldur.log; fail "kernel"; }
@@ -154,7 +157,8 @@ cp $KO/boot/Image "$O/Image-gen5"
 cp scripts/gen5/install-gen5.sh scripts/gen5/boot-repack.py external-and-mods/baldur/firmware.tsv "$O/"
 cp -r external-and-mods/baldur/switch-to-steamos "$O/"
 cd "$O"; sha256sum Image-gen5 steamos-gen5-card.img > SHA256SUMS; cat SHA256SUMS
-f=steamos-arm-port-lenovo-legion-y700-gen5-v1.3.0-test$N.7z
-rm -f ../$f; 7z a -mx=3 -mmt=8 ../$f Image-gen5 steamos-gen5-card.img install-gen5.sh boot-repack.py firmware.tsv switch-to-steamos SHA256SUMS >/dev/null
-cd ..; sha256sum $f | tee $f.sha256; ls -l $f
+f="${ARCHIVE:-steamos-arm-port-lenovo-legion-y700-gen5-v1.3.0-test$N.7z}"
+AD="${ARCHIVE_DIR:-..}"; mkdir -p "$AD"; AD=$(cd "$AD" && pwd)
+rm -f "$AD/$f"; 7z a -mx=3 -mmt=8 "$AD/$f" Image-gen5 steamos-gen5-card.img install-gen5.sh boot-repack.py firmware.tsv switch-to-steamos SHA256SUMS >/dev/null
+cd "$AD"; sha256sum $f | tee $f.sha256; ls -l $f
 echo "==> done $(date +%T)"

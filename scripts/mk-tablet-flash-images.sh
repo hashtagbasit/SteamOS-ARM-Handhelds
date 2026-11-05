@@ -17,6 +17,7 @@
 #                  super: its firmware is copied out of it.
 #   userdata.simg  -> userdata: the system and /home in one ext4 filesystem,
 #                  Android sparse, grown to the whole partition on first boot
+# FLASH_WORK=DIR keeps the scratch files (a 14 GB userdata.img) off /work.
 # KERNEL_OUT replaces the image's kernel and modules (a newer build of the
 # same kernel); the Gen 4 needs it, its boot.img is built from it.
 set -euo pipefail
@@ -28,7 +29,7 @@ case "$DEV" in tb321fu|elden) ;; *) die "unknown tablet $DEV" ;; esac
 [[ $DEV == tb321fu || -n "$KO" ]] || die "the Gen 4 boot.img is built from KERNEL_OUT"
 command -v img2simg >/dev/null || die "img2simg missing (android-sdk-libsparse-utils)"
 
-W=$(mktemp -d "/work/$DEV-flash.XXXXXX")
+W=$(mktemp -d "${FLASH_WORK:-/work}/$DEV-flash.XXXXXX")
 LOOP=""; FAT=""
 cleanup() {
   set +e
