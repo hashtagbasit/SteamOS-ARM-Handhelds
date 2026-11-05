@@ -1,0 +1,341 @@
+#!/bin/bash
+# Lenovo Legion Y700 Gen 4: a boot menu (Android / SteamOS) on slot A.
+#
+#   tablet-bootmenu-install [--dry-run] [--yes] [--default steamos|android]
+#                           [--timeout SECONDS] [--tools DIR] [--dtb FILE]
+#   tablet-bootmenu-install --restore [--dry-run] [--yes]
+#   tablet-bootmenu-install --status
+#
+# Run as root from SteamOS on the tablet (SteamOS in the "steamos" partition,
+# started from boot_b, Android on slot A). It
+#   1. reads the stock Android boot image from boot_a and saves it, with its
+#      sha256, to /home/.ufs-backup (boot_a is never touched before that)
+#   2. packs that image as the Android entry, the SteamOS kernel of boot_b
+#      (with the device tree of this kernel) as the SteamOS entry, and the
+#      menu program (kShimC.bin) in front, then checks the result: sizes, the
+#      layout, unpack and pack again byte for byte, the AVB footer
+#   3. writes it to boot_a, reads it back and compares
+#   4. makes slot A the active one: the next boot shows the menu
+# boot_b is not touched. If the menu doesn't come up: Volume Down + Power for
+# fastboot and, on the computer, `fastboot set_active b` starts SteamOS as
+# before. --restore writes the saved stock image back to boot_a and makes
+# slot B active again.
+# Kernel updates: when boot_b gets a new kernel, the SteamOS entry in boot_a
+# would still run the old one. steamos-arm-tablet-bootmenu-sync.service runs
+# `--sync` at boot, which packs boot_a again from the saved stock image.
+#
+# The menu comes from kShimC.bin, the packer tools and tablet-bootmenu-pack,
+# found next to this script, in --tools DIR, or in the copy this script keeps in
+# /var/lib/steamos-arm/kshimc/tools after a successful install.
+#
+# TABLET_BOOTMENU_TEST=1 skips the tablet checks and root; BOOT_A, BOOT_B (files
+# of 96 MiB), BACKUP, BOOTMENU_STATE, BOOTMENU_DTB, BOOTMENU_BOOTARGS and
+# TABLET_SLOT (a command taking `activate a|b`) stand in for the real ones.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEST=${TABLET_BOOTMENU_TEST:-0}
+BACKUP=${BACKUP:-/home/.ufs-backup}
+STATE=${BOOTMENU_STATE:-/var/lib/steamos-arm/kshimc}
+BOOT_SIZE=100663296
+MODE=install DRY=0 YES=0 DEFAULT=steamos TIMEOUT=8 TOOLS=${KSHIMC_DIR:-} DTB=${BOOTMENU_DTB:-}
+WORK=""
+
+die() { echo "tablet-bootmenu-install: $*" >&2; exit 1; }
+log() { echo "==> $*"; }
+usage() { sed -n '2,32s/^# \{0,1\}//p' "$0"; exit 2; }
+cleanup() { [[ -n $WORK ]] && rm -rf "$WORK"; return 0; }
+trap cleanup EXIT
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run) DRY=1; shift ;;
+    --yes) YES=1; shift ;;
+    --default) DEFAULT=${2:?}; shift 2 ;;
+    --timeout) TIMEOUT=${2:?}; shift 2 ;;
+    --tools) TOOLS=${2:?}; shift 2 ;;
+    --dtb) DTB=${2:?}; shift 2 ;;
+    --restore) MODE=restore; shift ;;
+    --status) MODE=status; shift ;;
+    --sync) MODE=sync; shift ;;
+    -h|--help) usage ;;
+    *) die "unknown option $1 (--help)" ;;
+  esac
+done
+[[ $DEFAULT == steamos || $DEFAULT == android ]] || die "--default: steamos or android"
+[[ $TIMEOUT =~ ^[0-9]+$ ]] && (( TIMEOUT >= 1 && TIMEOUT <= 60 )) || die "--timeout: 1 to 60 seconds"
+if [[ $TEST != 1 && $MODE != status && $(id -u) != 0 ]]; then exec pkexec "$0" "$@"; fi
+
+# --- small helpers ---------------------------------------------------------
+sha_of() { sha256sum "$1" | cut -d' ' -f1; }
+kv() { sed -n "s/^$2=//p" "$1" 2>/dev/null | tail -n1; }   # kv FILE KEY
+free_kib() { df -Pk "$1" | awk 'NR==2{print $4}'; }
+
+find_tools() {
+  local d
+  for d in "$TOOLS" "$HERE" "$STATE/tools"; do
+    [[ -n $d && -s $d/kShimC.bin && -x $d/MultiBootKernelPatcher && -x $d/UnpackTool ]] && { TOOLS=$d; break; }
+    d=""
+  done
+  [[ -n $d ]] || die "the menu tools (kShimC.bin, MultiBootKernelPatcher, UnpackTool) are not here: use --tools DIR"
+  for f in repack_boot_v4.py avbtool.py; do [[ -f $TOOLS/$f ]] || die "$TOOLS/$f missing"; done
+  PACK=""
+  for d in "$TOOLS" "$HERE"; do [[ -x $d/tablet-bootmenu-pack ]] && { PACK=$d/tablet-bootmenu-pack; break; }; done
+  [[ -n $PACK ]] || die "tablet-bootmenu-pack missing"
+  [[ $(stat -c %s "$TOOLS/kShimC.bin") == 4194304 ]] || die "kShimC.bin is not 4 MiB"
+  if [[ -f $TOOLS/SHA256SUMS ]]; then
+    (cd "$TOOLS" && sha256sum -c --quiet SHA256SUMS) || die "the files in $TOOLS don't match SHA256SUMS"
+  fi
+  "$TOOLS/MultiBootKernelPatcher" --help >/dev/null 2>&1 || [[ $? -ne 126 && $? -ne 127 ]] \
+    || die "MultiBootKernelPatcher doesn't run here (aarch64 build needed)"
+}
+
+find_partitions() {
+  if [[ $TEST == 1 ]]; then
+    [[ -f ${BOOT_A:-} && -f ${BOOT_B:-} ]] || die "test mode: BOOT_A and BOOT_B files needed"
+    return
+  fi
+  grep -aq "lenovo,elden" /sys/firmware/devicetree/base/compatible 2>/dev/null \
+    || die "this is for the Lenovo Legion Y700 Gen 4 (TB322FC)"
+  BOOT_A=$(readlink -f /dev/disk/by-partlabel/boot_a 2>/dev/null) || true
+  BOOT_B=$(readlink -f /dev/disk/by-partlabel/boot_b 2>/dev/null) || true
+  [[ -b $BOOT_A && -b $BOOT_B ]] || die "boot_a / boot_b not found"
+  [[ $(blockdev --getsize64 "$BOOT_A") == "$BOOT_SIZE" && $(blockdev --getsize64 "$BOOT_B") == "$BOOT_SIZE" ]] \
+    || die "boot_a / boot_b are not 96 MiB"
+  grep -q 'root=PARTLABEL=steamos' /proc/cmdline \
+    || die "this SteamOS doesn't run from the steamos partition: install it next to Android first (tablet-dualboot-install)"
+}
+
+slot() {  # slot a|b
+  local c
+  if [[ -n ${TABLET_SLOT:-} ]]; then "$TABLET_SLOT" activate "$1"; return; fi
+  [[ $TEST != 1 ]] || { log "(test) slot $1 would be made active"; return; }
+  for c in "$TOOLS/tablet-slot" "$HERE/tablet-slot"; do
+    # Only a tablet-slot that knows `activate` will do.
+    if [[ -x $c ]] && grep -q '^  activate)' "$c"; then "$c" activate "$1"; return; fi
+  done
+  die "no tablet-slot with \`activate\` found: slot $1 is not active yet, use fastboot set_active $1"
+}
+
+# The newest saved stock image that is still a good one.
+saved_stock() {
+  local f s want files
+  want=$(kv "$STATE/state.env" STOCK_SHA256)
+  mapfile -t files < <(printf '%s\n' "$BACKUP"/boot_a-stock-*.img | sort -r)
+  for f in "${files[@]}"; do
+    [[ -f $f && -f $f.sha256 ]] || continue
+    s=$(cut -d' ' -f1 "$f.sha256")
+    [[ -n $want && $s != "$want" ]] && continue
+    [[ $(sha_of "$f") == "$s" ]] || { echo "tablet-bootmenu-install: $f doesn't match its sha256, skipped" >&2; continue; }
+    "$PACK" check-stock "$f" >/dev/null 2>&1 || continue
+    echo "$f"; return 0
+  done
+  return 1
+}
+
+write_boot_a() {  # write_boot_a IMAGE: write, read back, compare
+  local img=$1
+  dd if="$img" of="$BOOT_A" bs=1M conv=fsync,notrunc status=none
+  sync
+  cmp -n "$BOOT_SIZE" "$img" "$BOOT_A" >/dev/null 2>&1
+}
+
+confirm() {
+  (( YES )) && return 0
+  local ans
+  read -r -p "Type YES to go on: " ans
+  [[ $ans == YES ]] || die "stopped, nothing changed"
+}
+
+work_dir() {
+  WORK=$(mktemp -d "${TMPDIR:-/var/tmp}/bootmenu.XXXXXX")
+  (( $(free_kib "$WORK") >= 800 * 1024 )) || die "less than 800 MB free in ${TMPDIR:-/var/tmp}"
+}
+
+# The boot-time check for a new SteamOS kernel (the image carries the unit
+# already; a tablet with an older image gets it here).
+sync_service() {
+  local unit=steamos-arm-tablet-bootmenu-sync.service d=${SYSTEMD_ETC:-/etc/systemd/system}
+  [[ $TEST != 1 || -n ${SYSTEMD_ETC:-} ]] || return 0
+  [[ -e /usr/lib/systemd/system/$unit ]] && return 0
+  install -d "$d/multi-user.target.wants"
+  cat >"$d/$unit" <<UNIT
+[Unit]
+Description=Pack the boot menu image again when the SteamOS kernel changed (Lenovo Legion Y700 Gen 4)
+ConditionFirmware=device-tree-compatible(lenovo,elden)
+ConditionPathExists=$STATE/state.env
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=$STATE/tools/tablet-bootmenu-install --sync
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+  ln -sfn "../$unit" "$d/multi-user.target.wants/$unit"
+}
+
+# --- status ----------------------------------------------------------------
+if [[ $MODE == status ]]; then
+  find_tools 2>/dev/null || true
+  echo "state:   $( [[ -f $STATE/state.env ]] && echo "menu installed ($(kv "$STATE/state.env" INSTALLED_AT))" || echo "menu not installed")"
+  echo "backups: $(ls "$BACKUP"/boot_a-stock-*.img 2>/dev/null | wc -l) stock image(s) in $BACKUP"
+  [[ -x $HERE/tablet-slot && $TEST != 1 ]] && "$HERE/tablet-slot" status || true
+  exit 0
+fi
+
+find_partitions
+
+# --- restore ---------------------------------------------------------------
+if [[ $MODE == restore ]]; then
+  PACK=""
+  for d in "$TOOLS" "$HERE" "$STATE/tools"; do [[ -n $d && -x $d/tablet-bootmenu-pack ]] && { PACK=$d/tablet-bootmenu-pack; break; }; done
+  [[ -n $PACK ]] || die "tablet-bootmenu-pack missing"
+  stock=$(saved_stock) || die "no saved stock Android boot image in $BACKUP"
+  log "stock image: $stock"
+  echo "boot_a <- $stock ($(( BOOT_SIZE / 1048576 )) MiB), then slot B becomes the active one."
+  if (( DRY )); then echo "Dry run: nothing changed."; exit 0; fi
+  confirm
+  write_boot_a "$stock" || die "boot_a doesn't match the stock image after writing: write it again, or flash it with fastboot (fastboot flash boot_a $stock)"
+  rm -f "$STATE/state.env"
+  slot b
+  echo "Done. boot_a is the stock Android image again; SteamOS starts from slot B."
+  exit 0
+fi
+
+# --- install / sync --------------------------------------------------------
+find_tools
+for c in python3 dd cmp sha256sum df mktemp; do command -v $c >/dev/null || die "$c missing"; done
+work_dir
+W=$WORK
+
+log "boot_b: the SteamOS kernel"
+dd if="$BOOT_B" of="$W/boot_b.img" bs=1M status=none
+"$PACK" check-steamos "$W/boot_b.img" >"$W/steamos.info"
+kernel_sha=$(kv "$W/steamos.info" kernel_sha256)
+"$PACK" kernel "$W/boot_b.img" "$W/Image"
+
+if [[ $MODE == sync ]]; then
+  [[ -f $STATE/state.env ]] || exit 0
+  [[ $(kv "$STATE/state.env" KERNEL_SHA256) != "$kernel_sha" ]] || exit 0
+  log "the SteamOS kernel in boot_b changed: packing boot_a again"
+  # Same menu settings as at install time.
+  d=$(kv "$STATE/state.env" DEFAULT); [[ -z $d ]] || DEFAULT=$d
+  d=$(kv "$STATE/state.env" TIMEOUT); [[ -z $d ]] || TIMEOUT=$d
+  YES=1
+fi
+
+if [[ -z $DTB ]]; then
+  DTB=$(ls -1 /opt/steamos-sm8750/*-elden-steamos/dtbs/sm8750-lenovo-elden.dtb 2>/dev/null | sort -V | tail -n1 || true)
+fi
+[[ -f $DTB ]] || die "no device tree for this kernel (looked for /opt/steamos-sm8750/*-elden-steamos/dtbs/sm8750-lenovo-elden.dtb): use --dtb FILE"
+bootargs=${BOOTMENU_BOOTARGS:-}
+[[ -n $bootargs || $TEST == 1 ]] || bootargs=$(tr -d '\n' </proc/cmdline)
+[[ -n $bootargs ]] || bootargs="root=PARTLABEL=steamos rw rootwait rootfstype=ext4"
+[[ $bootargs == *root=PARTLABEL=steamos* ]] || die "the kernel command line doesn't use root=PARTLABEL=steamos"
+
+log "boot_a"
+dd if="$BOOT_A" of="$W/boot_a.img" bs=1M status=none
+kind=$("$PACK" kind "$W/boot_a.img" | sed 's/^kind=//')
+need_save=0
+case $kind in
+  stock)
+    [[ $MODE != sync ]] || { echo "boot_a is the stock image again; run tablet-bootmenu-install to put the menu back"; exit 0; }
+    "$PACK" check-stock "$W/boot_a.img" >"$W/stock.info"
+    stock=$W/boot_a.img
+    stock_sha=$(kv "$W/stock.info" sha256)
+    if ! grep -qs "^$stock_sha " "$BACKUP"/boot_a-stock-*.img.sha256 2>/dev/null; then need_save=1; fi
+    ;;
+  menu)
+    stock=$(saved_stock) || die "boot_a already has the menu and there is no saved stock Android image in $BACKUP to pack it from"
+    "$PACK" check-stock "$stock" >"$W/stock.info"
+    stock_sha=$(kv "$W/stock.info" sha256)
+    ;;
+  *) die "boot_a holds neither the stock Android boot image nor this menu: not touching it" ;;
+esac
+if (( need_save )); then
+  (( DRY )) || mkdir -p "$BACKUP" 2>/dev/null || true
+  d=$BACKUP
+  while [[ ! -d $d && $d != / ]]; do d=$(dirname "$d"); done
+  [[ -d $BACKUP ]] || (( DRY )) || die "can't create $BACKUP"
+  (( $(free_kib "$d") >= 160 * 1024 )) || die "less than 160 MB free in $BACKUP for the stock image backup"
+fi
+
+log "packing"
+args=(--stock "$stock" --linux-image "$W/Image" --dtb "$DTB" --runtime "$TOOLS/kShimC.bin"
+      --packer "$TOOLS/MultiBootKernelPatcher" --unpacker "$TOOLS/UnpackTool"
+      --repacker "$TOOLS/repack_boot_v4.py" --avbtool "$TOOLS/avbtool.py"
+      --bootargs "$bootargs" --default "$DEFAULT" --timeout-ms $(( TIMEOUT * 1000 )) --out "$W/out")
+"$PACK" build "${args[@]}" >"$W/build.info"
+boot_sha=$(kv "$W/build.info" boot_sha256)
+dtb_sha=$(kv "$W/build.info" dtb_sha256)
+[[ $(stat -c %s "$W/out/boot.img") == "$BOOT_SIZE" ]] || die "the new boot image doesn't fit boot_a"
+
+cat <<INFO
+
+boot_a:      $kind -> the menu (Android + SteamOS), default $DEFAULT after $TIMEOUT s
+stock image: sha256 $stock_sha $( (( need_save )) && echo "(will be saved to $BACKUP)" || echo "(saved already)")
+SteamOS:     kernel from boot_b (sha256 ${kernel_sha:0:16}...), device tree $DTB
+new image:   sha256 ${boot_sha:0:16}..., kernel $(kv "$W/build.info" kernel_bytes) bytes, checked: layout, unpack/pack round trip, AVB
+boot_b:      untouched
+INFO
+if (( DRY )); then echo; echo "Dry run: nothing changed."; exit 0; fi
+if [[ $MODE == install ]]; then
+  echo
+  echo "Slot A becomes the active one: the next boot shows the menu."
+  echo "If it doesn't: fastboot (Volume Down + Power), then  fastboot set_active b"
+  confirm
+fi
+
+if (( need_save )); then
+  stamp=$(date +%Y%m%d-%H%M%S)
+  f=$BACKUP/boot_a-stock-$stamp.img
+  log "saving the stock image: $f"
+  cp "$stock" "$f.part"
+  sync
+  [[ $(sha_of "$f.part") == "$stock_sha" ]] || { rm -f "$f.part"; die "the backup copy doesn't match"; }
+  mv "$f.part" "$f"
+  echo "$stock_sha  ${f##*/}" >"$f.sha256"
+  sync
+fi
+
+log "boot_a <- the menu image"
+if ! write_boot_a "$W/out/boot.img"; then
+  echo "tablet-bootmenu-install: boot_a doesn't match after writing, writing the stock image back" >&2
+  write_boot_a "$stock" || echo "tablet-bootmenu-install: that failed too: fastboot flash boot_a <the saved stock image>, or fastboot set_active b" >&2
+  die "boot_a write failed"
+fi
+
+# Keep the tools and the state for --sync and --restore.
+install -d "$STATE/tools"
+for f in kShimC.bin MultiBootKernelPatcher UnpackTool repack_boot_v4.py avbtool.py; do
+  install -m 0755 "$TOOLS/$f" "$STATE/tools/$f.new"; mv -f "$STATE/tools/$f.new" "$STATE/tools/$f"
+done
+for f in "$PACK" "$HERE/tablet-bootmenu-install" "$TOOLS/tablet-slot" "$HERE/tablet-slot"; do
+  [[ -f $f ]] || continue
+  install -m 0755 "$f" "$STATE/tools/${f##*/}.new"; mv -f "$STATE/tools/${f##*/}.new" "$STATE/tools/${f##*/}"
+done
+(cd "$STATE/tools" && sha256sum -- * >SHA256SUMS.new 2>/dev/null; grep -v ' SHA256SUMS' SHA256SUMS.new >SHA256SUMS; rm -f SHA256SUMS.new)
+sync_service
+{
+  echo "INSTALLED_AT=$(date '+%F %T')"
+  echo "STOCK_SHA256=$stock_sha"
+  echo "KERNEL_SHA256=$kernel_sha"
+  echo "DTB_SHA256=$dtb_sha"
+  echo "MENU_SHA256=$(sha_of "$TOOLS/kShimC.bin")"
+  echo "BOOT_SHA256=$boot_sha"
+  echo "DEFAULT=$DEFAULT"
+  echo "TIMEOUT=$TIMEOUT"
+} >"$STATE/state.env.new"
+mv -f "$STATE/state.env.new" "$STATE/state.env"
+
+if [[ $MODE == install ]]; then
+  slot a
+  echo
+  echo "Done. The menu shows from the next boot (Android / SteamOS)."
+  echo "Back to plain SteamOS from fastboot: fastboot set_active b. From here: $0 --restore"
+else
+  log "boot_a packed again with the new kernel"
+fi

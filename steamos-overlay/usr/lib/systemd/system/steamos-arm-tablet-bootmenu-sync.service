@@ -1,0 +1,13 @@
+[Unit]
+Description=Pack the boot menu image again when the SteamOS kernel changed (Lenovo Legion Y700 Gen 4)
+ConditionFirmware=device-tree-compatible(lenovo,elden)
+ConditionPathExists=/var/lib/steamos-arm/kshimc/state.env
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/steamos-arm/tablet-bootmenu-install --sync
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

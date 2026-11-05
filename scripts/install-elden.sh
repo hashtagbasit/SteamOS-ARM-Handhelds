@@ -151,9 +151,14 @@ done
 install -Dm0755 "$O/usr/lib/systemd/system-sleep/steamos-arm-sleep-stats" "$R/usr/lib/systemd/system-sleep/steamos-arm-sleep-stats"
 # Dual boot with ZUXOS: switch slots (Handheld Control's Restart into ZUXOS),
 # and move SteamOS from the microSD card to internal storage next to ZUXOS.
-for f in tablet-slot tablet-dualboot-install; do
+# The boot menu (ZUXOS / SteamOS on slot A) comes from a separate add-on bundle
+# (scripts/build-kshimc.sh); its sync service keeps the menu's SteamOS kernel
+# the one in boot_b.
+for f in tablet-slot tablet-dualboot-install tablet-bootmenu-install tablet-bootmenu-pack; do
   install -Dm0755 "$O/usr/lib/steamos-arm/$f" "$R/usr/lib/steamos-arm/$f"
 done
+install -Dm0644 "$O/usr/lib/systemd/system/steamos-arm-tablet-bootmenu-sync.service" "$R/usr/lib/systemd/system/steamos-arm-tablet-bootmenu-sync.service"
+ln -sfn ../steamos-arm-tablet-bootmenu-sync.service "$R/usr/lib/systemd/system/multi-user.target.wants/steamos-arm-tablet-bootmenu-sync.service"
 # Asleep or awake, power off before the battery runs flat: a sleeping
 # handheld at 0 % browns out and can boot-loop on the charger.
 install -Dm0755 "$O/usr/lib/systemd/system-sleep/steamos-arm-low-battery" "$R/usr/lib/systemd/system-sleep/steamos-arm-low-battery"

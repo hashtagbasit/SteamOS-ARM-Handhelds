@@ -6,6 +6,11 @@
 #
 #   tablet-slot android   start ZUXOS (slot A) from the next boot on, and restart
 #   tablet-slot status    which slot is active, and whether this is a dual boot
+#   tablet-slot activate a|b   make that slot the active one (no restart)
+#
+# With the boot menu (tablet-bootmenu-install) slot A starts a menu that offers
+# ZUXOS and SteamOS: "android" then restarts into that menu, where ZUXOS is
+# picked with the volume keys.
 #
 # The stock Qualcomm bootloader keeps the slot state in the GPT attributes of
 # boot_a / boot_b: bit 50 active, 51-53 retries, 54 successful, 55 unbootable.
@@ -25,24 +30,43 @@ setbits() {  # setbits <slot> <bits...>
 }
 sd_boot() { findmnt -no SOURCE / | grep -q mmcblk; }
 dual_boot() { sd_boot || [[ $(lsblk -no PARTLABEL "$(findmnt -no SOURCE /)" 2>/dev/null) == steamos ]]; }
+menu_installed() { [[ -f ${BOOTMENU_STATE:-/var/lib/steamos-arm/kshimc}/state.env ]]; }
+# activate <slot>: that slot active with its retries back at 7 and not
+# unbootable; the other one only inactive.
+activate() {
+  local s=$1 o x y
+  [[ $s == a || $s == b ]] || { echo "usage: tablet-slot activate a|b" >&2; exit 2; }
+  if [[ $s == a ]]; then o=b; else o=a; fi
+  x=$(bits "$s" | tr ' ' '\n' | grep -vxE '50|55|51|52|53' || true)
+  y=$(bits "$o" | tr ' ' '\n' | grep -vx 50 || true)
+  # shellcheck disable=SC2086
+  setbits "$s" $x 50 51 52 53
+  # shellcheck disable=SC2086
+  setbits "$o" $y
+  sync
+}
 case "${1:-status}" in
   status)
     for s in a b; do echo "boot_$s: $(bits $s)"; done
+    menu_installed && echo "boot menu installed (slot A shows Android / SteamOS)"
     if sd_boot; then echo "running from the microSD card (dual boot)"
     elif dual_boot; then echo "running from internal storage next to ZUXOS (dual boot)"
     else echo "running from internal storage"; fi
     ;;
+  activate)
+    [[ $(id -u) == 0 ]] || exec pkexec "$0" "$@"
+    activate "${2:-}"
+    ;;
   android)
     dual_boot || { echo "SteamOS replaced ZUXOS on this tablet: there's no ZUXOS to start" >&2; exit 1; }
     [[ $(id -u) == 0 ]] || exec pkexec "$0" "$@"
-    a=$(bits a | tr ' ' '\n' | grep -vxE '50|55|51|52|53' || true)
-    b=$(bits b | tr ' ' '\n' | grep -vx 50 || true)
-    # Slot A active with its retries back at 7 and not unbootable; B stays as it is, only inactive.
-    setbits a $a 50 51 52 53
-    setbits b $b
-    sync
-    echo "ZUXOS starts from the next boot; back to SteamOS: fastboot set_active b"
+    activate a
+    if menu_installed; then
+      echo "Restarting into the boot menu: pick Android with the volume keys. Back to SteamOS: fastboot set_active b"
+    else
+      echo "ZUXOS starts from the next boot; back to SteamOS: fastboot set_active b"
+    fi
     systemctl reboot
     ;;
-  *) echo "usage: tablet-slot status|android" >&2; exit 2 ;;
+  *) echo "usage: tablet-slot status|android|activate a|b" >&2; exit 2 ;;
 esac

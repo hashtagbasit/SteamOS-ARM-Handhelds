@@ -1,0 +1,520 @@
+#!/usr/bin/env python3
+"""The checks and the packing behind tablet-bootmenu-install (Lenovo Legion
+Y700 Gen 4, header v4 boot images). Python standard library only.
+
+  tablet-bootmenu-pack kind IMG                what boot_a holds: stock | menu | other
+  tablet-bootmenu-pack check-stock IMG         the stock Android boot image is usable
+  tablet-bootmenu-pack check-steamos IMG       a SteamOS boot image (root=PARTLABEL=steamos)
+  tablet-bootmenu-pack kernel IMG OUT          write the kernel of a v4 boot image
+  tablet-bootmenu-pack build ...               pack the menu image (see build --help)
+
+Every step prints one "key=value" line or a message on stderr and exits 1.
+"""
+import argparse
+import configparser
+import gzip
+import hashlib
+import os
+import re
+import struct
+import subprocess
+import sys
+import tempfile
+
+BOOT_SIZE = 96 * 1024 * 1024
+RUNTIME_SIZE = 4 * 1024 * 1024
+RAW_BUDGET = 128 * 1024 * 1024     # the loader's size limit for the packed kernel
+PAGE = 4096
+MAGIC = b"ANDROID!"
+ARM64_MAGIC = b"ARM\x64"
+AVB_MAGIC = b"AVBf"
+MANIFEST_MAGIC = 0x464D504B
+MANIFEST_HEADER_SIZE = 60
+MANIFEST_ENTRY_SIZE = 56
+MF_LINUX, MF_SHIM, MF_DTB = 1, 3, 5
+FLAG_BASE, FLAG_EXEC, FLAG_HAS_DTB, FLAG_QC = 1, 4, 8, 16
+FDT_MAGIC = 0xD00DFEED
+ROOT = b"root=PARTLABEL=steamos"
+REQUIRED_COMPATIBLE = ("lenovo,elden", "qcom,sm8750")
+FORBIDDEN_COMPATIBLE = ("lenovo,baldur", "lenovo,tb323fu", "qcom,sm8850",
+                        "qcom,canoe", "qcom,canoep", "qcom,kaanapali")
+
+
+def die(msg):
+    print("tablet-bootmenu-pack: " + msg, file=sys.stderr)
+    sys.exit(1)
+
+
+def need(cond, msg):
+    if not cond:
+        die(msg)
+
+
+def le32(b, o):
+    return struct.unpack_from("<I", b, o)[0]
+
+
+def le64(b, o):
+    return struct.unpack_from("<Q", b, o)[0]
+
+
+def align_up(v, a):
+    return (v + a - 1) // a * a
+
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def read(path, limit=None):
+    with open(path, "rb") as f:
+        return f.read() if limit is None else f.read(limit)
+
+
+def header(img):
+    need(len(img) >= PAGE, "image shorter than a boot header")
+    return {"magic": img[:8], "kernel_size": le32(img, 8), "ramdisk_size": le32(img, 12),
+            "header_size": le32(img, 20), "version": le32(img, 40),
+            "signature_size": le32(img, 1580)}
+
+
+def boot_kernel(img, what):
+    """The kernel bytes of a v4 boot image with no ramdisk."""
+    h = header(img)
+    need(h["magic"] == MAGIC, f"{what}: not an Android boot image")
+    need(h["version"] == 4, f"{what}: header version {h['version']}, need 4")
+    need(h["header_size"] == 1584, f"{what}: header_size {h['header_size']}, need 1584")
+    need(h["ramdisk_size"] == 0, f"{what}: has a ramdisk")
+    need(h["signature_size"] == 0, f"{what}: has a boot signature")
+    ks = h["kernel_size"]
+    need(ks != 0 and PAGE + ks <= len(img), f"{what}: bad kernel_size {ks}")
+    return img[PAGE:PAGE + ks]
+
+
+def raw_arm64(k, what):
+    need(len(k) >= 64, f"{what}: kernel shorter than 64 bytes")
+    need(k[:16] != b"UNCOMPRESSED_IMG", f"{what}: kernel has a loader wrapper")
+    need(k[:2] != b"\x1f\x8b", f"{what}: kernel is compressed, a raw ARM64 Image is needed")
+    need(k[56:60] == ARM64_MAGIC, f"{what}: kernel is not an ARM64 Image")
+    need(le64(k, 16) >= 64, f"{what}: kernel image_size is below 64")
+    return {"text_offset": le64(k, 8), "image_size": le64(k, 16)}
+
+
+def avb_footer(img, what):
+    need(img[-64:-60] == AVB_MAGIC, f"{what}: no AVB footer")
+    f = struct.unpack(">4sIIQQQ28s", img[-64:])
+    return {"orig": f[3], "vbo": f[4], "vbs": f[5]}
+
+
+def cmd_kind(a):
+    img = read(a.img)
+    if len(img) < PAGE or img[:8] != MAGIC:
+        print("kind=other")
+        return
+    ks = le32(img, 8)
+    k = img[PAGE:PAGE + ks]
+    if k[:2] == b"\x1f\x8b":
+        try:
+            raw = gzip.decompress(k)
+        except (OSError, EOFError):
+            print("kind=other")
+            return
+        mo, ms = le64(raw, 32), le64(raw, 40)
+        if raw[56:60] == ARM64_MAGIC and mo and mo + 4 <= len(raw) and le32(raw, mo) == MANIFEST_MAGIC and ms:
+            print("kind=menu")
+            return
+        print("kind=other")
+    elif k[56:60] == ARM64_MAGIC:
+        print("kind=stock")
+    else:
+        print("kind=other")
+
+
+def cmd_check_stock(a):
+    img = read(a.img)
+    need(len(img) == BOOT_SIZE, f"stock boot image is {len(img)} bytes, need {BOOT_SIZE} (96 MiB)")
+    k = boot_kernel(img, "stock boot image")
+    raw_arm64(k, "stock boot image")
+    avb_footer(img, "stock boot image")
+    print("sha256=" + sha(img))
+    print(f"kernel_size={len(k)}")
+
+
+def cmd_check_steamos(a):
+    img = read(a.img)
+    need(len(img) >= PAGE and img[:8] == MAGIC, "boot_b is not an Android boot image")
+    k = boot_kernel(img, "boot_b")
+    raw_arm64(k, "boot_b")
+    need(ROOT in k, "boot_b does not start SteamOS from the steamos partition (root=PARTLABEL=steamos)")
+    print("kernel_sha256=" + sha(k))
+    print(f"kernel_size={len(k)}")
+
+
+def cmd_kernel(a):
+    k = boot_kernel(read(a.img), a.img)
+    with open(a.out, "wb") as f:
+        f.write(k)
+
+
+# --- device tree ----------------------------------------------------------
+class Node:
+    def __init__(self, name):
+        self.name, self.props, self.kids = name, [], []
+
+    def prop(self, name):
+        for n, v in self.props:
+            if n == name:
+                return v
+        return None
+
+    def kid(self, name):
+        for k in self.kids:
+            if k.name == name:
+                return k
+        return None
+
+    def setprop(self, name, value):
+        self.props = [(n, v) for n, v in self.props if n != name] + [(name, value)]
+
+    def delprop(self, name):
+        self.props = [(n, v) for n, v in self.props if n != name]
+
+
+def fdt_parse(b):
+    need(len(b) >= 40 and struct.unpack_from(">I", b, 0)[0] == FDT_MAGIC, "bad device tree magic")
+    total, off_struct, off_str, off_rsv, ver, lastc, boot_cpu, sz_str, sz_struct = \
+        struct.unpack_from(">IIIIIIIII", b, 4)
+    need(total == len(b), f"device tree totalsize {total} != file size {len(b)}")
+    need(ver >= 17, "device tree version below 17")
+    strings = b[off_str:off_str + sz_str]
+    rsv = b[off_rsv:off_struct]
+    pos, end = off_struct, off_struct + sz_struct
+    stack, root = [], None
+    while pos < end:
+        tok = struct.unpack_from(">I", b, pos)[0]
+        pos += 4
+        if tok == 1:
+            z = b.index(b"\0", pos)
+            n = Node(b[pos:z].decode())
+            pos = align_up(z + 1, 4)
+            if stack:
+                stack[-1].kids.append(n)
+            else:
+                root = n
+            stack.append(n)
+        elif tok == 2:
+            stack.pop()
+        elif tok == 3:
+            ln, nameoff = struct.unpack_from(">II", b, pos)
+            pos += 8
+            z = strings.index(b"\0", nameoff)
+            stack[-1].props.append((strings[nameoff:z].decode(), b[pos:pos + ln]))
+            pos = align_up(pos + ln, 4)
+        elif tok == 4:
+            pass
+        elif tok == 9:
+            break
+        else:
+            die(f"bad device tree token {tok}")
+    need(root is not None and not stack, "malformed device tree")
+    return root, rsv, boot_cpu
+
+
+def fdt_build(root, rsv, boot_cpu):
+    strings, offs = bytearray(), {}
+    st = bytearray()
+
+    def emit(n):
+        st.extend(struct.pack(">I", 1))
+        st.extend(n.name.encode() + b"\0")
+        st.extend(b"\0" * (-len(st) % 4))
+        for name, val in n.props:
+            if name not in offs:
+                offs[name] = len(strings)
+                strings.extend(name.encode() + b"\0")
+            st.extend(struct.pack(">III", 3, len(val), offs[name]))
+            st.extend(val)
+            st.extend(b"\0" * (-len(st) % 4))
+        for k in n.kids:
+            emit(k)
+        st.extend(struct.pack(">I", 2))
+
+    emit(root)
+    st.extend(struct.pack(">I", 9))
+    off_rsv = 40
+    off_struct = off_rsv + len(rsv)
+    off_str = off_struct + len(st)
+    total = off_str + len(strings)
+    hdr = struct.pack(">IIIIIIIIII", FDT_MAGIC, total, off_struct, off_str, off_rsv,
+                      17, 16, boot_cpu, len(strings), len(st))
+    return bytes(hdr) + bytes(rsv) + bytes(st) + bytes(strings)
+
+
+def cstrings(v):
+    return [s.decode() for s in v.split(b"\0") if s]
+
+
+def fdt_compatible(root):
+    v = root.prop("compatible")
+    need(v is not None, "device tree has no compatible")
+    return cstrings(v)
+
+
+def check_compatible(compat, what):
+    for c in REQUIRED_COMPATIBLE:
+        need(c in compat, f"{what}: not a Legion Y700 Gen 4 device tree (compatible {compat})")
+    for c in FORBIDDEN_COMPATIBLE:
+        need(c not in compat, f"{what}: device tree of another tablet ({c})")
+
+
+def make_dtb(src, bootargs):
+    root, rsv, boot_cpu = fdt_parse(src)
+    check_compatible(fdt_compatible(root), "device tree")
+    chosen = root.kid("chosen")
+    if chosen is None:
+        chosen = Node("chosen")
+        root.kids.append(chosen)
+    chosen.delprop("linux,initrd-start")
+    chosen.delprop("linux,initrd-end")
+    chosen.setprop("bootargs", bootargs.encode() + b"\0")
+    chosen.setprop("kshim,boot-stage", b"os\0")
+    chosen.setprop("kshim,root-medium", b"internal\0")
+    out = fdt_build(root, rsv, boot_cpu)
+    # Parse it again: only /chosen may differ from the source.
+    r2, _, _ = fdt_parse(out)
+
+    def flat(n, path, acc):
+        acc[path] = (n.props if path != "/chosen" else
+                     [p for p in n.props if p[0] not in
+                      ("bootargs", "kshim,boot-stage", "kshim,root-medium",
+                       "linux,initrd-start", "linux,initrd-end")])
+        for k in n.kids:
+            flat(k, path.rstrip("/") + "/" + k.name, acc)
+        return acc
+
+    a, b = flat(root_orig(src), "/", {}), flat(r2, "/", {})
+    need(sorted(a) == sorted(b), "device tree node set changed")
+    for p in a:
+        need(sorted(a[p]) == sorted(b[p]), f"device tree changed outside /chosen at {p}")
+    got = r2.kid("chosen")
+    need(got.prop("bootargs") == bootargs.encode() + b"\0", "bootargs did not stick")
+    need(got.prop("kshim,root-medium") == b"internal\0", "root-medium did not stick")
+    return out
+
+
+def root_orig(src):
+    return fdt_parse(src)[0]
+
+
+def cmd_dtb(a):
+    out = make_dtb(read(a.dtb_in), a.bootargs)
+    with open(a.out, "wb") as f:
+        f.write(out)
+    print("dtb_sha256=" + sha(out))
+
+
+# --- packing --------------------------------------------------------------
+def run(cmd, **kw):
+    r = subprocess.run([str(c) for c in cmd], capture_output=True, **kw)
+    if r.returncode != 0:
+        die(f"{os.path.basename(str(cmd[0]))} failed ({r.returncode}): "
+            + (r.stderr or r.stdout).decode(errors="replace").strip()[-600:])
+    return r
+
+
+def parse_manifest(buf, off):
+    magic, vmaj, vmin, count, default, timeout = struct.unpack_from("<IHHIII", buf, off)
+    backup = struct.unpack_from("<QQQQQ", buf, off + 20)
+    entries, cur = [], off + MANIFEST_HEADER_SIZE
+    for _ in range(count):
+        (eo, es, et, ef, el, ee, ed, eal, ec, nl) = struct.unpack_from("<QQIIQIIIQI", buf, cur)
+        name = buf[cur + MANIFEST_ENTRY_SIZE:cur + MANIFEST_ENTRY_SIZE + nl]
+        entries.append({"offset": eo, "size": es, "type": et, "flags": ef, "load": el,
+                        "entry_offset": ee, "dtb": ed, "align": eal, "copy_max": ec,
+                        "name": name})
+        cur += align_up(MANIFEST_ENTRY_SIZE + nl, 4)
+    return {"magic": magic, "major": vmaj, "minor": vmin, "count": count,
+            "default": default, "timeout": timeout, "backup": backup,
+            "entries": entries, "end": cur}
+
+
+def cmd_build(a):
+    out = os.path.abspath(a.out)
+    os.makedirs(out, exist_ok=True)
+    need(not os.listdir(out), f"{out} is not empty")
+    stock_boot = read(a.stock)
+    need(len(stock_boot) == BOOT_SIZE, "stock boot image is not 96 MiB")
+    stock = boot_kernel(stock_boot, "stock boot image")
+    sinfo = raw_arm64(stock, "stock boot image")
+    avb_footer(stock_boot, "stock boot image")
+    linux = read(a.linux_image)
+    linfo = raw_arm64(linux, "SteamOS kernel")
+    runtime = read(a.runtime)
+    need(len(runtime) == RUNTIME_SIZE, "kShimC.bin is not 4 MiB")
+    need(re.fullmatch(r"[ -~]*", a.bootargs) and len(a.bootargs) < 1500, "bad bootargs")
+    padded = linux + b"\0" * (max(len(linux), linfo["image_size"]) - len(linux))
+    dtb = make_dtb(read(a.dtb), a.bootargs)
+    need(len(dtb) <= 200 * 1024, "device tree is too big for the menu")
+
+    work = os.path.join(out, "work")
+    os.makedirs(work)
+    paths = {"base": os.path.join(work, "StockImage"), "linux": os.path.join(work, "padded-Image"),
+             "dtb": os.path.join(work, "SteamOS.dtb")}
+    for key, data in (("base", stock), ("linux", padded), ("dtb", dtb)):
+        with open(paths[key], "wb") as f:
+            f.write(data)
+    packed_path = os.path.join(out, "PackedKernel")
+    cfg = os.path.join(work, "build.cfg")
+    for p in list(paths.values()) + [a.runtime, packed_path]:
+        need(re.fullmatch(r"[A-Za-z0-9_./+-]+", p), f"path with unusual characters: {p}")
+    default_label = "Image-01" if a.default == "steamos" else "Image-00"
+    with open(cfg, "w") as f:
+        f.write("\n".join([
+            "[Pack]", "Shim=" + a.runtime, "Output=" + packed_path, "Default=" + default_label,
+            "Timeout=%d" % a.timeout_ms, "",
+            "[Image-00]", "Name=Android", "Path=" + paths["base"], "Type=Linux",
+            "BaseImage=true", "Align=21", "",
+            "[Image-01]", "Name=SteamOS", "Path=" + paths["linux"], "Type=Linux",
+            "BaseImage=false", "Align=21", "EntryOffset=0", "DeviceTreeBlob=Image-02", "",
+            "[Image-02]", "Name=SteamOS DTB", "Path=" + paths["dtb"], "Type=DTB",
+            "BaseImage=false", "Align=3", "",
+            "[Manifest]", "Type=Manifest", ""]))
+    run([a.packer, cfg])
+    raw = read(packed_path)
+
+    # The packed kernel.
+    need(len(raw) <= RAW_BUDGET, f"the packed kernel is {len(raw)} bytes, the loader takes {RAW_BUDGET}")
+    need(raw[56:60] == ARM64_MAGIC, "packed: bad ARM64 magic")
+    need(le64(raw, 16) == len(raw), "packed: image_size != length")
+    need(le64(raw, 8) == sinfo["text_offset"], "packed: text_offset changed")
+    need(le64(raw, 0x18) == le64(stock, 0x18), "packed: flags changed")
+    mo, ms, so = le64(raw, 32), le64(raw, 40), le64(raw, 48)
+    need(ms >= MANIFEST_HEADER_SIZE and mo + ms <= len(raw), "packed: manifest out of bounds")
+    m = parse_manifest(raw, mo)
+    need(m["magic"] == MANIFEST_MAGIC, "packed: bad manifest magic")
+    need((m["major"], m["minor"]) == (0, 1), "packed: manifest version")
+    need(m["count"] == 4, f"packed: {m['count']} manifest entries, need 4")
+    need(m["default"] == (1 if a.default == "steamos" else 0), "packed: wrong default entry")
+    need(m["timeout"] == a.timeout_ms, "packed: wrong timeout")
+    need(m["end"] == mo + ms, "packed: manifest size")
+    need(m["backup"] == (le64(stock, 0), le64(stock, 16), le64(stock, 32), le64(stock, 40), le64(stock, 48)),
+         "packed: backed-up base header differs")
+    e = m["entries"]
+    exp = [(MF_LINUX, FLAG_BASE | FLAG_EXEC, 21, 0), (MF_LINUX, FLAG_EXEC | FLAG_HAS_DTB, 21, 2),
+           (MF_DTB, 0, 3, 0), (MF_SHIM, FLAG_EXEC, 2, 0)]
+    for i, (t, fl, al, dt) in enumerate(exp):
+        x = e[i]
+        need((x["type"], x["flags"], x["align"], x["dtb"]) == (t, fl, al, dt), f"packed: entry {i} fields")
+        need(x["load"] == 0 and x["entry_offset"] == 0 and x["copy_max"] == 0, f"packed: entry {i} addresses")
+    pay = lambda x: raw[x["offset"]:x["offset"] + x["size"]]
+    need(e[0]["offset"] == 0 and e[0]["size"] == len(stock), "packed: base placement")
+    need(not (e[0]["flags"] & (FLAG_HAS_DTB | FLAG_QC)), "packed: base flags")
+    need(e[3]["offset"] == so and e[3]["size"] == RUNTIME_SIZE, "packed: shim placement")
+    need(pay(e[3]) == runtime, "packed: shim payload differs from kShimC.bin")
+    restored = bytearray(pay(e[0]))
+    for slot, off in enumerate((0, 16, 32, 40, 48)):
+        struct.pack_into("<Q", restored, off, m["backup"][slot])
+    need(bytes(restored) == stock, "packed: base payload differs from the stock kernel")
+    need(pay(e[1]) == padded, "packed: SteamOS payload differs from its kernel")
+    need(pay(e[2]) == dtb, "packed: device tree payload differs")
+    spans = sorted((x["offset"], x["offset"] + x["size"], i) for i, x in enumerate(e))
+    prev = 0
+    for s, t, i in spans:
+        need(s % (1 << e[i]["align"]) == 0, f"packed: entry {i} misaligned")
+        need(s >= prev and t <= len(raw), f"packed: entry {i} overlaps or runs past the end")
+        need(raw[prev:s] == b"\0" * (s - prev), f"packed: non-zero gap before entry {i}")
+        prev = t
+    need(mo >= prev and raw[prev:mo] == b"\0" * (mo - prev), "packed: gap before manifest")
+    need(mo + ms == len(raw), "packed: bytes after the manifest")
+    need(e[1]["offset"] % 4096 == e[0]["offset"] % 4096, "packed: SteamOS offset residue")
+    w0 = le32(raw, 0)
+    need(w0 == (0x94000000 | ((so >> 2) & 0x03FFFFFF)) and 0 < so < 0x08000000, "packed: branch to the shim")
+    ow0, ow1 = le32(stock, 0), le32(stock, 4)
+    isb = lambda w: (w & 0xFC000000) == 0x14000000
+    if isb(ow0) and not isb(ow1):
+        need(le32(raw, 4) == (0x14000000 | ((ow0 - 1) & 0x03FFFFFF)), "packed: second instruction")
+    else:
+        need(isb(ow1) and le32(raw, 4) == ow1, "packed: second instruction")
+
+    # Unpack and pack again: byte-identical.
+    un = os.path.join(out, "unpacked")
+    run([a.unpacker, packed_path, un])
+    need(read(os.path.join(un, "BaseImage")) == stock, "unpack: base differs")
+    need(read(os.path.join(un, "Shim.bin")) == runtime, "unpack: shim differs")
+    cp = configparser.ConfigParser()
+    cp.optionxform = str
+    cp.read(os.path.join(un, "config.cfg"), encoding="utf-8")
+
+    def emitted(sec):
+        need(cp.has_section(sec) and cp[sec].get("Path"), f"unpack: no {sec}")
+        p = cp[sec]["Path"]
+        return p if os.path.isabs(p) else os.path.join(un, p)
+
+    need(read(emitted("Image-01")) == padded, "unpack: SteamOS kernel differs")
+    need(read(emitted("Image-02")) == dtb, "unpack: device tree differs")
+    rp = cp["Pack"].get("Output", "RepackedKernel") if cp.has_section("Pack") else "RepackedKernel"
+    rp = rp if os.path.isabs(rp) else os.path.join(un, rp)
+    run([a.packer, os.path.join(un, "config.cfg")], cwd=un)
+    need(read(rp) == raw, "repack: not byte-identical")
+
+    # Boot image: gzip kernel, v4 header and AVB footer kept from the stock one.
+    gz = gzip.compress(raw, compresslevel=6, mtime=0)
+    gzp = os.path.join(out, "PackedKernel.gz")
+    with open(gzp, "wb") as f:
+        f.write(gz)
+    final_path = os.path.join(out, "boot.img")
+    run([sys.executable, "-B", a.repacker, "--original", a.stock, "--kernel", gzp,
+         "--output", final_path, "--report", os.path.join(out, "repack_report.json"),
+         "--avbtool", a.avbtool])
+    final = read(final_path)
+    need(len(final) == BOOT_SIZE, f"boot image is {len(final)} bytes, boot_a is {BOOT_SIZE}")
+    fk = boot_kernel(final, "boot image")
+    need(fk == gz, "boot image: kernel is not the packed one")
+    need(gzip.decompress(fk) == raw, "boot image: kernel does not decompress to the packed one")
+    need(final[:8] == stock_boot[:8] and final[12:PAGE] == stock_boot[12:PAGE],
+         "boot image: header differs beyond kernel_size")
+    f = avb_footer(final, "boot image")
+    need(f["orig"] == PAGE + align_up(len(gz), PAGE), "boot image: AVB original_image_size")
+    need(f["vbs"] > 0 and f["vbo"] >= f["orig"] and f["vbo"] + f["vbs"] <= len(final) - 64,
+         "boot image: AVB metadata out of bounds")
+    need(final[PAGE + len(gz):f["orig"]] == b"\0" * (f["orig"] - PAGE - len(gz)), "boot image: kernel padding")
+    run([sys.executable, "-B", a.avbtool, "verify_image", "--image", final_path])
+    info = run([sys.executable, "-B", a.avbtool, "info_image", "--image", final_path]).stdout.decode(errors="replace")
+    mm = re.search(r"^\s*Algorithm:\s*(\S+)", info, re.M)
+    need(mm is not None, "boot image: no AVB algorithm line")
+    print("boot_sha256=" + sha(final))
+    print("dtb_sha256=" + sha(dtb))
+    print(f"packed_bytes={len(raw)}")
+    print(f"kernel_bytes={len(gz)}")
+    print("avb_algorithm=" + mm.group(1))
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    for name, fn in (("kind", cmd_kind), ("check-stock", cmd_check_stock), ("check-steamos", cmd_check_steamos)):
+        p = sub.add_parser(name)
+        p.add_argument("img")
+        p.set_defaults(fn=fn)
+    p = sub.add_parser("kernel")
+    p.add_argument("img")
+    p.add_argument("out")
+    p.set_defaults(fn=cmd_kernel)
+    p = sub.add_parser("dtb")
+    p.add_argument("dtb_in")
+    p.add_argument("out")
+    p.add_argument("--bootargs", required=True)
+    p.set_defaults(fn=cmd_dtb)
+    p = sub.add_parser("build")
+    for opt in ("stock", "linux-image", "dtb", "runtime", "packer", "unpacker", "repacker", "avbtool", "out"):
+        p.add_argument("--" + opt, required=True)
+    p.add_argument("--bootargs", required=True)
+    p.add_argument("--default", choices=("steamos", "android"), default="steamos")
+    p.add_argument("--timeout-ms", type=int, default=8000)
+    p.set_defaults(fn=cmd_build)
+    a = ap.parse_args()
+    a.fn(a)
+
+
+if __name__ == "__main__":
+    main()
