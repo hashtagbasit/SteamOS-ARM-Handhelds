@@ -83,6 +83,11 @@ index f46328513..4f29cb574 100644
 +					      WCD939X_REFBUFF_UHQA_CTL_REFBUFN_IOUT_CTL, 1);
 +	}
 +
++	/* crosstalk coefficients (stock: scale 0x1f, sec2/3 0x11/0x4f) */
++	snd_soc_component_write(component, sec_base + 0, 0x1f);
++	snd_soc_component_write(component, sec_base + 3, 0x4f);
++	snd_soc_component_write(component, sec_base + 2, 0x11);
++
 +	if (!comp_en) {
 +		/* compander bypassed, gain from register */
 +		if (hphr)
@@ -131,11 +136,6 @@ index f46328513..4f29cb574 100644
 +	else
 +		snd_soc_component_write_field(component, WCD939X_DIGITAL_CDC_COMP_CTL_0,
 +					      WCD939X_CDC_COMP_CTL_0_HPHL_COMP_EN, true);
-+
-+	/* crosstalk coefficients (stock: scale 0x1f, sec2/3 0x11/0x4f) */
-+	snd_soc_component_write(component, sec_base + 0, 0x1f);
-+	snd_soc_component_write(component, sec_base + 3, 0x4f);
-+	snd_soc_component_write(component, sec_base + 2, 0x11);
 +}
 +
 +static void wcd939x_hph_pcm_post_dac(struct snd_soc_component *component)
@@ -492,7 +492,7 @@ index f46328513..4f29cb574 100644
 +	u8 ch_mask;
 +
 +	/* in HPH PCM mode the HPH stream rides the HIFI_PCM port */
-+	if (wcd939x->hph_pcm_enabled) {
++	if (wcd939x->hph_pcm_enabled && !wcd->is_tx) {
 +		if (ch_id == WCD939X_HPH_L)
 +			ch_id = WCD939X_HIFI_PCM_L;
 +		else if (ch_id == WCD939X_HPH_R)
@@ -514,7 +514,7 @@ index f46328513..4f29cb574 100644
 +	u8 ch_mask;
 +
 +	/* in HPH PCM mode the HPH stream rides the HIFI_PCM port */
-+	if (wcd939x->hph_pcm_enabled) {
++	if (wcd939x->hph_pcm_enabled && !wcd->is_tx) {
 +		if (ch_id == WCD939X_HPH_L)
 +			ch_id = WCD939X_HIFI_PCM_L;
 +		else if (ch_id == WCD939X_HPH_R)

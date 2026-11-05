@@ -1,0 +1,51 @@
+From: SteamOS ARM port
+Subject: [PATCH] ASoC: codecs: wcd939x: fix the HPHL/HPHR Volume controls
+
+The HPHL and HPHR Volume controls were carried over from wcd938x, where
+the headphone PA gain lives in the low bits of HPH_L_EN and HPH_R_EN. On
+WCD939x those bits are spare (WCD939X_L_EN_SPARE_BITS); the PA gain is the
+VALUE field of HPH_NEW_INT_PA_GAIN_CTL_L/R. Writing the controls has no
+effect on the output, and the PA stays at its reset code 0, which is
++6 dB.
+
+Point the controls at the PA gain fields. Codes 0 to 24 select +6 dB down
+to -30 dB in 1.5 dB steps, the range Qualcomm's downstream driver exposes
+for these registers. Keep the control inverted so that it increases with
+gain, and give it a matching TLV with no mute step. Control value 20 then
+selects code 4, 0 dB. The remaining bits of the registers (2 Vpk mode,
+supply level and DAC drive boost) are left untouched.
+
+The gain applies while HPH_x_EN selects the register as the gain source,
+i.e. with the compander off. A UCM profile that does not write these controls keeps the reset
+gain until it sets them.
+
+---
+ sound/soc/codecs/wcd939x.c | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/sound/soc/codecs/wcd939x.c b/sound/soc/codecs/wcd939x.c
+index cb119f8..0022c70 100644
+--- a/sound/soc/codecs/wcd939x.c
++++ b/sound/soc/codecs/wcd939x.c
+@@ -220,7 +220,7 @@ static const char * const wcd939x_supplies[] = {
+ };
+ 
+ static const SNDRV_CTL_TLVD_DECLARE_DB_MINMAX(ear_pa_gain, 600, -1800);
+-static const DECLARE_TLV_DB_SCALE(line_gain, 0, 7, 1);
++static const DECLARE_TLV_DB_SCALE(hph_pa_gain, -3000, 150, 0);
+ static const DECLARE_TLV_DB_SCALE(analog_gain, 0, 25, 1);
+ 
+ static const struct wcd_mbhc_field wcd_mbhc_fields[WCD_MBHC_REG_FUNC_MAX] = {
+@@ -2818,8 +2818,10 @@ static const struct snd_kcontrol_new wcd939x_snd_controls[] = {
+ 		       wcd939x_get_swr_port, wcd939x_set_swr_port),
+ 	SOC_SINGLE_EXT("DSD_R Switch", WCD939X_DSD_R, 0, 1, 0,
+ 		       wcd939x_get_swr_port, wcd939x_set_swr_port),
+-	SOC_SINGLE_TLV("HPHL Volume", WCD939X_HPH_L_EN, 0, 20, 1, line_gain),
+-	SOC_SINGLE_TLV("HPHR Volume", WCD939X_HPH_R_EN, 0, 20, 1, line_gain),
++	SOC_SINGLE_TLV("HPHL Volume", WCD939X_HPH_NEW_INT_PA_GAIN_CTL_L,
++		       0, 24, 1, hph_pa_gain),
++	SOC_SINGLE_TLV("HPHR Volume", WCD939X_HPH_NEW_INT_PA_GAIN_CTL_R,
++		       0, 24, 1, hph_pa_gain),
+ 	SOC_SINGLE_EXT("LDOH Enable Switch", SND_SOC_NOPM, 0, 1, 0,
+ 		       wcd939x_ldoh_get, wcd939x_ldoh_put),
+ 
