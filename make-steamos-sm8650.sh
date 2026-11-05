@@ -25,9 +25,9 @@ OVL="${ROOT}/steamos-overlay"
 SOC="${SOC:-sm8650}"
 export SOC   # apply-overlays: 8 Gen 2-only files
 case "$SOC" in
-  sm8650) _kdef="${WORKDIR}/kernel-release/current" ;;
+  sm8650) _kdef="${WORKDIR}/kernel-sm8650/output/current" ;;
   sm8550)
-    if [[ "${SM8550_KERNEL:-prebuilt}" == prebuilt ]]; then
+    if [[ "${SM8550_KERNEL:-rocknix}" == prebuilt ]]; then
       _kdef="${WORKDIR}/kernel-prebuilt/7.0.14-edge-sm8550"
     else
       _kdef="${WORKDIR}/kernel-sm8550/output/current"

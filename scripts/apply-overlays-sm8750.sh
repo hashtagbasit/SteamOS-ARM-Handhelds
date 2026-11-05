@@ -12,7 +12,7 @@ OVL="${ROOT}/steamos-overlay"
 SM8750_OVL="${ROOT}/sm8750-overlay"
 # KREL from KOUT's dir name (as apply-overlays.sh does), not hardcoded: the
 # from-source kernel self-reports "7.2.0-sm8750-steamos", not "7.2.0".
-KOUT="$(readlink -f "${KERNEL_OUT:-${WORKDIR}/kernel-sm8750-release/7.2.0}")"
+KOUT="$(readlink -f "${KERNEL_OUT:-${WORKDIR}/kernel-sm8750/output/current}")"
 KREL="$(basename "$KOUT")"
 STOCK="${R}/opt/stock-steamos"
 MESA_SO="${SM8750_MESA_SO:-${SM8750_OVL}/usr/lib/libvulkan_freedreno.so}"
