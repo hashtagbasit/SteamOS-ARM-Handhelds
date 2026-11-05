@@ -17,6 +17,19 @@
 # install-kde-extras.sh unpacks into an image's rootfs.
 set -euo pipefail
 
+# CMake randomly misses a package that is there, about one configure in six.
+# Repeat with --fresh: a miss stays in the cache and would fail every retry.
+retry_cfg() {
+  local i
+  "$@" && return 0
+  for i in 2 3 4 5 6; do
+    echo "configure failed, try $i" >&2
+    sleep 5
+    "$@" --fresh && return 0
+  done
+  return 1
+}
+
 R="$(cd "${1:?rootfs}" && pwd)"
 WORKDIR="${STEAMOS_WORK:-/work}"
 OUT="${2:-${WORKDIR}/kde-extras-build}"
@@ -69,7 +82,7 @@ build() {  # build SOURCE-DIR [cmake args...]
   # No KDocTools in the rootfs, and the handbooks aren't needed.
   sed -i -e 's/\bDocTools\b//' -e '/add_subdirectory *( *doc/d' -e '/kdoctools_install/d' \
     "$SRC/$s/CMakeLists.txt"
-  run cmake -S "/src/$s" -B "/out/build/$s" -G Ninja \
+  retry_cfg run cmake -S "/src/$s" -B "/out/build/$s" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_LIBEXECDIR=lib -DBUILD_TESTING=OFF -DBUILD_QCH=OFF "$@"
   run ninja -C "/out/build/$s"

@@ -4,6 +4,19 @@
 # Usage: build-kde-gear-26.04.2.sh <rootfs> <ark|kcalc|filelight|gwenview|okular>
 set -euo pipefail
 
+# CMake randomly misses a package that is there, about one configure in six.
+# Repeat with --fresh: a miss stays in the cache and would fail every retry.
+retry_cfg() {
+  local i
+  "$@" && return 0
+  for i in 2 3 4 5 6; do
+    echo "configure failed, try $i" >&2
+    sleep 5
+    "$@" --fresh && return 0
+  done
+  return 1
+}
+
 R="${1:-}"
 NAME="${2:-}"
 [[ -n "$R" && -d "$R/usr" && -n "$NAME" ]] || {
@@ -67,7 +80,7 @@ if [[ "$NAME" == okular && ! -f "$R/usr/lib/cmake/KF6ThreadWeaver/KF6ThreadWeave
   rm -rf "$TW_BUILD"
   mkdir -p "$TW_BUILD"
   echo "==> cmake threadweaver ${TW_VER} (okular dep)"
-  run /usr/bin/cmake -S "$TW_SRC" -B "$TW_BUILD" -G Ninja \
+  retry_cfg run /usr/bin/cmake -S "$TW_SRC" -B "$TW_BUILD" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_LIBDIR=lib \
@@ -85,7 +98,7 @@ CMAKE_EXTRA=()
 )
 
 echo "==> cmake ${NAME} ${VER}"
-run /usr/bin/cmake -S "$SRC_DIR" -B "$BUILD" -G Ninja \
+retry_cfg run /usr/bin/cmake -S "$SRC_DIR" -B "$BUILD" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=/usr \
   -DCMAKE_INSTALL_LIBDIR=lib \
