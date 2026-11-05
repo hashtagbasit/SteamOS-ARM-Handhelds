@@ -268,7 +268,7 @@ if [[ -f "$OVL/etc/xdg/powerdevilrc" ]]; then
   install -m 0644 "$OVL/etc/xdg/powerdevilrc" "$R/etc/skel/.config/powerdevilrc"
 fi
 
-# Official Plasma kscreen KCM is installed by build-kscreen-6.2.5.sh
+# Official Plasma kscreen KCM is installed by build-kde-extras-in-rootfs.sh
 # Do not ship a fake Display Configuration menu.
 
 # Branch selector (rel + beta + preview, no atomupd)

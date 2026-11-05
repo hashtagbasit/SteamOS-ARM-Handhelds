@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # Install Plasma work extras into a SteamOS Frame rootfs.
 #
-# Frame extra.db is a stripped 6.0 snapshot (no kate/ark/kscreen).
+# Frame 0.6 extra.db carries Plasma 6.6.2, KF 6.23.0 and Qt 6.10.2, including
+# plasma-nm, networkmanager-qt and modemmanager-qt. It has no kscreen or
+# bluedevil (scripts/build-kde-extras-in-rootfs.sh) and no ark, kcalc,
+# gwenview, okular or filelight (scripts/build-kde-gear-26.04.2.sh).
 # kate comes from deckard-arch-hotfixes (built for this KF6).
-# ark/kcalc/gwenview/okular/filelight come from Arch Linux ARM extra
-# (KDE Gear, KF-only deps). Plasma 6.7 applets (kscreen/plasma-nm/…)
-# are skipped — they will not load on Plasma 6.2.5.
+# Arch Linux ARM extra is only a source for small tools. Its KDE and Plasma
+# packages are built for a newer Qt than the Frame has, so a package whose
+# binaries need a Qt version newer than the rootfs's is refused.
 #
 # Usage: install-plasma-extras.sh [rootfs]
 set -euo pipefail
@@ -26,26 +29,6 @@ mkdir -p "$DB/local"
 already_installed() {
   local name="$1"
   case "$name" in
-    networkmanager-qt)
-      [[ -e "$R/usr/lib/libKF6NetworkManagerQt.so" \
-        || -e "$R/usr/lib/libKF6NetworkManagerQt.so.6" ]] || return 1
-      # Frame extra is 6.1.0; plasma-nm 6.2.5 needs KF6 >= 6.5.
-      strings "$R/usr/lib/libKF6NetworkManagerQt.so.6" 2>/dev/null \
-        | grep -q '6\.1\.0' && return 1
-      return 0
-      ;;
-    modemmanager-qt)
-      [[ -e "$R/usr/lib/libKF6ModemManagerQt.so" \
-        || -e "$R/usr/lib/libKF6ModemManagerQt.so.6" ]] || return 1
-      strings "$R/usr/lib/libKF6ModemManagerQt.so.6" 2>/dev/null \
-        | grep -q '6\.1\.0' && return 1
-      return 0
-      ;;
-    plasma-nm)
-      [[ -e "$R/usr/lib/qt6/plugins/plasma/kcms/systemsettings_qwidgets/kcm_networkmanagement.so" \
-        && -e "$R/usr/lib/libKF6NetworkManagerQt.so" ]] && return 0
-      return 1
-      ;;
     nm-connection-editor)
       [[ -x "$R/usr/bin/nm-connection-editor" ]] && return 0
       return 1
@@ -62,11 +45,9 @@ already_installed() {
       [[ -f "$R/usr/share/ECM/cmake/ECMConfig.cmake" ]] && return 0
       return 1
       ;;
-    ark|kcalc|gwenview|okular|filelight|kate)
-      [[ -x "$R/usr/bin/$name" ]] || return 1
-      # ALARM Gear 26.08 is Qt 6.11 — treat as missing so we rebuild 26.04.2.
-      strings "$R/usr/bin/$name" 2>/dev/null | grep 'Qt_6\.11' >/dev/null && return 1
-      return 0
+    kate)
+      [[ -x "$R/usr/bin/$name" ]] && return 0
+      return 1
       ;;
   esac
   compgen -G "$DB/local/${name}-[0-9]*" >/dev/null 2>&1 \
@@ -147,17 +128,22 @@ if [[ -n "$hf_server" ]] && download_db "${hf_server}/deckard-arch-hotfixes.db" 
   index_db "$WORKDIR/hf.db" "$hf_server"
 fi
 
-# ALARM Gear only (not Plasma 6.7 applets).
+# Arch Linux ARM: small tools only, see the header.
 if download_db "http://mirror.archlinuxarm.org/aarch64/extra/extra.db" "$WORKDIR/alarm.db"; then
   index_db "$WORKDIR/alarm.db" "http://mirror.archlinuxarm.org/aarch64/extra"
 fi
 
-# Prefer SteamOS-built kate; skip Plasma-6.7 modules from ALARM.
-# plasma-nm 6.0.4 is already on Frame but networkmanager-qt was stripped —
-# without libKF6NetworkManagerQt the panel applet and kcm do nothing.
-WANT_STEAMOS=(kate networkmanager-qt modemmanager-qt extra-cmake-modules)
-WANT_GEAR=(ark kcalc gwenview okular filelight)
+# Prefer SteamOS-built kate. Gear apps are built, not installed.
+WANT_STEAMOS=(kate extra-cmake-modules)
 WANT_OPTIONAL=(p7zip 7zip unrar unzip zip kdialog unarchiver lrzip yyjson fastfetch)
+
+# Newest Qt 6 version symbol (Qt_6.NN) the libQt6Core of the rootfs defines,
+# and the newest one the files under a directory ask for.
+qt_have="$(strings "$R/usr/lib/libQt6Core.so.6" 2>/dev/null | grep -oE '^Qt_6\.[0-9]+$' | sort -V | tail -1 || true)"
+qt_need() {
+  find "$1" -type f \( -name '*.so*' -o -perm -111 \) -print0 2>/dev/null \
+    | xargs -0 -r strings 2>/dev/null | { grep -oE '^Qt_6\.[0-9]+$' || true; } | sort -V | tail -1
+}
 
 install_pkg() {
   local name="$1"
@@ -171,7 +157,7 @@ install_pkg() {
   case "$name" in
     kscreen|plasma-nm|bluedevil|spectacle|plasma-pa|plasma-desktop|plasma-workspace)
       if [[ "$url" == *archlinuxarm* ]]; then
-        warn "skip $name (Plasma 6.7 would break 6.2.5)"
+        warn "skip $name (newer Plasma than the Frame's 6.6.2)"
         return 1
       fi
       ;;
@@ -189,10 +175,10 @@ install_pkg() {
   else
     tar -C "$dest" -xf "$WORKDIR/$file"
   fi
-  # Frame Qt is 6.8.0. ALARM Gear 26.08 is linked against Qt_6.11.
-  if find "$dest" -type f \( -name '*.so*' -o -perm -111 \) 2>/dev/null \
-      | xargs -r strings 2>/dev/null | grep 'Qt_6\.11' >/dev/null; then
-    warn "skip $name ($file needs Qt_6.11; this image has Qt 6.8)"
+  # Refuse a package built for a newer Qt than the rootfs has.
+  local need; need="$(qt_need "$dest")"
+  if [[ -n "$need" && "$(printf '%s\n%s\n' "${qt_have:-Qt_6.0}" "$need" | sort -V | tail -1)" != "${qt_have:-Qt_6.0}" ]]; then
+    warn "skip $name ($file needs $need; the rootfs has ${qt_have:-no Qt})"
     return 1
   fi
   for d in usr etc opt; do
@@ -220,7 +206,7 @@ install_pkg() {
 
 ok=0
 fail=0
-for name in "${WANT_STEAMOS[@]}" "${WANT_GEAR[@]}" "${WANT_OPTIONAL[@]}"; do
+for name in "${WANT_STEAMOS[@]}" "${WANT_OPTIONAL[@]}"; do
   if already_installed "$name"; then
     log "have $name"
     continue

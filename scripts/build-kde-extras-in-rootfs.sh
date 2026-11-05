@@ -4,11 +4,13 @@
 #
 #   bluez-qt + bluedevil  Bluetooth in Desktop Mode (tray applet, System
 #                         Settings page, pairing wizard, file transfer)
-#   libkscreen + kscreen  Display settings: scale, orientation, resolution,
+#   kscreen               Display settings: scale, orientation, resolution,
 #                         refresh rate, plus the OSD and the kded module
 #
-# Valve's aarch64 repos don't carry them, so Desktop Mode had no way to pair
-# a Bluetooth device and no display settings page on any device.
+# Valve's aarch64 repos don't carry them (Frame 0.6 ships libkscreen 6.6.2 but
+# not kscreen, bluedevil or bluez-qt), so Desktop Mode had no way to pair a
+# Bluetooth device and no display settings page on any device. kscreen is
+# built against the Frame's own libkscreen, which is not rebuilt here.
 #
 # Usage: build-kde-extras-in-rootfs.sh <rootfs> [out-dir]
 # Leaves <out-dir>/kde-extras.tar (paths relative to /), which
@@ -20,10 +22,10 @@ WORKDIR="${STEAMOS_WORK:-/work}"
 OUT="${2:-${WORKDIR}/kde-extras-build}"
 SRC="${WORKDIR}/kde-extras-src"
 
-# Frameworks and Plasma releases the Frame rootfs ships (its CMake config
-# files: KF6CoreAddons, LibKWorkspace).
-KF_VER="${KF_VER:-6.14.0}"
-PLASMA_VER="${PLASMA_VER:-6.2.5}"
+# Frameworks and Plasma releases the Frame 0.6 rootfs ships (its CMake config
+# files: KF6CoreAddons, LibKWorkspace, KF6Screen).
+KF_VER="${KF_VER:-6.23.0}"
+PLASMA_VER="${PLASMA_VER:-6.6.2}"
 KDE_MIRROR="${KDE_MIRROR:-https://download.kde.org/stable}"
 
 log() { printf '==> [kde-extras] %s\n' "$*"; }
@@ -45,7 +47,6 @@ fetch() {  # fetch NAME URL
 
 fetch "bluez-qt-${KF_VER}" "${KDE_MIRROR}/frameworks/${KF_VER%.*}/bluez-qt-${KF_VER}.tar.xz"
 fetch "bluedevil-${PLASMA_VER}" "${KDE_MIRROR}/plasma/${PLASMA_VER}/bluedevil-${PLASMA_VER}.tar.xz"
-fetch "libkscreen-${PLASMA_VER}" "${KDE_MIRROR}/plasma/${PLASMA_VER}/libkscreen-${PLASMA_VER}.tar.xz"
 fetch "kscreen-${PLASMA_VER}" "${KDE_MIRROR}/plasma/${PLASMA_VER}/kscreen-${PLASMA_VER}.tar.xz"
 
 rm -rf "$OUT"
@@ -78,8 +79,7 @@ build() {  # build SOURCE-DIR [cmake args...]
 build "bluez-qt-${KF_VER}"
 # bluedevil links bluez-qt from the stage, not from the rootfs.
 build "bluedevil-${PLASMA_VER}" -DKF6BluezQt_DIR="/out/stage/usr/lib/cmake/KF6BluezQt"
-build "libkscreen-${PLASMA_VER}"
-build "kscreen-${PLASMA_VER}" -DKF6Screen_DIR="/out/stage/usr/lib/cmake/KF6Screen"
+build "kscreen-${PLASMA_VER}"
 
 # Nothing a running system needs from the headers or CMake files.
 rm -rf "$OUT/stage/usr/include" "$OUT/stage/usr/lib/cmake" "$OUT/stage/usr/lib/pkgconfig" \
@@ -87,8 +87,9 @@ rm -rf "$OUT/stage/usr/include" "$OUT/stage/usr/lib/cmake" "$OUT/stage/usr/lib/p
 [[ -n "$(find "$OUT/stage" -name 'libKF6BluezQt.so.6*' -print -quit)" ]] || die "no bluez-qt library"
 [[ -n "$(find "$OUT/stage" -name 'kcm_bluetooth.so' -print -quit)" ]] || die "no Bluetooth settings page"
 [[ -n "$(find "$OUT/stage" -name 'kcm_kscreen.so' -print -quit)" ]] || die "no display settings page"
-[[ -n "$(find "$OUT/stage" -name 'libKF6Screen.so.8*' -print -quit)" ]] || die "no libkscreen"
-if find "$OUT/stage" -type f -name '*.so*' -exec strings {} + | grep -q 'GLIBC_2\.4[0-9]'; then
+# The Frame's libkscreen has to stay the only one.
+[[ -z "$(find "$OUT/stage" -name 'libKF6Screen*' -print -quit)" ]] || die "stage carries a libkscreen"
+if find "$OUT/stage" -type f -name '*.so*' -exec strings {} + | grep -q 'GLIBC_2\.4[4-9]'; then
   die "built against a newer glibc than the Frame"
 fi
 tar -C "$OUT/stage" --owner=0 --group=0 -cf "$OUT/kde-extras.tar" .
