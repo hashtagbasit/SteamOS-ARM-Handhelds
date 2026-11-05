@@ -24,7 +24,7 @@ if [[ "$(uname -m)" != aarch64 ]]; then
   export CROSS_COMPILE="${CROSS_COMPILE:-aarch64-linux-gnu-}"
 fi
 env_args=()
-for v in SM8550_RECIPE SM8650_RECIPE WORK ROCKNIX_DIR JOBS OUT_BASE LOCALVERSION DTBS_OVERRIDE INITRAMFS_HOTFIX CROSS_COMPILE FRAME_FW_DIR; do
+for v in SM8550_RECIPE SM8650_RECIPE WORK ROCKNIX_DIR JOBS OUT_BASE LOCALVERSION DTBS_OVERRIDE INITRAMFS_HOTFIX CROSS_COMPILE FRAME_FW_DIR NO_CURRENT; do
   [[ -n "${!v:-}" ]] && env_args+=(-e "$v=${!v}")
 done
 exec "$DOCKER" run --rm --security-opt label=disable -v "$MOUNT:$MOUNT" -v "$BUSYBOX:/bin/busybox:ro" "${env_args[@]}" \

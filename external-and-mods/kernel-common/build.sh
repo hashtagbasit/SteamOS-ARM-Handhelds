@@ -390,7 +390,9 @@ install_output() {
   else
     pack_kernel_img "$o/boot/KERNEL"
   fi
-  ln -sfn "$KREL" "${OUT_BASE}/current"
+  # NO_CURRENT=1: a test build next to the release one; leave the `current`
+  # link on whatever it points to.
+  [[ "${NO_CURRENT:-0}" == 1 ]] || ln -sfn "$KREL" "${OUT_BASE}/current"
   log "done: $o"
   ls -la "$o/boot" >&2
 }
