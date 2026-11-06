@@ -19,7 +19,8 @@ DOCKER="${DOCKER:-docker}"
 [[ -x "$BUSYBOX" ]] || { echo "no static busybox at $BUSYBOX" >&2; exit 1; }
 
 PKGS="file gcc make bc bison flex python3 curl tar xz gzip cpio kmod patch perl rsync
-      openssl-devel elfutils-libelf-devel dwarves diffutils findutils hostname which git"
+      openssl-devel elfutils-libelf-devel dwarves diffutils findutils hostname which git
+      rust rust-src bindgen-cli clang"
 if [[ "$(uname -m)" != aarch64 ]]; then
   PKGS+=" gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu"
   export CROSS_COMPILE="${CROSS_COMPILE:-aarch64-linux-gnu-}"

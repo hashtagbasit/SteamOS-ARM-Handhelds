@@ -297,6 +297,10 @@ configure() {
     fi
   done <"$frag"
   ((bad)) && log "some fragment options did not stick (see WARN lines)"
+  # Android can't start without binder, and Kconfig drops it without an error
+  # when the Rust toolchain is missing.
+  grep -qE '^CONFIG_ANDROID_BINDER_IPC(_RUST)?=y' "${SRC}/.config" || die "no binder in the config (7.4 needs rustc, rust-src, bindgen, clang)"
+  grep -q '^CONFIG_ANDROID_BINDER_DEVICES="anbox-binder,' "${SRC}/.config" || die "binder device names are not the ones Lepton expects"
   return 0
 }
 
