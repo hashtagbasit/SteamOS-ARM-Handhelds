@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build a SteamOS ARM fastboot kit for the REDMAGIC 6 (Nubia NX669J, SM8350).
+# Build a Zaviya fastboot kit for the REDMAGIC 6 (Nubia NX669J, SM8350).
 #
 # The phone has no SD slot and boots from Nubia's stock (unlocked) ABL, so
 # instead of a card image this makes a kit that fastboot flashes:
@@ -54,7 +54,7 @@ Usage: $0 [options]
 
   --from-rootfs DIR  Shared rootfs to start from (default: ${SRC_ROOTFS},
                      built by make-steamos-sm8650.sh)
-  --from-img IMG     Start from a released SteamOS ARM card image instead
+  --from-img IMG     Start from a released Zaviya card image instead
                      (its p2 root and p3 home)
   --skip-copy        Reuse ${R} as it is (no fresh copy)
   --skip-apply       Do not re-run scripts/apply-overlays-sm8350.sh
@@ -109,12 +109,12 @@ copy_rootfs() {
     trap cleanup_image EXIT
     for _ in $(seq 1 50); do [[ -b "${LOOPDEV}p3" ]] && break; sleep 0.1; done
     [[ -b "${LOOPDEV}p2" && -b "${LOOPDEV}p3" ]] \
-      || die "${SRC_IMG} is not a SteamOS ARM card image (p2 root, p3 home)"
+      || die "${SRC_IMG} is not a Zaviya card image (p2 root, p3 home)"
     mkdir -p "${MNT}/root" "${MNT}/home"
     sudo_run mount -o ro "${LOOPDEV}p2" "${MNT}/root"
     sudo_run mount -o ro "${LOOPDEV}p3" "${MNT}/home"
     [[ -x "${MNT}/root/usr/bin/bash" && -f "${MNT}/root/opt/steamos-sm8650/IMAGE.txt" ]] \
-      || die "p2 is not a SteamOS ARM root"
+      || die "p2 is not a Zaviya root"
     log "$(tr '\n' ' ' <"${MNT}/root/opt/steamos-sm8650/IMAGE.txt")"
     log "Copying root + home to ${R}"
     sudo_run rsync -aHAX --numeric-ids --delete --info=progress2 "${MNT}/root/" "${R}/"
@@ -202,7 +202,7 @@ build_kit() {
 
   # SteamOS mounts /etc from the overlay: write both layers.
   printf '%s\n' \
-    "# SteamOS ARM (sm8350, REDMAGIC 6): one ext4 on the UFS userdata partition," \
+    "# Zaviya (sm8350, REDMAGIC 6): one ext4 on the UFS userdata partition," \
     "# /home included. No boot partition: the kernel lives in boot_a/boot_b." \
     "UUID=${root_uuid}  /  ext4  defaults,noatime,commit=30,x-systemd.growfs  0 1" \
     | sudo_run tee "${MNT}/root/etc/fstab" >/dev/null
