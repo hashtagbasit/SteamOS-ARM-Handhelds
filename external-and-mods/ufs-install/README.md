@@ -3,7 +3,7 @@
 Moves the system you're running from the microSD card onto the internal
 storage, next to Android. For the KONKR Pocket FIT (and the AYANEO Pocket S2,
 untested), both SM8650, SM8550 handhelds (AYN Odin 2, Odin 2 Mini, Odin 2
-Portal), the AYN Odin 3, and the KONKR Pocket FIT Elite (SM8750, untested)
+Portal), the AYN Odin 3, and the KONKR Pocket FIT Elite (SM8750)
 with OpenABL.
 
 > **This erases Android's user data** (apps, photos, accounts) and changes the

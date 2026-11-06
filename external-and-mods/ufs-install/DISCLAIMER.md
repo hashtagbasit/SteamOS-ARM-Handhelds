@@ -4,7 +4,7 @@
 
 ## What these tools do
 
-The scripts in **external-and-mods/ufs-install** repartition the **internal UFS** storage on Qualcomm SM8650 handhelds (KONKR Pocket FIT, AYANEO Pocket S2), SM8550 handhelds (AYN Odin 2, Odin 2 Mini, Odin 2 Portal), and SM8750 handhelds (AYN Odin 3; KONKR Pocket FIT Elite untested) to install **Zaviya** alongside **Android**, using **OpenABL** with a dual-boot layout of **three Linux partitions** (boot + `STORAGE` + `HOME`).
+The scripts in **external-and-mods/ufs-install** repartition the **internal UFS** storage on Qualcomm SM8650 handhelds (KONKR Pocket FIT, AYANEO Pocket S2), SM8550 handhelds (AYN Odin 2, Odin 2 Mini, Odin 2 Portal), and SM8750 handhelds (AYN Odin 3, KONKR Pocket FIT Elite) to install **Zaviya** alongside **Android**, using **OpenABL** with a dual-boot layout of **three Linux partitions** (boot + `STORAGE` + `HOME`).
 
 This is **not** a supported manufacturer procedure. It is an **experimental community tool**.
 
