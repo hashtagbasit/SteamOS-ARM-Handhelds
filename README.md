@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://steamos-arm-port.github.io/">
+  <a href="https://steamos-arm-port.github.io/zaviya/">
     <img src=".github/assets/logo.svg" alt="Zaviya" width="112">
   </a>
 </p>
@@ -20,26 +20,26 @@
 <p align="center">
   <a href="https://github.com/hashtagbasit/SteamOS-ARM-Port/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/hashtagbasit/SteamOS-ARM-Port?include_prereleases&style=flat&color=7c5cf0&label=release"></a>
   <a href="https://github.com/hashtagbasit/SteamOS-ARM-Port/releases"><img alt="Total downloads" src="https://img.shields.io/github/downloads/hashtagbasit/SteamOS-ARM-Port/total?style=flat&color=7c5cf0&label=downloads"></a>
-  <a href="https://steamos-arm-port.github.io/"><img alt="Documentation" src="https://img.shields.io/badge/docs-steamos--arm--port.github.io-18181a?style=flat"></a>
+  <a href="https://steamos-arm-port.github.io/zaviya/"><img alt="Documentation" src="https://img.shields.io/badge/docs-website-18181a?style=flat"></a>
   <a href="LICENSE"><img alt="GPL-2.0 license" src="https://img.shields.io/badge/license-GPL--2.0-18181a?style=flat"></a>
   <a href="https://discord.gg/EP53nZYvg"><img alt="Discord" src="https://img.shields.io/badge/chat-Discord-5865F2?style=flat&amp;logo=discord&amp;logoColor=white"></a>
 </p>
 
 <p align="center">
-  <a href="https://steamos-arm-port.github.io/getting-started/install/"><strong>Install it</strong></a>
+  <a href="https://steamos-arm-port.github.io/zaviya/getting-started/install/"><strong>Install it</strong></a>
   ·
-  <a href="https://steamos-arm-port.github.io/devices/">Supported devices</a>
+  <a href="https://steamos-arm-port.github.io/zaviya/devices/">Supported devices</a>
   ·
-  <a href="https://steamos-arm-port.github.io/downloads/">Downloads</a>
+  <a href="https://steamos-arm-port.github.io/zaviya/downloads/">Downloads</a>
   ·
-  <a href="https://steamos-arm-port.github.io/help/known-issues/">Known issues</a>
+  <a href="https://steamos-arm-port.github.io/zaviya/help/known-issues/">Known issues</a>
 </p>
 
 > [!WARNING]
 > This is a community project, not affiliated with or endorsed by Valve.
 > Installing it means flashing the OpenABL bootloader, and getting that
 > wrong can leave your device unable to boot or lose your data. Back up first
-> and follow the [install guide](https://steamos-arm-port.github.io/getting-started/install/)
+> and follow the [install guide](https://steamos-arm-port.github.io/zaviya/getting-started/install/)
 > step by step.
 
 ## About
@@ -66,7 +66,7 @@ What you get:
 
 ## Quick start
 
-1. Flash the OpenABL bootloader for your SoC (older versions of it work too), the [ABL guide](https://steamos-arm-port.github.io/getting-started/abl/) walks you through it. Back up your stock ABL first.
+1. Flash the OpenABL bootloader for your SoC (older versions of it work too), the [ABL guide](https://steamos-arm-port.github.io/zaviya/getting-started/abl/) walks you through it. Back up your stock ABL first.
 2. Download the image for your SoC from [Releases](https://github.com/hashtagbasit/SteamOS-ARM-Port/releases/latest), open the `.001` part with 7-Zip and flash the `.img` inside to a microSD card (32 GB+) with balenaEtcher or Rufus.
 3. Boot the card from the ABL menu and pick your device. First boot takes a couple of minutes.
 
@@ -102,19 +102,19 @@ Gen 4 can also run from a microSD card. The Gen 5 runs from a microSD card
 and is switched on from Android, it's in early testing with a few testers
 right now. Tablet builds go out in the Discord first, so if you have one and
 want to help, come say hi on [Discord](https://discord.gg/EP53nZYvg) and see the
-[Lenovo page](https://steamos-arm-port.github.io/devices/lenovo/).
+[Lenovo page](https://steamos-arm-port.github.io/zaviya/devices/lenovo/).
 
 ## Documentation
 
-Everything lives on the [website](https://steamos-arm-port.github.io/).
+Everything lives on the [website](https://steamos-arm-port.github.io/zaviya/).
 
 | I want to… | Guide |
 |---|---|
-| Install it | [Flash to a microSD card](https://steamos-arm-port.github.io/getting-started/install/) |
-| Check my device | [Supported devices](https://steamos-arm-port.github.io/devices/) |
-| Move it to internal storage | [Internal storage](https://steamos-arm-port.github.io/getting-started/internal-storage/) |
-| Update | [Updates](https://steamos-arm-port.github.io/using/updates/) |
-| Get help | [FAQ](https://steamos-arm-port.github.io/help/faq/) · [Troubleshooting](https://steamos-arm-port.github.io/help/troubleshooting/) |
+| Install it | [Flash to a microSD card](https://steamos-arm-port.github.io/zaviya/getting-started/install/) |
+| Check my device | [Supported devices](https://steamos-arm-port.github.io/zaviya/devices/) |
+| Move it to internal storage | [Internal storage](https://steamos-arm-port.github.io/zaviya/getting-started/internal-storage/) |
+| Update | [Updates](https://steamos-arm-port.github.io/zaviya/using/updates/) |
+| Get help | [FAQ](https://steamos-arm-port.github.io/zaviya/help/faq/) · [Troubleshooting](https://steamos-arm-port.github.io/zaviya/help/troubleshooting/) |
 | Report a bug | [GitHub issues](https://github.com/hashtagbasit/SteamOS-ARM-Port/issues) |
 
 ## Building
