@@ -88,17 +88,15 @@ sanitize_steam_user_data() {
   printf '%b\n' '"InstallConfigStore"' '{' '\t"SteamOS"' '\t{' \
     '\t\t"WifiForceWPASupplicant"\t\t"1"' '\t}' '}' >"${d}/config/config.vdf"
 
-  # Steam shows its first-run setup (language, time zone, Wi-Fi, then sign-in)
-  # while the CompletedOOBE / CompletedOOBEStage1 registry values are absent;
-  # it writes them itself when setup finishes. Ship a registry.vdf without them
-  # (the earlier explicit "0" values images carried skipped the setup). A neutral value keeps the file
-  # non-empty.
+  # Steam treats setup as done unless ForceOOBE is set, even with no
+  # CompletedOOBE values. sm8550-patch-steamui clears it when setup completes.
   local home="${d%/.local/share/Steam}"
   if [[ "$home" != "$d" ]]; then
     mkdir -p "${home}/.steam"
     printf '%b\n' '"Registry"' '{' '\t"HKCU"' '\t{' '\t\t"Software"' '\t\t{' \
       '\t\t\t"Valve"' '\t\t\t{' '\t\t\t\t"Steam"' '\t\t\t\t{' \
       '\t\t\t\t\t"RunningAppID"\t\t"0"' \
+      '\t\t\t\t\t"ForceOOBE"\t\t"1"' \
       '\t\t\t\t}' '\t\t\t}' '\t\t}' '\t}' '}' >"${home}/.steam/registry.vdf"
   fi
 }

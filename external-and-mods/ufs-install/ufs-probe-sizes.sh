@@ -15,8 +15,12 @@ for d in /dev/sd[a-z]; do
 done
 [[ -n "$disk" ]] || { echo "ERROR=no internal disk with a userdata partition found"; exit 1; }
 
-out="$(python3 "$HERE/ufs-partition.py" detect --disk "$disk" --storage-gib "$STORAGE_GIB")" \
-  || { echo "ERROR=could not read the internal partition table"; exit 1; }
+# Decky plugins inherit its bundled libraries, which break the system python.
+unset LD_LIBRARY_PATH
+errfile="$(mktemp)"
+out="$(python3 "$HERE/ufs-partition.py" detect --disk "$disk" --storage-gib "$STORAGE_GIB" 2>"$errfile")" \
+  || { echo "ERROR=could not read the internal partition table: $(tail -n1 "$errfile")"; rm -f "$errfile"; exit 1; }
+rm -f "$errfile"
 echo "$out"
 get() { sed -n "s/^$1=//p" <<<"$out"; }
 max=$(get ANDROID_MAX_GIB)

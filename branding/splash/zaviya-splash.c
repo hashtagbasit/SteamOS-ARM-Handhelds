@@ -23,7 +23,9 @@
 #include "logo_masks.h"
 
 #define INTRO_S 1.6
-#define PULSE_S 3.2
+#define PULSE_S 0.75
+#define GLOW_R_DIV 22	/* how far the glow reaches, as a share of the width */
+#define FPS_WAITING 24
 #define GOLD_R 0xC9
 #define GOLD_G 0xA2
 #define GOLD_B 0x4D
@@ -34,6 +36,7 @@ enum { FRAME, GOLD, NAME, TAG, LAYERS };
 struct picture {
 	int w, h;
 	uint8_t *layer[LAYERS];
+	uint8_t *halo;	/* the gold layer, blurred: the glow around the bar */
 };
 
 static uint8_t *unpack(const unsigned char *rle, size_t len)
@@ -83,6 +86,59 @@ static uint8_t *scale(const uint8_t *src, int w, int h)
 	return out;
 }
 
+/*
+ * The glow's strength from the distance to the nearest part of the bar, so the
+ * thin ends shine as much as the thick middle. Two-pass chamfer distance.
+ */
+static uint8_t *make_halo(const uint8_t *mask, int w, int h)
+{
+	float *d = malloc(sizeof(float) * w * h);
+	uint8_t *out = malloc(w * h);
+	float reach = (float)w / GLOW_R_DIV;
+
+	if (!d || !out)
+		return NULL;
+	for (int i = 0; i < w * h; i++)
+		d[i] = mask[i] > 96 ? 0 : 1e9f;
+#define RELAX(i, j, cost) do { if (d[j] + (cost) < d[i]) d[i] = d[j] + (cost); } while (0)
+	for (int y = 0; y < h; y++) {
+		for (int x = 0; x < w; x++) {
+			int i = y * w + x;
+
+			if (x > 0)
+				RELAX(i, i - 1, 1.0f);
+			if (y > 0)
+				RELAX(i, i - w, 1.0f);
+			if (x > 0 && y > 0)
+				RELAX(i, i - w - 1, 1.414f);
+			if (x < w - 1 && y > 0)
+				RELAX(i, i - w + 1, 1.414f);
+		}
+	}
+	for (int y = h - 1; y >= 0; y--) {
+		for (int x = w - 1; x >= 0; x--) {
+			int i = y * w + x;
+
+			if (x < w - 1)
+				RELAX(i, i + 1, 1.0f);
+			if (y < h - 1)
+				RELAX(i, i + w, 1.0f);
+			if (x < w - 1 && y < h - 1)
+				RELAX(i, i + w + 1, 1.414f);
+			if (x > 0 && y < h - 1)
+				RELAX(i, i + w - 1, 1.414f);
+		}
+	}
+#undef RELAX
+	for (int i = 0; i < w * h; i++) {
+		float t = 1 - d[i] / reach;
+
+		out[i] = t > 0 ? (uint8_t)(255 * t * t) : 0;
+	}
+	free(d);
+	return out;
+}
+
 static int load_picture(struct picture *pic, int w, int h)
 {
 	static const struct { const unsigned char *rle; size_t len; } src[LAYERS] = {
@@ -102,7 +158,8 @@ static int load_picture(struct picture *pic, int w, int h)
 		if (!pic->layer[i])
 			return -1;
 	}
-	return 0;
+	pic->halo = make_halo(pic->layer[GOLD], w, h);
+	return pic->halo ? 0 : -1;
 }
 
 static float ramp(float t, float start, float end)
@@ -116,6 +173,7 @@ static float ramp(float t, float start, float end)
 struct look {
 	float wipe;	/* the frame's soft edge, 0 at its left, 1 past its right */
 	float frame, gold, gold_shift;
+	float glow;	/* 0 no halo, 1 full halo and a white-hot bar */
 	float name, tag;
 };
 
@@ -132,10 +190,12 @@ static struct look intro_look(float t)
 	return l;
 }
 
-/* The bar breathes while we wait. */
+/* The bar glows while we wait: fast, and sharper at the peak than a plain wave. */
 static float pulse(float t)
 {
-	return 0.74f + 0.26f * (0.5f + 0.5f * cosf(2 * (float)M_PI * t / PULSE_S));
+	float wave = 0.5f + 0.5f * cosf(2 * (float)M_PI * t / PULSE_S);
+
+	return wave * wave;
 }
 
 /*
@@ -166,6 +226,12 @@ static void compose_row(const struct picture *pic, const struct look *l, int y, 
 		b += (int)a;
 		if (gx >= 0 && gold[gx]) {
 			a = gold[gx] * l->gold / 255.0f;
+			r += (int)((GOLD_R + (255 - GOLD_R) * l->glow) * a);
+			g += (int)((GOLD_G + (255 - GOLD_G) * l->glow * 0.8f) * a);
+			b += (int)((GOLD_B + (255 - GOLD_B) * l->glow * 0.5f) * a);
+		}
+		if (l->glow > 0 && pic->halo[y * pic->w + x]) {
+			a = pic->halo[y * pic->w + x] * l->glow / 255.0f;
 			r += (int)(GOLD_R * a);
 			g += (int)(GOLD_G * a);
 			b += (int)(GOLD_B * a);
@@ -223,7 +289,7 @@ static int write_movie(const char *dir)
 		return 1;
 	for (int i = 0; i < frames; i++) {
 		float t = (float)i / fps, out = 1 - ramp(t, 2.2f, 3.0f);
-		struct look l = { .wipe = 1, .frame = out, .gold = pulse(t) * out, .name = out, .tag = out };
+		struct look l = { .wipe = 1, .frame = out, .gold = out, .glow = pulse(t) * out, .name = out, .tag = out };
 
 		snprintf(path, sizeof(path), "%s/%03d.bmp", dir, i);
 		if (write_bmp(path, &pic, &l))
@@ -474,6 +540,16 @@ static void flush_panel(struct panel *p)
 	ioctl(p->fd, DRM_IOCTL_MODE_DIRTYFB, &dirty);
 }
 
+/* False once another program's buffer is on the panel. */
+static int panel_is_ours(const struct panel *p)
+{
+	struct drm_mode_crtc crtc = { .crtc_id = p->crtc };
+
+	if (ioctl(p->fd, DRM_IOCTL_MODE_GETCRTC, &crtc))
+		return 0;
+	return crtc.fb_id == p->fb;
+}
+
 /* Upright picture position to panel position. */
 static inline void to_panel(const struct panel *p, int u, int v, int *x, int *y)
 {
@@ -535,21 +611,33 @@ static int run_on_panel(void)
 		struct look l = intro_look((float)t);
 
 		if (t > INTRO_S) {
-			l.gold = pulse((float)(t - INTRO_S));
+			l.gold = 1;
+			l.glow = pulse((float)(t - INTRO_S));
 			l.gold_shift = 0;
 		}
 		draw_rows(&p, &pic, &l, left, top, row);
 		flush_panel(&p);
-		/* Once it's all up only the bar moves, slowly, and boot needs the CPU more. */
-		nap(t > INTRO_S ? 0.1 : 1.0 / 30);
+		/* Once it's all up only the bar moves, and boot needs the CPU more. */
+		nap(t > INTRO_S ? 1.0 / FPS_WAITING : 1.0 / 30);
 	}
 	/*
 	 * The session needs to be master, but closing would clear the panel. Stay
-	 * open, with the picture up, until it has taken over.
+	 * open and keep the bar moving, since our buffer stays on screen, until the
+	 * session has put up its own.
 	 */
 	ioctl(p.fd, DRM_IOCTL_DROP_MASTER, 0);
-	if (session_starting)
-		nap(HOLD_S);
+	if (session_starting) {
+		double held = now();
+
+		while (!stopping && now() - held < HOLD_S && panel_is_ours(&p)) {
+			struct look l = intro_look(INTRO_S);
+
+			l.glow = pulse((float)(now() - start));
+			draw_rows(&p, &pic, &l, left, top, row);
+			flush_panel(&p);
+			nap(1.0 / FPS_WAITING);
+		}
+	}
 	return 0;
 }
 #endif /* NO_DRM */

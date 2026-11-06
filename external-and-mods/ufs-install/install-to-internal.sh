@@ -395,6 +395,7 @@ case "$HOME_MODE" in
     printf '%b\n' '"Registry"' '{' '\t"HKCU"' '\t{' '\t\t"Software"' '\t\t{' \
       '\t\t\t"Valve"' '\t\t\t{' '\t\t\t\t"Steam"' '\t\t\t\t{' \
       '\t\t\t\t\t"RunningAppID"\t\t"0"' \
+      '\t\t\t\t\t"ForceOOBE"\t\t"1"' \
       '\t\t\t\t}' '\t\t\t}' '\t\t}' '\t}' '}' >"$WORK/home/steamos/.steam/registry.vdf"
     printf '%b\n' '"InstallConfigStore"' '{' '\t"SteamOS"' '\t{' \
       '\t\t"WifiForceWPASupplicant"\t\t"1"' '\t}' '}' \

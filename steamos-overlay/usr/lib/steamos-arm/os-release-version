@@ -50,3 +50,15 @@ for rel in ("etc/os-release", "usr/lib/os-release"):
     tmp.write_text(text)
     os.chmod(tmp, 0o644)
     os.replace(tmp, path)                 # a link to /usr becomes a file of our own
+
+# The Desktop Mode start menu shows the account's full name. Leave a name the
+# user chose alone.
+passwd = root / "etc/passwd"
+if passwd.is_file():
+    text = passwd.read_text()
+    named = re.sub(r"^(steamos:[^:]*:[^:]*:[^:]*:)SteamOS user:", r"\1Zaviya user:", text, flags=re.M)
+    if named != text:
+        tmp = passwd.with_name("passwd.tmp")
+        tmp.write_text(named)
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, passwd)
