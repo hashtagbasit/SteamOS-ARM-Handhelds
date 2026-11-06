@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Zaviya" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0C0C0E</item>
+        <item name="android:statusBarColor">#0C0C0E</item>
+        <item name="android:navigationBarColor">#0C0C0E</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

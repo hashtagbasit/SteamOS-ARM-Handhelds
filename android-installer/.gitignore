@@ -1,0 +1,11 @@
+# Build output and local machine files
+.gradle/
+build/
+app/build/
+local.properties
+.idea/
+*.iml
+.kotlin/
+captures/
+# The OpenABL ELFs are fetched and checked by tools/fetch-openabl.sh; the screens in design/ are kept.
+app/src/main/assets/openabl/*.elf
