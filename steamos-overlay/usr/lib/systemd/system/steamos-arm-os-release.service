@@ -1,5 +1,5 @@
 [Unit]
-Description=Show the installed SteamOS ARM release as the OS name
+Description=Show the installed Zaviya release as the OS name
 # Before Steam starts, so Settings > System reads the new name.
 DefaultDependencies=no
 After=local-fs.target

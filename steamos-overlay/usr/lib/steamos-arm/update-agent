@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Find and install SteamOS ARM updates, for Steam's own update button.
+"""Find and install Zaviya updates, for Steam's own update button.
 
   update-agent check   newest release for this device newer than the one
                        installed, as JSON ({} when up to date)

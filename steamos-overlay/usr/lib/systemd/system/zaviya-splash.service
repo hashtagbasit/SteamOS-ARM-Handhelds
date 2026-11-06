@@ -1,0 +1,13 @@
+[Unit]
+Description=Boot animation
+DefaultDependencies=no
+ConditionKernelCommandLine=!steamos.debug=1
+Conflicts=shutdown.target
+Before=shutdown.target
+
+[Service]
+ExecStart=/usr/lib/steamos-arm/zaviya-splash
+TimeoutStopSec=2
+
+[Install]
+WantedBy=sysinit.target

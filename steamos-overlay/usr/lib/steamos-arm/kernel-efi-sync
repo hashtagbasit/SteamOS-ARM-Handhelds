@@ -89,6 +89,13 @@ def model(dtb):
     raise ValueError('DTB has no root model')
 
 
+def verbose_cmdline(cmdline):
+    quiet = {'quiet', 'logo.nologo', 'loglevel=0', 'systemd.show_status=0',
+             'rd.udev.log_level=0', 'vt.global_cursor_default=0'}
+    words = [w for w in cmdline.split() if w not in quiet]
+    return ' '.join(words + ['console=tty0', 'loglevel=7', 'steamos.debug=1'])
+
+
 def write_atomic(path, data):
     tmp = path.with_name(path.name + '.new')
     with tmp.open('wb') as f:
@@ -124,12 +131,13 @@ def sync(boot, force=False):
     (boot / STAMP).unlink(missing_ok=True)
     write_atomic(boot / 'Image.gz', gz)
     lines = ['# Written by kernel-efi-sync from KERNEL. Changes here are overwritten.',
-             'default steamos', 'timeout 0', 'label steamos', '    menu label SteamOS',
+             'default steamos', 'timeout 0', 'label steamos', '    menu label Zaviya',
              '    linux /Image.gz']
     if len(initrd) >= PAGE_MIN_INITRD:
         write_atomic(boot / 'initrd.img', initrd)
-        lines.append('    initrd /initrd.img')
+        initrd_line = ['    initrd /initrd.img']
     else:
+        initrd_line = []
         (boot / 'initrd.img').unlink(missing_ok=True)
     (boot / 'dtbs').mkdir(exist_ok=True)
     for old in (boot / 'dtbs').glob('*.dtb'):
@@ -139,7 +147,10 @@ def sync(boot, force=False):
         write_atomic(boot / 'dtbs' / name, blob)
     # No fdtdir: it takes the first file with the compatible, whichever variant
     # that is. Without it the bootloader keeps the DTB of the picked model.
-    lines += [f'    append {cmdline}', '']
+    lines += initrd_line + [f'    append {cmdline}', '',
+                            'label verbose', '    menu label Zaviya (show boot log)',
+                            '    linux /Image.gz'] + initrd_line + \
+        [f'    append {verbose_cmdline(cmdline)}', '']
     conf.parent.mkdir(exist_ok=True)
     write_atomic(conf, '\n'.join(lines).encode())
     write_atomic(boot / STAMP, (stamp + '\n').encode())
@@ -147,13 +158,33 @@ def sync(boot, force=False):
     return True
 
 
+def sync_logo(boot, src):
+    """The bootloader's boot logo. One the user put there themselves stays."""
+    dst = boot / 'logo'
+    mark = dst / '.zaviya'
+    if not src.is_dir() or (dst.exists() and not mark.exists()):
+        return
+    frames = {p.name: p for p in src.iterdir() if p.is_file()}
+    need = sum(p.stat().st_size for p in frames.values())
+    have = sum(p.stat().st_size for p in dst.glob('*')) if dst.exists() else 0
+    if need == have or shutil.disk_usage(boot).free < need - have + (1 << 20):
+        return
+    dst.mkdir(exist_ok=True)
+    mark.touch()
+    for name, path in frames.items():
+        write_atomic(dst / name, path.read_bytes())
+    os.sync()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--boot', default='/boot', type=Path)
     ap.add_argument('--force', action='store_true')
+    ap.add_argument('--logo', default='/usr/share/zaviya/logo', type=Path)
     a = ap.parse_args()
     try:
         print('updated' if sync(a.boot, a.force) else 'up to date')
+        sync_logo(a.boot, a.logo)
     except (ValueError, OSError, struct.error) as e:
         print(f'kernel-efi-sync: {e}', file=sys.stderr)
         return 1

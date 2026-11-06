@@ -1,13 +1,13 @@
-# Offline SteamOS updates
+# Offline Zaviya updates
 
 This updater is under verification for v1.2. It must not be advertised as release-ready until the boot-hook and hardware gates in `docs/V1.2-VERIFICATION.md` pass.
 
 ## How it works
 
-1. In Desktop Mode, open **SteamOS Update** in ARM-Manager. Select the update package and paste its SHA-256 from the official GitHub release.
+1. In Desktop Mode, open **Zaviya Update** in ARM-Manager. Select the update package and paste its SHA-256 from the official GitHub release.
 2. Preparation checks the archive, hashes every payload file, checks available space, and copies a private recovery runtime to HOME. It saves the current boot image and installs the recovery-capable bootstrap.
 3. On restart, the initramfs mounts the same root, boot, and HOME filesystems. It verifies their UUIDs and takes a rollback copy before replacing system files.
-4. It updates the system and the two bundled Decky plugins, verifies installed content, then boots SteamOS. Games, ROMs, saves, Steam account files, Decky settings, accounts, network credentials, and fstab are preserved.
+4. It updates the system and the two bundled Decky plugins, verifies installed content, then boots Zaviya. Games, ROMs, saves, Steam account files, Decky settings, accounts, network credentials, and fstab are preserved.
 5. An interrupted apply or rollback is recovered on the next boot. A failed apply restores the backup and reboots into the previous kernel. If recovery itself cannot finish, normal boot is stopped and its log is left on HOME.
 
 No partition table is changed and no filesystem is formatted. Both SD and internal installs use the same process. HOME needs enough free space for the unpacked update and a copy of the current system; the root partition must also fit the new system. Existing backups are retained.

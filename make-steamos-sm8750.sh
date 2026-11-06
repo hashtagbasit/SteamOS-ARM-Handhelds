@@ -331,7 +331,7 @@ EOF
     repack_kernel_partuuid "${KOUT}/boot/KERNEL" "${MNT}/boot/KERNEL" "${disk_id}-02"
   sudo_run cp "${MNT}/boot/KERNEL" "${MNT}/boot/boot/KERNEL"
   sudo_run bash -c "cd '${MNT}/boot' && md5sum KERNEL | tee KERNEL.md5 boot/KERNEL.md5 >/dev/null"
-  sudo_run python3 "${ROOT}/steamos-overlay/usr/lib/steamos-arm/kernel-efi-sync" --boot "${MNT}/boot" --force
+  sudo_run python3 "${ROOT}/steamos-overlay/usr/lib/steamos-arm/kernel-efi-sync" --boot "${MNT}/boot" --force --logo "${MNT}/usr/share/zaviya/logo"
   if [[ -f "${MOD}/kernel-sm8750/post-flash.sh" ]]; then
     sed "s/@ROOT_UUID@/${root_uuid}/" "${MOD}/kernel-sm8750/post-flash.sh" \
       | sudo_run tee "${MNT}/boot/post-flash.sh" "${MNT}/boot/boot/post-flash.sh" >/dev/null
@@ -372,7 +372,7 @@ EOF
   trap - EXIT INT TERM
 
   log "================================================================="
-  log "SUCCESS: SteamOS ARM for AYN Odin 3 built:"
+  log "SUCCESS: Zaviya for AYN Odin 3 built:"
   log "Image: ${IMG} ($((total_mib)) MiB)"
   log "Flash to microSD with: sudo dd if=${IMG} of=/dev/sdX bs=4M status=progress"
   log "Boot instructions: Hold Volume Down -> Boot Mode: Linux -> START"

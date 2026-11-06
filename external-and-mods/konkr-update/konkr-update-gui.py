@@ -7,14 +7,14 @@ from gi.repository import Gtk, GLib
 
 class Window(Gtk.Window):
     def __init__(self):
-        super().__init__(title='SteamOS Update')
+        super().__init__(title='Zaviya Update')
         self.set_default_size(560, 330)
         self.set_border_width(20)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); self.add(box)
-        label = Gtk.Label(label='Update SteamOS while keeping your games, saves and login.\nThe update runs on the next restart and keeps a recovery backup.')
+        label = Gtk.Label(label='Update Zaviya while keeping your games, saves and login.\nThe update runs on the next restart and keeps a recovery backup.')
         label.set_line_wrap(True); label.set_xalign(0); box.pack_start(label, False, False, 0)
         self.file = Gtk.FileChooserButton(title='Choose an official update package')
-        f = Gtk.FileFilter(); f.set_name('SteamOS update package'); f.add_pattern('*.tar.gz'); self.file.add_filter(f)
+        f = Gtk.FileFilter(); f.set_name('Zaviya update package'); f.add_pattern('*.tar.gz'); self.file.add_filter(f)
         box.pack_start(self.file, False, False, 0)
         self.sha = Gtk.Entry(); self.sha.set_placeholder_text('SHA-256 checksum from the official release')
         box.pack_start(self.sha, False, False, 0)

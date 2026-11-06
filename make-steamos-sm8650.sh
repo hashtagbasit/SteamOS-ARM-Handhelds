@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build a flashable SteamOS ARM image for one SoC (SOC=sm8650 default, sm8550 or sm8250):
+# Build a flashable Zaviya image for one SoC (SOC=sm8650 default, sm8550 or sm8250):
 #   sm8650: KONKR Pocket FIT / AYANEO Pocket S2
 #   sm8550: AYN Odin 2 / Mini / Portal / Thor, AYANEO Pocket ACE / DMG / DS /
 #           EVO / S 1K / S 2K, Retroid Pocket 6 / Nova
@@ -457,7 +457,7 @@ EOF
   # SteamOS mounts /etc from the overlay. Write both layers so first boot
   # actually uses this 3-partition layout (and home can grow).
   sudo_run tee "${MNT}/root/etc/fstab" >/dev/null <<EOF
-# SteamOS ARM (${SOC}) — PC/handheld layout (not Steam Deck A/B)
+# Zaviya (${SOC}) — PC/handheld layout (not Steam Deck A/B)
 UUID=${root_uuid}  /      ext4  defaults,noatime                         0 1
 LABEL=BOOT         /boot  vfat  defaults,umask=0077,nofail               0 2
 UUID=${home_uuid}  /home  ext4  defaults,noatime,commit=30,x-systemd.growfs 0 2
@@ -471,7 +471,7 @@ EOF
   # vfat cannot store Unix owner/mode — cp -a fails with EPERM
   sudo_run install -m0644 "${ktmp}" "${MNT}/boot/KERNEL"
   sudo_run bash -c "cd '${MNT}/boot' && md5sum KERNEL > KERNEL.md5"
-  sudo_run python3 "${ROOT}/steamos-overlay/usr/lib/steamos-arm/kernel-efi-sync" --boot "${MNT}/boot" --force
+  sudo_run python3 "${ROOT}/steamos-overlay/usr/lib/steamos-arm/kernel-efi-sync" --boot "${MNT}/boot" --force --logo "${MNT}/usr/share/zaviya/logo"
   # Optional second kernel on BOOT for testers to swap in by renaming
   # (TEST_KERNEL_OUT; its modules must be in KERNEL_OUT too). SM8550: our own
   # source build by default, so it gets the source-build cmdline; set

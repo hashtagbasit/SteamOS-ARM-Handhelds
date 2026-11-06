@@ -1,5 +1,5 @@
 [Unit]
-Description=Download and stage a SteamOS ARM update (Steam's update button)
+Description=Download and stage a Zaviya update (Steam's update button)
 After=network-online.target
 
 [Service]

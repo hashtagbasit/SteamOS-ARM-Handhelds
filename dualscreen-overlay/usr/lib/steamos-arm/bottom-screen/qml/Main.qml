@@ -183,7 +183,7 @@ Window {
 
     readonly property var titles: ({
         home: "", dash: "Dashboard", pad: "Trackpad and keyboard", keys: "Trackpad and keyboard",
-        settings: "Settings", apps: "Apps", notes: "Game Notes", newweb: "Web apps", hub: "Loadout", skins: "Theme", bricks: "Bricks"
+        settings: "Settings", apps: "Apps", notes: "Game Notes", newweb: "Web apps", hub: "Zaviya Loadout", skins: "Theme", bricks: "Bricks"
     })
 
     // ------------------------------------------------------------- frame --

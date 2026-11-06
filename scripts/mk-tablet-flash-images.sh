@@ -101,7 +101,7 @@ if [[ $DEV == tb321fu ]]; then
   {
     printf 'set timeout=-1\nset default=0\nset gfxpayload=keep\n'
     for p in csot boe; do
-      printf '\nmenuentry "SteamOS ARM Port (%s panel)" {\n' "${p^^}"
+      printf '\nmenuentry "Zaviya (%s panel)" {\n' "${p^^}"
       printf '    devicetree /dtb/sm8650-lenovo-tb321fu-%s.dtb\n    linux /Image %s\n}\n' "$p" "$opts"
     done
     cat <<'CFG'
@@ -169,7 +169,7 @@ menuentry "Logs 5: system partition boot log (end of it)" {
 CFG
   } > "$S/boot/grub/grub.cfg"
   echo 'configfile /boot/grub/grub.cfg' > "$S/EFI/BOOT/grub.cfg"
-  [[ $(grep -c '^menuentry "SteamOS ARM Port' "$S/boot/grub/grub.cfg") = 2 ]] || die "boot entries missing"
+  [[ $(grep -c '^menuentry "Zaviya' "$S/boot/grub/grub.cfg") = 2 ]] || die "boot entries missing"
   ! grep -q -E 'usbimage|STORAGE' "$S/boot/grub/grub.cfg" || die "old root or USB fallback in the menu"
   # Beta: logs on every boot (bootlog.txt, debug-logs/). Delete /boot/debug to stop them.
   : > "$S/debug"

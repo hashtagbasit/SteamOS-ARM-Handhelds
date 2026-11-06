@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply the REDMAGIC 6 (SM8350) kernel and overlay onto a SteamOS ARM rootfs.
+# Apply the REDMAGIC 6 (SM8350) kernel and overlay onto a Zaviya rootfs.
 # Run by make-steamos-sm8350.sh, as root.
 #
 # The rootfs is the one every chip shares (make-steamos-sm8650.sh builds it,
@@ -173,5 +173,6 @@ install -m0755 "$OVL/usr/lib/steamos/sm8550-bluetooth-setup" \
 # Hostname from the model, Desktop scale from the panel (scripts/install-device-defaults.sh).
 "${SCRIPT_DIR}/install-device-defaults.sh" "$R" | tee -a "$LOG"
 "${SCRIPT_DIR}/install-hub.sh" "$R" "$R/home/steamos" | tee -a "$LOG"
+"${SCRIPT_DIR}/install-branding.sh" "$R"
 
 log "== done (kernel ${KREL})"

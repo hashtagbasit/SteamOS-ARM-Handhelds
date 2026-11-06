@@ -18,12 +18,12 @@ LOCALE = K / "src/core/menu_locale.c"
 HEADER = K / "src/include/menu_text.h"
 
 NEW = {
-    "NAME_INTERNAL": ("SteamOS", "SteamOS"),
-    "NAME_TF": ("SteamOS (TF 卡)", "SteamOS (TF card)"),
-    "DESC_INTERNAL": ("启动 SteamOS。", "Start SteamOS."),
-    "DESC_TF": ("启动 TF 卡中的 SteamOS，请先插入对应 TF 卡。",
-                "Start SteamOS from the TF card. Insert the matching card first."),
-    "CREDIT": ("SteamOS ARM Port", "SteamOS ARM Port"),
+    "NAME_INTERNAL": ("Zaviya", "Zaviya"),
+    "NAME_TF": ("Zaviya (TF 卡)", "Zaviya (TF card)"),
+    "DESC_INTERNAL": ("启动 Zaviya。", "Start Zaviya."),
+    "DESC_TF": ("启动 TF 卡中的 Zaviya，请先插入对应 TF 卡。",
+                "Start Zaviya from the TF card. Insert the matching card first."),
+    "CREDIT": ("Zaviya", "Zaviya"),
 }
 
 

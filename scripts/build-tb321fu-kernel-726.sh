@@ -65,7 +65,7 @@ grep -q 'kirby-nt36523-csot-dsc-vid' "$P/dts/sm8650-lenovo-tb321fu-csot.dts" || 
 # (they were checked to apply to this exact tree with no fuzz and no rejects).
 OURP="$(cd "$(dirname "$0")/.." && pwd)/external-and-mods/kernel-tb321fu-726/patches"
 ls "$OURP"/*.patch >/dev/null 2>&1 || die "no patches in $OURP"
-{ echo; echo "# SteamOS ARM Port: our own patches for the Gen 3 kernel"; } >> "$P/patches/series"
+{ echo; echo "# Zaviya: our own patches for the Gen 3 kernel"; } >> "$P/patches/series"
 for f in "$OURP"/*.patch; do
   cp "$f" "$P/patches/"; basename "$f" >> "$P/patches/series"
 done
@@ -73,7 +73,7 @@ done
 cp "$CPIO" "$P/initrd.cpio"
 cat >> "$P/config/armada-kernel.config.overrides" <<EOF
 
-# SteamOS ARM Port: startup code built in, our version suffix
+# Zaviya: startup code built in, our version suffix
 CONFIG_INITRAMFS_SOURCE="/src/initrd.cpio"
 CONFIG_INITRAMFS_COMPRESSION_NONE=y
 CONFIG_LOCALVERSION="-tb321fu"
@@ -83,7 +83,7 @@ CONFIG_FONT_TER16x32=y
 # The startup code has no modules and mounts the /etc overlay itself.
 CONFIG_OVERLAY_FS=y
 
-# SteamOS ARM Port: options from our own kernel fragments (systemd resource
+# Zaviya: options from our own kernel fragments (systemd resource
 # control, firewalld, zswap, Bluetooth PAN, suspend debug, USB disks)
 CONFIG_BT_RFCOMM_TTY=y
 CONFIG_BT_BNEP=m
@@ -145,7 +145,7 @@ rm -rf "$m/dtb" "$m/vmlinuz" "$m/.armada-source"
 mv "$m" "$OUT/modules/$kver"
 cp "$W/cache/build/linux-"*/.config "$OUT/config-$kver"
 # Every option from our fragment must have survived Kconfig.
-sed -n '/^# SteamOS ARM Port: options from our own kernel fragments/,/^EOF$/p' "$0" | grep '^CONFIG_' | while read -r opt; do
+sed -n '/^# Zaviya: options from our own kernel fragments/,/^EOF$/p' "$0" | grep '^CONFIG_' | while read -r opt; do
   grep -qx "$opt" "$OUT/config-$kver" || { echo "ERROR: config option did not stick: $opt (got: $(grep -m1 "^${opt%%=*}[= ]\|^# ${opt%%=*} " "$OUT/config-$kver" || echo missing))" >&2; exit 1; }
 done
 grep -q 'steamos.bootlabel' "$OUT/boot/Image" || die "startup code isn't in the Image"

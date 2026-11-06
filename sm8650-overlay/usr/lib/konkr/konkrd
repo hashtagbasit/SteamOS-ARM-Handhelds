@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""konkrd — KONKR Pocket FIT platform daemon (SteamOS-ARM-SM8650).
+"""konkrd — KONKR Pocket FIT platform daemon (Zaviya).
 
 Fixes the platform-side gaps that make Linux slower than Android on this
 handheld and wires up the extra buttons:
@@ -271,7 +271,7 @@ def curve_pwm(curve, temp: float) -> int:
 # hunting. Only DANGER_C skips the ramp.
 FAN_STEP_S = 3.0
 FAN_QUANTUM = 8
-# Reaction (Handheld Control): (smoothing, most up, most down) per step.
+# Reaction (Zaviya Control): (smoothing, most up, most down) per step.
 FAN_REACTION = {
     "gentle":  (0.6, 20, 4),
     "calm":    (0.5, 36, 6),
@@ -299,7 +299,7 @@ STANDBY_HOT_PWM = 128
 
 def game_fan(st: dict) -> dict | None:
     """The fan settings in force: the running game's own (state "fan_games",
-    set in Handheld Control) over the global ones. A game entry is either
+    set in Zaviya Control) over the global ones. A game entry is either
     {"curve": "silent"|"balanced"|"turbo"} or {"mode": "fixed", "fixed": n};
     fan boost still wins."""
     glob_fan = {**(st.get("fan") or {}), "curves": st.get("fan_curves") or {}}
@@ -322,7 +322,7 @@ def on_charger() -> bool:
 
 
 def custom_curve(points) -> list | None:
-    """A curve from Handheld Control ([temp °C, speed %] pairs) as pwm
+    """A curve from Zaviya Control ([temp °C, speed %] pairs) as pwm
     points, sorted, with the speed never dropping as the temperature rises."""
     try:
         pts = sorted((max(20, min(105, int(t))), max(0, min(100, int(p)))) for t, p in points)
@@ -408,7 +408,7 @@ class Fan:
                 log(f"fan: fixed {fan.get('fixed')}% -> pwm {step}")
                 self.cur = step
             return
-        # a game's own curve or one picked in Handheld Control, else the
+        # a game's own curve or one picked in Zaviya Control, else the
         # profile's; boost wins over both
         name = "turbo" if fan.get("boost") else fan.get("curve") or profile
         curve = fan_curve(name, fan.get("curves") or {}) or FAN_CURVES[profile]
@@ -447,7 +447,7 @@ class Fan:
             self.cur = want
 
     def status(self, name: str, target: int) -> None:
-        """What the fan is doing, for Handheld Control's graph."""
+        """What the fan is doing, for Zaviya Control's graph."""
         try:
             os.makedirs(os.path.dirname(FAN_STATUS), exist_ok=True)
             with open(FAN_STATUS + ".tmp", "w", encoding="utf-8") as fh:
@@ -550,7 +550,7 @@ def big_cpus() -> set[int]:
 
 
 # ------------------------------------------------------ per-game perf ----
-# Set per game in Handheld Control (state "perf_games", keyed by App ID):
+# Set per game in Zaviya Control (state "perf_games", keyed by App ID):
 # a profile of its own, CPU and GPU caps, the cores its threads may use and
 # their priority. Applied when the game starts, and at once when changed
 # while it runs; the profile's own values come back when it exits.
@@ -736,7 +736,7 @@ class GameBoost:
 WEBHELPER_SH = "/home/steamos/.local/share/Steam/steamrtarm64/steamwebhelper.sh"
 WEBHELPER_EXEC = 'exec taskset 0x7c $(pwd)/steamwebhelper "$@" &> ~/.steam/steam/logs/steamwebhelper.log'
 KONKR_CEF = (
-    "# SteamOS-ARM-SM8650: draw the Steam UI through ANGLE's Vulkan backend on\n"
+    "# Zaviya: draw the Steam UI through ANGLE's Vulkan backend on\n"
     "# Turnip directly. The default (ANGLE -> GL -> zink -> Vulkan) converts every\n"
     "# UI draw call twice on the CPU and made menus/game pages sluggish.\n"
     'KONKR_CEF_FLAGS="--use-gl=angle --use-angle=vulkan '

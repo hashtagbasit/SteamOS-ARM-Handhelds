@@ -235,7 +235,12 @@ if [ -n "$rootdev" ] && mount -t ext4 -o rw "$rootdev" /newroot; then
     cp /bootdebug "$d/bootdebug" && chmod 0755 "$d/bootdebug"
     printf '[Unit]\nDescription=Copy boot logs to the FAT partition (debug)\nAfter=local-fs.target\n\n[Service]\nType=simple\nExecStart=/usr/lib/steamos-arm/bootdebug\n' > "$u/steamos-arm-bootdebug.service"
     ln -sf ../steamos-arm-bootdebug.service "$u/multi-user.target.wants/steamos-arm-bootdebug.service"
+    # The boot log instead of the animation.
+    mkdir -p "$u/zaviya-splash.service.d"
+    printf '[Unit]\nConditionPathExists=/nonexistent\n' >"$u/zaviya-splash.service.d/debug.conf"
+    echo 7 >/proc/sys/kernel/printk
   else
+    rm -f "/newroot/usr/lib/systemd/system/zaviya-splash.service.d/debug.conf"
     rm -f /newroot/usr/lib/systemd/system/multi-user.target.wants/steamos-arm-bootdebug.service \
       /newroot/usr/lib/systemd/system/steamos-arm-bootdebug.service
   fi

@@ -4,7 +4,7 @@
 steamos-manager relays some of its interfaces to another service when a
 remotes.d file says so. This is that service: Steam's Quick Access
 Performance Profile, TDP limit and manual GPU clock land on the device
-daemon (konkrd or odin3d), so Steam, Handheld Control, the device buttons
+daemon (konkrd or odin3d), so Steam, Zaviya Control, the device buttons
 and the bottom screen all drive the same profile and never fight. The
 battery charge limit goes to the battery driver's own threshold.
 
@@ -12,11 +12,11 @@ battery charge limit goes to the battery driver's own threshold.
   TdpLimit1             watts                      -> state "tdp"
   GpuPerformanceLevel1  auto / manual + MHz        -> state "gpu_manual_mhz"
   BatteryChargeLimit1   percent                    -> charge_control_end_threshold
-  org.steamos_arm.Power1.BypassCharging (ours, for Handheld Control and the
+  org.steamos_arm.Power1.BypassCharging (ours, for Zaviya Control and the
                         bottom screen): plugged in, the battery holds where it
                         is and the device runs from the charger
 
-Changes made elsewhere (a button, Handheld Control) are announced to Steam
+Changes made elsewhere (a button, Zaviya Control) are announced to Steam
 with PropertiesChanged, so its sliders follow.
 """
 from __future__ import annotations

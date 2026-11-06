@@ -1,5 +1,5 @@
 [Unit]
-Description=Free HOME from finished SteamOS ARM updates
+Description=Free HOME from finished Zaviya updates
 # After a restart that installed or rolled back an update: its download,
 # backup and boot images stay on HOME until this clears them.
 RequiresMountsFor=/home

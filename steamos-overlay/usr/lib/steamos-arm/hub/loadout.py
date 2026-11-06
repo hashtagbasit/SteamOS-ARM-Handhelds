@@ -258,9 +258,9 @@ def inspect(path: str) -> dict:
             info["as"] = "rom"
             c = info["choices"][0]
             if not c["installed"]:
-                info["note"] = f"Needs {c['app_title']}, which Loadout installs first."
+                info["note"] = f"Needs {c['app_title']}, which Zaviya Loadout installs first."
         else:
-            info["note"] = "Loadout doesn't know this kind of file."
+            info["note"] = "Zaviya Loadout doesn't know this kind of file."
     return info
 
 

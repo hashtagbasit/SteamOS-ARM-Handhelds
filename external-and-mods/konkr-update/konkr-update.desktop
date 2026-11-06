@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=SteamOS Update
-Comment=Update SteamOS while keeping games and saves
+Name=Zaviya Update
+Comment=Update Zaviya while keeping games and saves
 Exec=konkr-update-gui
 Icon=system-software-update
 Terminal=false

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SteamOS ARM on the Lenovo Legion Y700 Gen 5 (TB323FU), from a PC (Linux or
+# Zaviya on the Lenovo Legion Y700 Gen 5 (TB323FU), from a PC (Linux or
 # macOS; Windows: WSL2) with adb. Android stays on the tablet.
 #
 #   install-gen5.sh [--switch]
@@ -17,7 +17,7 @@
 #      kernel (the bootloader only takes one with its stock signature blob)
 #   5. stages it for the "Switch to SteamOS" KernelSU module
 #   6. with --switch: writes it to boot_a and restarts into SteamOS
-# Back to Android: Restart into ZUXOS in Handheld Control, or hold volume up
+# Back to Android: Restart into ZUXOS in Zaviya Control, or hold volume up
 # + volume down for 10 s.
 set -Eeuo pipefail
 # Never stop without saying why.

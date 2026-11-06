@@ -589,7 +589,7 @@ fi
 echo "${DECKY_SHA256}  ${DECKY_LOADER}" | sha256sum -c --status \
   || die "Decky loader ${DECKY_VERSION} sha256 mismatch"
 # Beta 2 only had the wants link, pointing at a unit that was never
-# installed: no Decky, so no Handheld Control either.
+# installed: no Decky, so no Zaviya Control either.
 mkdir -p "$HOME_DST/homebrew/settings" "$HOME_DST/homebrew/data" "$HOME_DST/homebrew/logs"
 install -m0755 "$DECKY_LOADER" "$HOME_DST/homebrew/services/PluginLoader"
 # Same binary in /usr: decky-plugin-fixes uses it to repair installs whose
@@ -606,7 +606,7 @@ ln -sfn ../plugin_loader.service "$R/usr/lib/systemd/system/multi-user.target.wa
 # arm64 ExecStart and environment whatever unit file wins.
 install_file "$OVL/usr/lib/systemd/system/plugin_loader.service.d/50-steamos-arm-box64.conf" \
   "$R/usr/lib/systemd/system/plugin_loader.service.d/50-steamos-arm-box64.conf" 0644
-# Handheld Control: profiles, fan and stick lighting in Quick Access (talks
+# Zaviya Control: profiles, fan and stick lighting in Quick Access (talks
 # to odin3d here, konkrd on the other images).
 HC_SRC="${MOD}/Decky/sm8650/konkr-control"
 HC_DST="$HOME_DST/homebrew/plugins/konkr-control"
@@ -657,6 +657,7 @@ install_file "$OVL/usr/share/steamos-odin/plugin_loader.service.d/fast-stop.conf
 chown -R 1000:1000 "$HOME_DST/homebrew"
 # Loadout: emulators, PC game stores and apps (engine + Decky plugin).
 "${SCRIPT_DIR}/install-hub.sh" "$R" "$HOME_DST"
+"${SCRIPT_DIR}/install-branding.sh" "$R"
 
 # GPU/GMU hang dumps kept past the kernel's five minutes (debug-logs copies them).
 install_file "$OVL/usr/lib/steamos-arm/save-devcoredump" "$R/usr/lib/steamos-arm/save-devcoredump" 0755

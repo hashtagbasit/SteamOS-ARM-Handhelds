@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# REDMAGIC 6 (NX669J) firmware for the SteamOS ARM image, taken from Nubia's
+# REDMAGIC 6 (NX669J) firmware for the Zaviya image, taken from Nubia's
 # own OTA (it cannot be redistributed, so bring your own):
 #
 #   scripts/extract-nx669j-firmware.sh NX669J-update.zip [OUT]

@@ -1,4 +1,4 @@
-const manifest = {"name":"Loadout"};
+const manifest = {"name":"Zaviya Loadout"};
 const API_VERSION = 2;
 const internalAPIConnection = window.__DECKY_SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_deckyLoaderAPIInit;
 if (!internalAPIConnection) {
@@ -38,7 +38,7 @@ const PROTONS = [
     { data: "proton_experimental", label: "Proton Experimental" },
     { data: "proton_11", label: "Proton 11" },
 ];
-// Loadout's own look: ink background, warm brass for what needs you,
+// Zaviya Loadout's own look: ink background, warm brass for what needs you,
 // mint for ready, a soft violet for the store's accent.
 const C = {
     ink: "#0b0f14", panel: "#131a22", raised: "#1a2430", line: "rgba(255,255,255,0.08)",
@@ -155,7 +155,7 @@ function play(appid) {
     else SteamClient.URL.ExecuteSteamURL("steam://rungameid/" + gameid);
 }
 
-// Toast when a job ends, whoever started it and whether Loadout is open.
+// Toast when a job ends, whoever started it and whether Zaviya Loadout is open.
 const seenJobs = {};
 async function watchJobs() {
     try {
@@ -180,7 +180,7 @@ async function watchStore() {
         const g = await E.store_games();
         const fresh = ((g && g.games) || []).filter((x) => !x.in_steam && !seenStore.has(`${x.store}:${x.id}`));
         fresh.forEach((x) => seenStore.add(`${x.store}:${x.id}`));
-        if (!storeFirst && fresh.length) toaster.toast({ title: "Loadout", body: `${fresh.map((x) => x.title).join(", ")} can go in your Steam library (PC Games)`, duration: 6000 });
+        if (!storeFirst && fresh.length) toaster.toast({ title: "Zaviya Loadout", body: `${fresh.map((x) => x.title).join(", ")} can go in your Steam library (PC Games)`, duration: 6000 });
         storeFirst = false;
     } catch (e) {}
 }
@@ -192,8 +192,8 @@ function useStatus(ms) {
     return [st, refresh];
 }
 const report = (r, fallback) => {
-    if (r && r.error) toaster.toast({ title: "Loadout", body: r.error, critical: true, duration: 6000 });
-    else if (fallback) toaster.toast({ title: "Loadout", body: fallback, duration: 2500 });
+    if (r && r.error) toaster.toast({ title: "Zaviya Loadout", body: r.error, critical: true, duration: 6000 });
+    else if (fallback) toaster.toast({ title: "Zaviya Loadout", body: fallback, duration: 2500 });
     return r;
 };
 
@@ -218,7 +218,7 @@ function Details({ app, chip, closeModal, refresh }) {
     }));
     const confirmReset = () => DFL.showModal(jsx(DFL.ConfirmModal, {
         strTitle: `Reset ${app.title}'s settings?`,
-        strDescription: "Back to how Loadout sets it up: controls, folders, paths. The old settings file is kept next to it; games and saves aren't touched.",
+        strDescription: "Back to how Zaviya Loadout sets it up: controls, folders, paths. The old settings file is kept next to it; games and saves aren't touched.",
         strOKButtonText: "Reset", strCancelButtonText: "Keep",
         onOK: () => E.reset(app.id).then((r) => { report(r, "Settings reset"); refresh(); }),
     }));
@@ -254,7 +254,7 @@ function Details({ app, chip, closeModal, refresh }) {
                 jsx("span", { children: f.label }),
                 f.found ? jsx("span", { style: { color: C.dim }, children: `· ${f.found}` }) : null,
             ] }, f.label)),
-            jsx(Small, { style: { marginTop: "6px" }, children: `Put them in ${bios.folder} (your own dumps; Loadout can't download them).` }),
+            jsx(Small, { style: { marginTop: "6px" }, children: `Put them in ${bios.folder} (your own dumps; Zaviya Loadout can't download them).` }),
         ] }) : null,
         app.update_notes ? jsxs("div", { style: { marginTop: "14px" }, children: [
             jsx(DFL.DialogButton, { onClick: () => setNotes(!notes), style: { width: "auto" }, children: notes ? "Hide what's new" : `What's new in ${app.update}` }),
@@ -310,8 +310,8 @@ function ForYou({ st, refresh }) {
             jsx("div", { style: { fontSize: "13px", color: C.accent, fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase" }, children: `${st.device.model} · ${CHIP_NAMES[chip] || chip}` }),
             jsx("div", { style: { fontSize: "24px", fontWeight: 800, margin: "6px 0 4px" }, children: !d ? "Looking through your games…"
                 : total ? `${total} games across ${d.systems.length} system${d.systems.length === 1 ? "" : "s"}` : "Your game library is empty" }),
-            jsx(Small, { children: total ? `In ${d.library}/roms. Loadout picks emulators for what's there.`
-                : `Put games in ${st.library}/roms/<system> (or move it to a card in Mine) and Loadout suggests what to get.` }),
+            jsx(Small, { children: total ? `In ${d.library}/roms. Zaviya Loadout picks emulators for what's there.`
+                : `Put games in ${st.library}/roms/<system> (or move it to a card in Mine) and Zaviya Loadout suggests what to get.` }),
             d && d.systems.length ? jsx("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "12px" }, children:
                 d.systems.map((s) => jsx(Pill, { text: `${s.name} ${s.games}${s.ready ? (s.bios.length ? " · needs BIOS" : " ✓") : ""}`, color: s.ready ? (s.bios.length ? C.warn : C.ready) : C.accent }, s.system)) }) : null,
         ] }),
@@ -467,13 +467,13 @@ function Mine({ st, refresh }) {
     const onSd = (st.sd || []).some((m) => st.library.startsWith(m));
     const work = (label, fn) => () => { setBusy(label); fn().then((r) => {
         report(r);
-        if (r && r.updates) toaster.toast({ title: "Loadout", body: Object.keys(r.updates).length ? `${Object.keys(r.updates).length} update(s) ready` : "Everything is up to date" });
+        if (r && r.updates) toaster.toast({ title: "Zaviya Loadout", body: Object.keys(r.updates).length ? `${Object.keys(r.updates).length} update(s) ready` : "Everything is up to date" });
     }).finally(() => { setBusy(""); refresh(); }); };
     return jsxs("div", { children: [
         jsxs(DFL.Focusable, { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }, children: [
             jsx(DFL.DialogButton, { onClick: () => addAGame(refresh), style: { padding: "16px", textAlign: "left", borderRadius: "12px", background: `linear-gradient(160deg, ${C.accent2}44, ${C.panel})` },
                 children: jsxs("div", { children: [jsx("div", { style: { fontWeight: 700, fontSize: "16px", color: C.text }, children: "＋ Add a game or app" }),
-                    jsx(Small, { children: "A Windows .exe, a Linux program or AppImage, a console game file or an Android .apk: Loadout works out how it runs and puts it in Steam." })] }) }),
+                    jsx(Small, { children: "A Windows .exe, a Linux program or AppImage, a console game file or an Android .apk: Zaviya Loadout works out how it runs and puts it in Steam." })] }) }),
             jsx(DFL.DialogButton, { onClick: updates.length ? work("upd", E.update_all) : work("chk", E.check_updates), style: { padding: "16px", textAlign: "left", borderRadius: "12px" },
                 children: jsxs("div", { children: [jsx("div", { style: { fontWeight: 700, fontSize: "16px", color: C.text }, children: busy === "chk" ? "Checking…" : updates.length ? `Update all (${updates.length})` : "Check for updates" }),
                     jsx(Small, { children: updates.length ? updates.map((a) => `${a.title} ${a.update}`).join(", ") : "Every app is checked against its own releases." })] }) }),
@@ -513,7 +513,7 @@ function Page() {
     const [st, refresh] = useStatus(1500);
     const [tab, setTab] = useState("foryou");
     const [q, setQ] = useState("");
-    if (!st) return jsx("div", { style: { paddingTop: "60px", textAlign: "center", color: C.dim }, children: "Loadout is looking at this device…" });
+    if (!st) return jsx("div", { style: { paddingTop: "60px", textAlign: "center", color: C.dim }, children: "Zaviya Loadout is looking at this device…" });
     const chip = st.device.chip;
     const hits = q.trim() ? st.apps.filter((a) => (a.title + " " + a.plays).toLowerCase().includes(q.trim().toLowerCase())) : null;
     const body = (t) => {
@@ -525,7 +525,7 @@ function Page() {
     const wrap = (child) => jsx("div", { style: { padding: "4px 24px 40px", color: C.text }, children: child });
     return jsxs("div", { style: { marginTop: "40px", height: "calc(100% - 40px)", background: C.ink, display: "flex", flexDirection: "column" }, children: [
         jsxs("div", { style: { display: "flex", alignItems: "center", gap: "16px", padding: "14px 24px 6px" }, children: [
-            jsx("div", { style: { fontSize: "22px", fontWeight: 800, color: C.text }, children: "Loadout" }),
+            jsx("div", { style: { fontSize: "22px", fontWeight: 800, color: C.text }, children: "Zaviya Loadout" }),
             jsx("div", { style: { flex: 1 }, children: jsx(DFL.TextField, { placeholder: "Search apps and emulators", value: q, onChange: (e) => setQ(e.target.value) }) }),
         ] }),
         hits ? jsx("div", { style: { flex: 1, overflowY: "auto" }, children: wrap(hits.length ? jsx(Grid, { apps: hits, chip, refresh }) : jsx(Small, { children: "Nothing matches." })) })
@@ -545,7 +545,7 @@ function Panel() {
     const updates = st.apps.filter((a) => a.update);
     return jsxs(Frag, { children: [
         jsxs(DFL.PanelSection, { children: [
-            row(jsx(DFL.ButtonItem, { layout: "below", onClick: open, description: "Emulators, PC game stores and apps for this device", children: "Open Loadout" })),
+            row(jsx(DFL.ButtonItem, { layout: "below", onClick: open, description: "Emulators, PC game stores and apps for this device", children: "Open Zaviya Loadout" })),
             row(jsx(DFL.ButtonItem, { layout: "below", onClick: () => addAGame(refresh), description: ".exe, AppImage, console game or .apk", children: "Add a game to Steam" })),
             updates.length ? row(jsx(DFL.ButtonItem, { layout: "below", onClick: () => E.update_all().then(refresh), description: updates.map((a) => a.title).join(", "), children: `Update all (${updates.length})` })) : null,
         ] }),
@@ -564,8 +564,8 @@ var index = definePlugin(() => {
     const t2 = setInterval(watchJobs, 3000);
     const t3 = setInterval(watchStore, 60000);
     return {
-        name: "Loadout",
-        titleView: jsx("div", { className: DFL.staticClasses && DFL.staticClasses.Title, children: "Loadout" }),
+        name: "Zaviya Loadout",
+        titleView: jsx("div", { className: DFL.staticClasses && DFL.staticClasses.Title, children: "Zaviya Loadout" }),
         content: jsx(Panel, {}),
         // a loadout slot: a case with two cartridges in it
         icon: jsx("svg", { viewBox: "0 0 24 24", width: "1em", height: "1em", fill: "currentColor", children: [

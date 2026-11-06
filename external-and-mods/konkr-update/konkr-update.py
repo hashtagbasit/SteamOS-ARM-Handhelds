@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage and recover offline SteamOS updates. Runs recovery from a private HOME root.
+"""Stage and recover offline Zaviya updates. Runs recovery from a private HOME root.
 No partitioning or formatting commands are used. Games and Steam account data are excluded.
 """
 from __future__ import annotations
@@ -328,9 +328,9 @@ def stage(args):
     if os.geteuid() != 0: raise ValueError('staging needs administrator access')
     model = Path('/sys/firmware/devicetree/base/model').read_text().rstrip('\0\n')
     if model not in SUPPORTED_MODELS: raise ValueError('unsupported device')
-    if os.uname().machine != 'aarch64': raise ValueError('requires ARM64 SteamOS')
+    if os.uname().machine != 'aarch64': raise ValueError('requires ARM64 Zaviya')
     import pwd
-    if pwd.getpwnam('steamos').pw_uid != 1000: raise ValueError('unsupported SteamOS account layout')
+    if pwd.getpwnam('steamos').pw_uid != 1000: raise ValueError('unsupported account layout')
     source_package = Path(args.package).resolve()
     expected = (args.sha256 or '').lower()
     if expected and not re.fullmatch('[0-9a-f]{64}', expected): raise ValueError('invalid expected SHA256')
@@ -577,7 +577,7 @@ def make_plan(target, root, home, boot):
     return plan
 
 
-# Settings files our own daemons rewrite from Handheld Control (konkrd puts
+# Settings files our own daemons rewrite from Zaviya Control (konkrd puts
 # the Pocket FIT's front buttons on controller buttons in this map, issue #64).
 # A release only changes one together with its blob; without the blob the
 # device's copy is the user's setting and stays.

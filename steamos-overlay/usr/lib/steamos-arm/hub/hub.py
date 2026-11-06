@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""steamos-arm-hub: emulators and apps in one tap, on every SteamOS-ARM device.
+"""steamos-arm-hub: emulators and apps in one tap, on every Zaviya device.
 
 One engine behind every front end: the Decky panel (all devices), the Thor's
 bottom screen and the command line. It runs as the user, needs no root

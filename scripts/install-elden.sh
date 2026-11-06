@@ -53,7 +53,7 @@ install -Dm0644 /dev/stdin "$R/usr/lib/udev/rules.d/90-steamos-arm-elden-touch.r
 # Lenovo Legion Y700 Gen 4: the touch panel reports portrait coordinates, Game Mode runs landscape.
 ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="NVTCapacitiveTouchScreen", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"
 ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="NVTCapacitivePen", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"
-# Screen flipped 180 degrees (Handheld Control, /etc/steamos-arm/flip-screen): the other landscape.
+# Screen flipped 180 degrees (Zaviya Control, /etc/steamos-arm/flip-screen): the other landscape.
 ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="NVTCapacitiveTouchScreen", TEST=="/etc/steamos-arm/flip-screen", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 -1 1 1 0 0"
 ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="NVTCapacitivePen", TEST=="/etc/steamos-arm/flip-screen", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 -1 1 1 0 0"
 RULES
@@ -149,7 +149,7 @@ for f in tablet-charger-hold tablet-backlight tablet-boot-watch; do
   install -Dm0755 "$O/usr/lib/steamos-arm/$f" "$R/usr/lib/steamos-arm/$f"
 done
 install -Dm0755 "$O/usr/lib/systemd/system-sleep/steamos-arm-sleep-stats" "$R/usr/lib/systemd/system-sleep/steamos-arm-sleep-stats"
-# Dual boot with ZUXOS: switch slots (Handheld Control's Restart into ZUXOS),
+# Dual boot with ZUXOS: switch slots (Zaviya Control's Restart into ZUXOS),
 # and move SteamOS from the microSD card to internal storage next to ZUXOS.
 # The boot menu (ZUXOS / SteamOS on slot A) comes from a separate add-on bundle
 # (scripts/build-kshimc.sh); its sync service keeps the menu's SteamOS kernel

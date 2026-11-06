@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Decky backend — Handheld Control (SteamOS-ARM handhelds).
+"""Decky backend — Zaviya Control.
 
 Thin front for the device daemon: konkrd (KONKR Pocket FIT, the 8 Gen 2
 devices) or odin3d (AYN Odin 3, KONKR Pocket FIT Elite). Every setting lives
@@ -265,7 +265,7 @@ def mode_of(st: dict[str, Any]) -> tuple[str, bool]:
 class Plugin:
     async def _main(self) -> None:
         self.watcher = asyncio.create_task(self._watch_mode())
-        decky.logger.info(f"Handheld Control ready ({DAEMON})")
+        decky.logger.info(f"Zaviya Control ready ({DAEMON})")
 
     async def _unload(self) -> None:
         self.watcher.cancel()

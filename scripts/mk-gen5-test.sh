@@ -96,7 +96,7 @@ for f in usr/lib/systemd/zram-generator.conf.d/60-steamos-arm-zram.conf \
   install -Dm0644 $OV/$f $R/$f
 done
 HC=$(find $M -maxdepth 6 -type d -path "*homebrew/plugins/konkr-control" | head -1)
-[ -n "$HC" ] || fail "Handheld Control"
+[ -n "$HC" ] || fail "Zaviya Control"
 install -m0644 external-and-mods/Decky/sm8650/konkr-control/main.py $HC/main.py
 install -m0644 external-and-mods/Decky/sm8650/konkr-control/dist/index.js $HC/dist/index.js
 chown -R 1000:1000 $HC

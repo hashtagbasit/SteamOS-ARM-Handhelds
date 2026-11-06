@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Name the installed SteamOS ARM release in /etc/os-release.
+"""Name the installed Zaviya release in /etc/os-release.
 
 Steam's Settings > System shows PRETTY_NAME as "OS Name", and Desktop Mode's
 About page shows it too. Frame's own VERSION_ID and BUILD_ID stay as they
@@ -23,7 +23,10 @@ except (OSError, ValueError):
 if not re.fullmatch(r"\d+(?:\.\d+)*", version or ""):
     sys.exit(0)                           # images before v1.3 don't record their release
 
-want = {"PRETTY_NAME": f'"Unofficial SteamOS ARM {version}"', "VERSION": f'"{version}"'}
+URL = "https://github.com/hashtagbasit/SteamOS-ARM-Port"
+want = {"NAME": '"Zaviya"', "PRETTY_NAME": f'"Zaviya {version}"', "VERSION": f'"{version}"', "LOGO": "zaviya",
+        "HOME_URL": f'"{URL}"', "DOCUMENTATION_URL": f'"{URL}"', "SUPPORT_URL": f'"{URL}/issues"',
+        "BUG_REPORT_URL": f'"{URL}/issues"'}
 for rel in ("etc/os-release", "usr/lib/os-release"):
     path = root / rel
     if not path.is_file() or (rel == "usr/lib/os-release" and str(root) == "/"):

@@ -38,7 +38,7 @@ Item {
             { id: "page:pad", page: "pad", name: "Trackpad", icon: "input-touchpad-symbolic", mask: true },
             { id: "page:keys", page: "keys", name: "Keyboard", icon: "input-keyboard-symbolic", mask: true },
             { id: "page:notes", page: "notes", name: game.name ? "Notes" : "Game Notes", icon: "document-edit-symbolic", mask: true },
-            { id: "page:hub", page: "hub", name: "Loadout", icon: "download-symbolic", mask: true },
+            { id: "page:hub", page: "hub", name: "Zaviya Loadout", icon: "download-symbolic", mask: true },
             { id: "page:bricks", page: "bricks", name: "Bricks", icon: "games-config-board-symbolic", mask: true },
             // the only way in to the bottom screen's own settings (themes, idle
             // timeout, what shows where)

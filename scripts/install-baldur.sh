@@ -151,14 +151,14 @@ echo legion-y700-gen5 > "$R/etc/hostname"
 # Game Mode on the portrait panel (1904x3040): gamescope's rotation shader
 # turns it right, after the Odin 3's drop-in (99-odin3), and touch, which the
 # shader doesn't turn, gets a libinput matrix (measured for "right" on the
-# tablet by the board project). Flip screen (Handheld Control) turns both
+# tablet by the board project). Flip screen (Zaviya Control) turns both
 # the other way; KWin maps touch itself in Desktop Mode.
 mkdir -p "$R/etc/systemd/user/gamescope-session.service.d"
 printf '[Service]\nEnvironment=GAMESCOPE_ORIENTATION=right\n' > "$R/etc/systemd/user/gamescope-session.service.d/99-zz-gen5.conf"
 install -Dm0644 /dev/stdin "$R/usr/lib/udev/rules.d/90-steamos-arm-gen5-touch.rules" <<'RULES'
 # Lenovo Legion Y700 Gen 5: Game Mode runs the portrait panel landscape ("right").
 ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="NVTCapacitiveTouchScreen|NVTCapacitivePen", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"
-# Screen flipped 180 degrees (Handheld Control, /etc/steamos-arm/flip-screen): the other landscape.
+# Screen flipped 180 degrees (Zaviya Control, /etc/steamos-arm/flip-screen): the other landscape.
 ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="NVTCapacitiveTouchScreen|NVTCapacitivePen", TEST=="/etc/steamos-arm/flip-screen", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 -1 1 1 0 0"
 RULES
 grep -qs 'Legion Y700 Gen 5' "$R/etc/xdg/kcminputrc" || cat >> "$R/etc/xdg/kcminputrc" <<'KCM'

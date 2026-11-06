@@ -48,7 +48,7 @@ mkdir -p "$ESP/EFI/BOOT" "$ESP/dtb"
 # a wrong pick boots the other one's kernel (or a stale one: black screen).
 MARK="steamos-arm-boot-$(head -c 6 /dev/urandom | od -An -tx1 | tr -d ' \n')"
 rm -f "$ESP"/steamos-arm-boot-*
-echo "SteamOS ARM Port boot partition (GRUB looks for this file)" >"$ESP/$MARK"
+echo "Zaviya boot partition (GRUB looks for this file)" >"$ESP/$MARK"
 cp "$CACHE/BOOTAA64.EFI" "$ESP/EFI/BOOT/BOOTAA64.EFI"
 cp "$CACHE/QCOMRAMP-CONFIGFILE.EFI" "$ESP/EFI/BOOT/QCOMRAMP.EFI"
 cp "$KOUT/boot/Image" "$ESP/Image"
@@ -64,7 +64,7 @@ set timeout=0
 set default=0
 set gfxpayload=keep
 search --no-floppy --file /$MARK --set=root
-menuentry "SteamOS ARM Port" {
+menuentry "Zaviya" {
     search --no-floppy --file /$MARK --set=root
     chainloader /EFI/BOOT/QCOMRAMP.EFI
     boot
@@ -81,7 +81,7 @@ timeout=0; [[ "$PANEL" == both ]] && timeout=8
 {
   printf 'set timeout=%s\nset default=0\nset gfxpayload=keep\n' "$timeout"
   for p in $PANELS; do
-    name="SteamOS ARM Port"; [[ "$PANEL" == both ]] && name="SteamOS ARM Port (${p^^} panel)"
+    name="Zaviya"; [[ "$PANEL" == both ]] && name="Zaviya (${p^^} panel)"
     cat <<CFG
 
 menuentry "$name" {

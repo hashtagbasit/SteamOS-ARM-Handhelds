@@ -1,12 +1,12 @@
 {
-  "name": "Handheld Control",
+  "name": "Zaviya Control",
   "author": "hashtagbasit",
   "api_version": 1,
   "flags": ["root"],
   "version": "1.1.0",
   "publish": {
     "tags": ["konkr", "pocket-fit", "sm8650", "fan", "rgb", "performance"],
-    "description": "Performance profiles, fan and stick lighting for SteamOS-ARM handhelds.",
+    "description": "Performance profiles, fan and stick lighting for Zaviya handhelds.",
     "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/decky-loader"
   }
 }

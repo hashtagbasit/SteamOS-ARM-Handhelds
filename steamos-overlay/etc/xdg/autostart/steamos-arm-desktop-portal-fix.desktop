@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=SteamOS ARM desktop portal fix
+Name=Zaviya desktop portal fix
 Exec=/usr/lib/steamos-arm/desktop-portal-fix
 OnlyShowIn=KDE;
 NoDisplay=true

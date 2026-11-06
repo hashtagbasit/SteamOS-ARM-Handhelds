@@ -1,4 +1,4 @@
-const manifest = {"name":"Handheld Control"};
+const manifest = {"name":"Zaviya Control"};
 const API_VERSION = 2;
 const internalAPIConnection = window.__DECKY_SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_deckyLoaderAPIInit;
 if (!internalAPIConnection) {
@@ -158,7 +158,7 @@ function findQueryClient() {
         queryClient = DFL.findModuleExport((e) => e && typeof e.getQueryData === "function"
             && typeof e.getQueryCache === "function" && typeof e.setQueryData === "function"
             && typeof e.invalidateQueries === "function") || null;
-    } catch (e) { console.log("Handheld Control: query cache", e); }
+    } catch (e) { console.log("Zaviya Control: query cache", e); }
     return queryClient;
 }
 function trimFrameRates(d) {
@@ -250,7 +250,7 @@ function PasswordModal({ replace, onDone, closeModal }) {
         bOKDisabled: a.length < 4 || a !== b,
         onOK: () => setPassword(a).then((ok) => {
             if (!ok) return setErr("Could not set it (use 4 characters or more, no colon)");
-            toaster.toast({ title: "Handheld Control", body: replace ? "Password changed" : "Password set" });
+            toaster.toast({ title: "Zaviya Control", body: replace ? "Password changed" : "Password set" });
             onDone && onDone();
             closeModal && closeModal();
         }),
@@ -839,7 +839,7 @@ function Content() {
                     description: "Needed for the KONKR, Performance and Quick Access buttons and stick lighting",
                     checked: st.mcu_enabled,
                     onChange: (v) => setMcu(v).then(() => {
-                        toaster.toast({ title: "Handheld Control", body: v ? "MCU link enabled" : "MCU link disabled" });
+                        toaster.toast({ title: "Zaviya Control", body: v ? "MCU link enabled" : "MCU link disabled" });
                         refresh();
                     }),
                 })) : null,
@@ -889,7 +889,7 @@ var index = definePlugin(() => {
         if (!shortFpsWanted() || applyShortFps(true) || ++shortFpsTries > 30) clearInterval(shortFpsTimer);
     }, 2000);
     return {
-        name: "Handheld Control",
+        name: "Zaviya Control",
         content: jsx(Content, {}),
         icon: jsx("div", { style: { fontWeight: 800 }, children: "H" }),
         alwaysRender: false,

@@ -293,6 +293,18 @@ if [[ -z "${GAMESCOPE_BACKLIGHT_PATH:-}" && -n "${TOP_BACKLIGHT:-}" && -e "$TOP_
   export GAMESCOPE_BACKLIGHT_PATH="$TOP_BACKLIGHT"
 fi
 
+# Our movies instead of Steam's when it starts and sleeps. Steam reads this
+# folder before its own, and keeps it across its updates.
+movies="$HOME/.local/share/Steam/config/uioverrides/movies"
+mkdir -p "$movies"
+for m in deck_startup oled_startup bigpicture_startup steam_os_startup steam_os_family_startup startup_machine; do
+  ln -sf /usr/share/zaviya/movies/zaviya-startup.webm "$movies/$m.webm"
+done
+for m in deck-suspend-animation deck-suspend-animation-from-throbber oled-suspend-animation \
+  oled-suspend-animation-from-throbber steam_os_suspend steam_os_suspend_from_throbber; do
+  ln -sf /usr/share/zaviya/movies/zaviya-suspend.webm "$movies/$m.webm"
+done
+
 # Panel orientation override (GAMESCOPE_ORIENTATION=left|right|normal|
 # upsidedown). The RP6 / Odin 2 Portal trees say rotation 270 where the
 # Odin 2 says 90, so those may need left (and the Thor right).
