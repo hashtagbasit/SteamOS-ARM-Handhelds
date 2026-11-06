@@ -12,6 +12,7 @@ wrote it without us.
 import argparse
 import hashlib
 import os
+import re
 import shutil
 import struct
 import sys
@@ -62,7 +63,7 @@ def split_payload(payload):
     return gz, dtbs
 
 
-def compatible(dtb):
+def model(dtb):
     off_struct, off_strings = struct.unpack_from('>II', dtb, 8)
     p = off_struct
     depth = 0
@@ -78,14 +79,14 @@ def compatible(dtb):
             size, nameoff = struct.unpack_from('>II', dtb, p)
             p += 8
             name = dtb[off_strings + nameoff:dtb.index(b'\0', off_strings + nameoff)]
-            if name == b'compatible':
+            if name == b'model':
                 return dtb[p:p + size].split(b'\0')[0].decode()
             p = (p + size + 3) & ~3
         elif token == 4:  # nop
             continue
         else:
             break
-    raise ValueError('DTB has no root compatible')
+    raise ValueError('DTB has no root model')
 
 
 def write_atomic(path, data):
@@ -111,7 +112,8 @@ def sync(boot, force=False):
     gz, dtbs = split_payload(payload)
     if not dtbs:
         raise ValueError('KERNEL has no DTBs')
-    named = {compatible(d).replace(',', '-') + '.dtb': d for d in dtbs}
+    # By model: variants of a device share a compatible.
+    named = {re.sub(r'[^a-z0-9]+', '-', model(d).lower()).strip('-') + '.dtb': d for d in dtbs}
     need = len(gz) + len(initrd) + sum(map(len, named.values())) + (1 << 20)
     if shutil.disk_usage(boot).free < need:
         have = sum(p.stat().st_size for p in (boot / 'Image.gz', boot / 'initrd.img') if p.is_file())
@@ -135,7 +137,9 @@ def sync(boot, force=False):
             old.unlink()
     for name, blob in named.items():
         write_atomic(boot / 'dtbs' / name, blob)
-    lines += ['    fdtdir /dtbs', f'    append {cmdline}', '']
+    # No fdtdir: it takes the first file with the compatible, whichever variant
+    # that is. Without it the bootloader keeps the DTB of the picked model.
+    lines += [f'    append {cmdline}', '']
     conf.parent.mkdir(exist_ok=True)
     write_atomic(conf, '\n'.join(lines).encode())
     write_atomic(boot / STAMP, (stamp + '\n').encode())
