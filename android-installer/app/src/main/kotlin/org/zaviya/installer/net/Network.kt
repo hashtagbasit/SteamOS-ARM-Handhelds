@@ -30,43 +30,58 @@ object Network {
     }
 
     /**
-     * Downloads to [dest] through a ".part" file and resumes one left from before.
-     * [onProgress] gets bytes so far. Throws IOException on failure.
+     * Downloads [parts] in order into one file at [dest], through a ".part" file,
+     * and resumes one left from before. [onProgress] gets bytes so far across all
+     * parts. Throws IOException on failure.
      */
-    fun download(url: String, dest: File, expectedBytes: Long, onProgress: (Long) -> Unit) {
-        val part = File(dest.path + ".part")
-        if (dest.exists() && dest.length() == expectedBytes) { onProgress(expectedBytes); return }
-        var have = if (part.exists()) part.length() else 0L
-        if (have > expectedBytes) { part.delete(); have = 0 }
-        if (have < expectedBytes) {
-            val c = open(url)
-            if (have > 0) c.setRequestProperty("Range", "bytes=$have-")
-            try {
-                val code = c.responseCode
-                if (code == 200 && have > 0) { part.delete(); have = 0 } // server ignored the range
-                else if (code != 200 && code != 206) throw IOException("HTTP $code")
-                RandomAccessFile(part, "rw").use { out ->
-                    out.seek(have)
-                    c.inputStream.use { input ->
-                        val buf = ByteArray(1 shl 16)
-                        var last = 0L
-                        while (true) {
-                            val n = input.read(buf)
-                            if (n < 0) break
-                            out.write(buf, 0, n)
-                            have += n
-                            val now = System.nanoTime()
-                            if (now - last > 250_000_000L) { onProgress(have); last = now }
-                        }
-                    }
+    fun download(parts: List<ImagePart>, dest: File, onProgress: (Long) -> Unit) {
+        val expected = parts.sumOf { it.bytes }
+        val tmp = File(dest.path + ".part")
+        if (dest.exists() && dest.length() == expected) { onProgress(expected); return }
+        var have = if (tmp.exists()) tmp.length() else 0L
+        if (have > expected) { tmp.delete(); have = 0 }
+        RandomAccessFile(tmp, "rw").use { out ->
+            var start = 0L
+            for (p in parts) {
+                val end = start + p.bytes
+                if (have < end) {
+                    have = fetchPart(p.url, out, start, have, onProgress)
+                    if (have != end) { onProgress(have); throw IOException("The download stopped early.") }
                 }
-            } finally {
-                c.disconnect()
+                start = end
             }
         }
         onProgress(have)
-        if (have != expectedBytes) throw IOException("The download stopped early.")
-        if (!part.renameTo(dest)) throw IOException("Couldn't save the download.")
+        if (!tmp.renameTo(dest)) throw IOException("Couldn't save the download.")
+    }
+
+    /** Writes one part, which begins at [start] in [out], carrying on from [from]. Returns the new length. */
+    private fun fetchPart(url: String, out: RandomAccessFile, start: Long, from: Long, onProgress: (Long) -> Unit): Long {
+        var have = from
+        val c = open(url)
+        if (have > start) c.setRequestProperty("Range", "bytes=${have - start}-")
+        try {
+            val code = c.responseCode
+            if (code == 200) have = start // a whole part, because it's new or the server ignored the range
+            else if (code != 206) throw IOException("HTTP $code")
+            out.setLength(have)
+            out.seek(have)
+            c.inputStream.use { input ->
+                val buf = ByteArray(1 shl 16)
+                var last = 0L
+                while (true) {
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    out.write(buf, 0, n)
+                    have += n
+                    val now = System.nanoTime()
+                    if (now - last > 250_000_000L) { onProgress(have); last = now }
+                }
+            }
+        } finally {
+            c.disconnect()
+        }
+        return have
     }
 
     fun sha256(file: File, onProgress: (Long) -> Unit = {}): String {

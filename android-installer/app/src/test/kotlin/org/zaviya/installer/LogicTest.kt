@@ -80,6 +80,31 @@ class ReleaseTest {
         ).joinToString(",") + "]"
         assertEquals(ReleaseLookup.NoImage, ReleaseParser.pick(json, Chip.SM8650))
     }
+
+    @Test fun partNames() {
+        assertEquals("1.5.0", AssetNames.versionOf("zaviya-sm8650-1.5.0.img.zst.002", Chip.SM8650))
+        assertEquals(2, AssetNames.partOf("zaviya-sm8650-1.5.0.img.zst.002", Chip.SM8650))
+        assertNull(AssetNames.partOf("zaviya-sm8650-1.5.0.img.zst", Chip.SM8650))
+        assertEquals("zaviya-sm8650-1.5.0.img.zst", AssetNames.joined("zaviya-sm8650-1.5.0.img.zst.002"))
+        assertNull(AssetNames.versionOf("zaviya-sm8650-1.5.0.7z.001", Chip.SM8650))
+    }
+
+    @Test fun joinsPartsInOrderWhateverOrderTheyAreListed() {
+        val json = "[" + release("v1.5", "SHA256SUMS", "zaviya-sm8650-1.5.0.img.zst.002", "zaviya-sm8650-1.5.0.img.zst.001", "zaviya-sm8650-1.5.0.7z.001") + "]"
+        val r = (ReleaseParser.pick(json, Chip.SM8650) as ReleaseLookup.Found).release
+        assertEquals("1.5.0", r.version)
+        assertEquals("zaviya-sm8650-1.5.0.img.zst", r.assetName)
+        assertEquals(listOf("001", "002"), r.parts.map { it.url.takeLast(3) })
+        assertEquals(200L, r.assetBytes)
+    }
+
+    @Test fun releaseMissingAPartIsPassedOver() {
+        val json = "[" + listOf(
+            release("v1.5", "SHA256SUMS", "zaviya-sm8650-1.5.img.zst.001", "zaviya-sm8650-1.5.img.zst.003"),
+            release("v1.4", "SHA256SUMS", "zaviya-sm8650-1.4.img.zst"),
+        ).joinToString(",") + "]"
+        assertEquals("1.4", (ReleaseParser.pick(json, Chip.SM8650) as ReleaseLookup.Found).release.version)
+    }
 }
 
 class SdRulesTest {

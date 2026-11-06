@@ -28,8 +28,10 @@ minSdk 30, arm64-v8a only. The unit tests also render every screen on the JVM in
 
 ## Where images come from
 
-`Config.kt` holds the repository owner and name and the asset pattern, `zaviya-<soc>-<version>.img.zst`,
-with checksums in `SHA256SUMS`. If the newest releases have no file for the chip, the app says so.
+`Config.kt` holds the repository owner and name and the asset pattern, `zaviya-<soc>-<version>.img.zst`.
+GitHub release files must be under 2 GiB, so releases carry it as `.img.zst.001`, `.002` and so on, made by
+`scripts/package-release.sh`. The app joins the parts and checks the joined file against its line in `SHA256SUMS`.
+A single unsplit `.img.zst` also works. If the newest releases have no complete image for the chip, the app says so.
 
 ## Root
 

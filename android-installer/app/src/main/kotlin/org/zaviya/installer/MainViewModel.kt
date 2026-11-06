@@ -157,7 +157,7 @@ class InstallerViewModel(app: Application) : AndroidViewModel(app) {
             catch (e: Exception) { result = "The download stopped."; set(Screen.DownloadFailed(e.toString())); return@launch }
             try {
                 // These loops block, so they only notice a cancel through their progress calls.
-                Network.download(rel.assetUrl, dest, total) {
+                Network.download(rel.parts, dest) {
                     running.ensureActive()
                     set(Screen.Downloading(it, total))
                     BackgroundDownload.update(DownloadProgress("Getting Zaviya.", percentOf(it)))
