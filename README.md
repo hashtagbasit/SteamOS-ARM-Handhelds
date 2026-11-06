@@ -1,17 +1,21 @@
 <p align="center">
   <a href="https://steamos-arm-port.github.io/">
-    <img src=".github/assets/logo.svg" alt="SteamOS ARM Port" width="112">
+    <img src=".github/assets/logo.svg" alt="Zaviya" width="112">
   </a>
 </p>
 
-<h1 align="center">SteamOS ARM Port</h1>
+<h1 align="center">Zaviya</h1>
 
-<p align="center"><strong>Unofficial SteamOS for Snapdragon handhelds</strong></p>
+<p align="center"><strong>for ARM handhelds</strong></p>
 
 <p align="center">
   Valve's SteamOS for ARM, the one made for the Steam Frame, set up for handhelds
   and tablets: Game Mode, the KDE desktop, PC games through FEX and Proton, and Android apps.
 </p>
+
+<p align="center">Based on Valve's SteamOS. Not affiliated with or endorsed by Valve.</p>
+
+<p align="center">Zaviya used to be called SteamOS ARM Port, in case you are searching for that.</p>
 
 <p align="center">
   <a href="https://github.com/hashtagbasit/SteamOS-ARM-Port/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/hashtagbasit/SteamOS-ARM-Port?include_prereleases&style=flat&color=7c5cf0&label=release"></a>
@@ -50,19 +54,19 @@ What you get:
 
 - Game Mode and Desktop Mode, with the controller showing up as a Steam Deck pad
 - x86 PC games through FEX and ARM64 Proton, plus Epic, GOG and Amazon through Heroic
-- Android apps with the Play Store, and Restart into Android from Handheld Control
+- Android apps with the Play Store, and Restart into Android from Zaviya Control
 - Updates from Settings > System, no reflashing
 - Install to internal storage next to Android, or keep it on a microSD card
 - Game Mode on an external monitor or dock, sound included
 - Lossless Scaling frame gen (lsfg-vk 2.0 and Classic 1.x), Decky and the performance overlay
 - Steam Remote Play with hardware decoding, plus optional PyroWave
-- Loadout, which installs emulators and apps picked for your SoC
+- Zaviya Loadout, which installs emulators and apps picked for your SoC
 - Sleep that lasts, quiet fan curves, and a clean power off before the battery runs flat
 - A dashboard with themes on the bottom screen of the AYN Thor and AYANEO Pocket DS
 
 ## Quick start
 
-1. Flash the OpenABL bootloader for your SoC (ROCKNIX ABL works too), the [ABL guide](https://steamos-arm-port.github.io/getting-started/abl/) walks you through it. Back up your stock ABL first.
+1. Flash the OpenABL bootloader for your SoC (older versions of it work too), the [ABL guide](https://steamos-arm-port.github.io/getting-started/abl/) walks you through it. Back up your stock ABL first.
 2. Download the image for your SoC from [Releases](https://github.com/hashtagbasit/SteamOS-ARM-Port/releases/latest), open the `.001` part with 7-Zip and flash the `.img` inside to a microSD card (32 GB+) with balenaEtcher or Rufus.
 3. Boot the card from the ABL menu and pick your device. First boot takes a couple of minutes.
 
@@ -134,10 +138,10 @@ development is the fastest way to get it there, message me on
 
 ## Credits
 
-The kernels and device support build on [ROCKNIX](https://github.com/ROCKNIX/distribution),
-with fixes shared back and forth with other ARM handheld projects. Thanks to
-everyone who contributed code, and to the testers in the Discord who send logs
-for devices I don't own. The full list of projects and people is in [CREDITS.md](CREDITS.md).
+The kernels and device support build on other people's work, and the fixes go
+back and forth with other ARM handheld projects. Thanks to everyone who
+contributed code, and to the testers in the Discord who send logs for devices I
+don't own. The full list of projects and people is in [CREDITS.md](CREDITS.md).
 
 ## License
 

@@ -1,12 +1,12 @@
-# How SteamOS ARM runs on the KONKR Pocket FIT
+# How Zaviya runs on the KONKR Pocket FIT
 
-Valve's SteamOS ARM (unofficial port) on the **KONKR Pocket FIT (Snapdragon G3 Gen 3 = SM8650, Adreno 750)**, with
+Zaviya, based on Valve's SteamOS for ARM, on the **KONKR Pocket FIT (Snapdragon G3 Gen 3 = SM8650, Adreno 750)**, with
 Pocket FIT-specific controls and a set of native performance fixes. The
 AYANEO Pocket S2 shares the base dtsi and gets a DTB too (untested).
 
 ## Why this works at all
 
-- The SteamOS ARM userspace this project repackages is Valve's
+- The userspace this project repackages is Valve's
   **Steam Frame** image, and the Steam Frame *is* SM8650 / Adreno 750. Valve's
   own Turnip, zink and GPU firmware target this exact GPU, so this build keeps
   the Frame Mesa untouched.
@@ -98,7 +98,7 @@ which would fight `konkrd` over the fan and drive AYN-only LEDs.
 | Area | SM8550 build | Pocket FIT (this project) |
 |------|---------------|--------------------|
 | Kernel | 7.0.14 + Armbian sm8550 | **7.1.2** (base 20260801 SM8650 recipe) + Pocket FIT patches (`external-and-mods/kernel-sm8650/`) |
-| DTB selection | 14-slot index chain | ROCKNIX ABL ≥ 1.1.8 matches the DTB `model` string |
+| DTB selection | 14-slot index chain | OpenABL matches the DTB `model` string |
 | Root | initramfs + `root=UUID=` | tiny busybox initramfs (writes `bootlog.txt` to the FAT partition), `root=PARTUUID=` patched at image pack |
 | GPU userspace | patched A740 Turnip | Frame's stock Turnip/zink (A750) |
 | Controller | `rsinput` serial MCU | USB XInput pad → InputPlumber `deck-uhid` (+ optional MCU link) |
@@ -128,7 +128,8 @@ Output: `/work/steamos-sm8650.img`.
 
 ## Install on the Pocket FIT
 
-1. **ROCKNIX ABL** (`abl_signed-SM8650.elf`, [v1.1.8](https://github.com/ROCKNIX/abl/releases))
+1. **OpenABL** (from the `openabl` folder on the image's BOOT drive, or
+   [its releases](https://github.com/OpenHandheldCollective/OpenABL/releases))
    flashed to `abl_a` and `abl_b`. It replaces the bootloader; Android still
    boots from its menu. Verify the SHA256.
 2. Flash `steamos-sm8650.img` to a microSD (balenaEtcher / `dd`).

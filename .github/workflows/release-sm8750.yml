@@ -1,4 +1,4 @@
-# Promote and publish a tested SteamOS Odin 3 (Snapdragon 8 Elite / SM8750) image artifact to a GitHub Release.
+# Promote and publish a tested Zaviya Odin 3 (Snapdragon 8 Elite / SM8750) image artifact to a GitHub Release.
 #
 # Decoupled from build-image-sm8750.yml so images can be downloaded, flashed to hardware,
 # and verified before being published to the public.
@@ -98,26 +98,26 @@ jobs:
           mkdir -p ./download
           gh run download "$IMAGE_RUN_ID" \
             --repo "${{ github.repository }}" \
-            -n steamos-odin3-image \
+            -n zaviya-odin3-image \
             -D ./download/
           ls -la ./download/
 
       - name: Prepare release assets
         run: |
           TAG="${{ inputs.tag_name }}"
-          if [ ! -f ./download/steamos-odin3.img.zst ]; then
-            echo "::error::Artifact steamos-odin3.img.zst not found in run $IMAGE_RUN_ID!"
+          if [ ! -f ./download/zaviya-odin3.img.zst ]; then
+            echo "::error::Artifact zaviya-odin3.img.zst not found in run $IMAGE_RUN_ID!"
             exit 1
           fi
 
           echo "Decompressing sparse image from zstd..."
-          zstd -d --sparse ./download/steamos-odin3.img.zst -o ./steamos-odin3.img
+          zstd -d --sparse ./download/zaviya-odin3.img.zst -o ./zaviya-odin3.img
           rm -rf ./download
 
           echo "Packaging into multi-volume 7z archive (< 2 GiB per volume)..."
-          ARCHIVE_BASE="steamos-arm-handhelds-sm8750-${TAG}.7z"
-          7z a -mx1 -v1900m "${ARCHIVE_BASE}" ./steamos-odin3.img
-          rm -f ./steamos-odin3.img
+          ARCHIVE_BASE="zaviya-sm8750-${TAG}.7z"
+          7z a -mx1 -v1900m "${ARCHIVE_BASE}" ./zaviya-odin3.img
+          rm -f ./zaviya-odin3.img
 
           sha256sum ${ARCHIVE_BASE}.* > SHA256SUMS
 
@@ -132,7 +132,7 @@ jobs:
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
-            steamos-arm-handhelds-sm8750-*.7z*
+            zaviya-sm8750-*.7z*
             SHA256SUMS
 
       - name: Publish to GitHub Release
@@ -151,7 +151,7 @@ jobs:
             FLAGS+=(--draft)
           fi
 
-          ASSETS=(steamos-arm-handhelds-sm8750-${TAG}.7z.* SHA256SUMS)
+          ASSETS=(zaviya-sm8750-${TAG}.7z.* SHA256SUMS)
           echo "Publishing release '$TAG' ($TITLE) with assets: ${ASSETS[*]}..."
 
           # Upload to existing release if present, otherwise create new release

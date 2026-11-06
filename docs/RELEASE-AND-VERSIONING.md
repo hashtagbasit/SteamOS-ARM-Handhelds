@@ -1,6 +1,6 @@
-# Release and Versioning Strategy — SteamOS ARM Handhelds
+# Release and Versioning Strategy — Zaviya
 
-This document outlines the version management architecture, component upgrade lifecycles, and automated release pipeline for the SteamOS ARM handheld ports (AYN Odin 3 / SM8750).
+This document outlines the version management architecture, component upgrade lifecycles, and automated release pipeline for the Zaviya handheld ports (AYN Odin 3 / SM8750).
 
 ---
 
@@ -52,7 +52,7 @@ It defines:
 ## 3. Component Upgrade Runbooks
 
 ### A. Upgrading the Valve SteamOS Base (`STEAMOS_BUILD`)
-Valve periodically updates the SteamOS ARM rootfs for the Steam Frame on `steamdeck-images.steamos.cloud`.
+Valve periodically updates its SteamOS for ARM rootfs for the Steam Frame on `steamdeck-images.steamos.cloud`.
 1. Update `STEAMOS_BUILD` and `STEAMOS_BUNDLE` in `versions.env`.
 2. Trigger `build-image-sm8750.yml` (or run `./make-steamos-sm8750.sh` locally).
 3. The script automatically fetches the new `.raucb` bundle and reassembles the updated `rootfs.img` via casync.
@@ -87,7 +87,7 @@ To ensure quality and prevent non-booting images from reaching end users, image 
 ┌────────────────────────────────────────────────────────┐
 │  build-image-sm8750.yml (The Builder)                  │
 │  • Trigger: workflow_dispatch (manual test builds)      │
-│  • Output: steamos-odin3-image Actions artifact        │
+│  • Output: zaviya-odin3-image Actions artifact        │
 │  • Safe to test any commit or overlay change           │
 └──────────────────────────┬─────────────────────────────┘
                            │
@@ -105,11 +105,11 @@ To ensure quality and prevent non-booting images from reaching end users, image 
 
 ### Step 1: Building a Test Image (`build-image-sm8750.yml`)
 1. Trigger the **Build Odin 3 (8 Elite) Image** workflow via `workflow_dispatch` on GitHub Actions.
-2. The workflow compiles the rootfs and uploads the compressed image as a workflow artifact named `steamos-odin3-image` (containing `steamos-odin3.img.zst` and `.sha256`).
+2. The workflow compiles the rootfs and uploads the compressed image as a workflow artifact named `zaviya-odin3-image` (containing `zaviya-odin3.img.zst` and `.sha256`).
 3. Download the artifact from the Actions run summary, flash to your micro-SD card:
    ```bash
-   zstd -d steamos-odin3.img.zst -o steamos-odin3.img
-   sudo dd if=steamos-odin3.img of=/dev/sdX bs=4M status=progress conv=fsync
+   zstd -d zaviya-odin3.img.zst -o zaviya-odin3.img
+   sudo dd if=zaviya-odin3.img of=/dev/sdX bs=4M status=progress conv=fsync
    ```
 4. Verify hardware boot on the Odin 3 (DSI-1 display orientation, controls, audio, WiFi, and Steam login).
 

@@ -1,6 +1,6 @@
 # Credits
 
-**SteamOS ARM Port** is an unofficial port of Valve's SteamOS ARM to Snapdragon 8 Gen 3
+**Zaviya** (it used to be called SteamOS ARM Port) is based on Valve's SteamOS for ARM and runs it on Snapdragon 8 Gen 3
 (SM8650: KONKR Pocket FIT, AYANEO Pocket S2) and 8 Gen 2 (SM8550: AYN, AYANEO
 and Retroid handhelds). Some of its groundwork (the image builder and a few scripts) came
 from MaSi's **SteamOS-ARM-SM8550**, so everything MaSi credits below still applies.
@@ -25,6 +25,7 @@ from MaSi's **SteamOS-ARM-SM8550**, so everything MaSi credits below still appli
 | **lsfg-vk 2.0** by PancakeTAS | https://lsfg-vk.dev | Frame generation layer. The ARM64 build shipped here is compiled from the official source with no code changes; licensed under [CC BY-NC-ND 4.0](sm8650-overlay/usr/share/licenses/lsfg-vk/LICENSE.txt) |
 | **lsfg-vk 1.x** by PancakeTAS, fork by xXJSONDeruloXx | https://github.com/xXJSONDeruloXx/lsfg-vk | Older frame generation layer (MIT) in `external-and-mods/lsfg-vk/` |
 | **decky-lsfg-vk** | https://github.com/xXJSONDeruloXx/decky-lsfg-vk | Frame generation Decky plugin |
+| **Jost** by The Jost Project Authors | https://github.com/indestructible-type , `branding/logo/Jost-OFL.txt` | Font of the Zaviya logo, SIL OFL 1.1, converted to outlines |
 
 ---
 
@@ -119,7 +120,7 @@ Inherited from **SteamOS-Ubuntu**. See
 | **MESA Easy Manager** | https://github.com/MaSieS4Fun/MESA-Easy-Manager | Turnip / Mesa helper |
 | **Proton ARM Easy Manager** | In-tree / inspired by ProtonPlus | ARM Proton helper |
 | **Steam ROM Manager** | https://github.com/SteamGridDB/steam-rom-manager | Desktop launcher |
-| **Easy UFS Install** | `external-and-mods/ufs-install/` (MaSi-OS UFS lineage) | Internal UFS install: ROCKNIX + STORAGE + HOME |
+| **Zaviya Installer** | `external-and-mods/ufs-install/` (MaSi-OS UFS lineage) | Internal UFS install: ROCKNIX + STORAGE + HOME |
 
 ---
 

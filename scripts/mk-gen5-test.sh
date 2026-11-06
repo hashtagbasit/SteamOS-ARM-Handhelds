@@ -158,7 +158,7 @@ cp $KO/boot/Image "$O/Image-gen5"
 cp scripts/gen5/install-gen5.sh scripts/gen5/boot-repack.py external-and-mods/baldur/firmware.tsv "$O/"
 cp -r external-and-mods/baldur/switch-to-steamos "$O/"
 cd "$O"; sha256sum Image-gen5 steamos-gen5-card.img > SHA256SUMS; cat SHA256SUMS
-f="${ARCHIVE:-steamos-arm-port-lenovo-legion-y700-gen5-v1.3.0-test$N.7z}"
+f="${ARCHIVE:-zaviya-lenovo-legion-y700-gen5-v1.3.0-test$N.7z}"
 AD="${ARCHIVE_DIR:-..}"; mkdir -p "$AD"; AD=$(cd "$AD" && pwd)
 rm -f "$AD/$f"; 7z a -mx=3 -mmt=8 "$AD/$f" Image-gen5 steamos-gen5-card.img install-gen5.sh boot-repack.py firmware.tsv switch-to-steamos SHA256SUMS >/dev/null
 cd "$AD"; sha256sum $f | tee $f.sha256; ls -l $f

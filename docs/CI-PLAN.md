@@ -1,4 +1,4 @@
-# CI Build Plan — SteamOS ARM (Odin 3 / SM8750)
+# CI Build Plan — Zaviya (Odin 3 / SM8750)
 
 > **Status:** Draft / MVP
 > **Target:** GitHub Actions workflows to build and publish the Odin 3 image as an artifact.
@@ -95,7 +95,7 @@ and the downloaded SteamOS rootfs.
 - **Triggers:** `workflow_dispatch` only
 - **Requires:** Successful `build-kernel-sm8750.yml` and `build-mesa-sm8750.yml` runs
 - **Build time:** ~30–45 min (dominated by rootfs download)
-- **Artifact:** `steamos-odin3.img.zst` (~6–8 GB compressed)
+- **Artifact:** `zaviya-odin3.img.zst` (~6–8 GB compressed)
 
 ### Seed & First-Boot Experience
 

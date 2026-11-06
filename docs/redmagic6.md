@@ -4,14 +4,14 @@ Experimental port to the REDMAGIC 6 (Nubia NX669J), built for the North
 American / global model (NX669J-UN firmware). It is a phone, not a handheld
 like the other devices here, so a few things work differently:
 
-- **No SD card slot.** SteamOS replaces Android on the internal storage (the
+- **No SD card slot.** Zaviya replaces Android on the internal storage (the
   `userdata` partition). Installing it erases the phone.
 - **Nubia's own bootloader** (unlocked) boots it from the `boot` and
-  `vendor_boot` partitions. There is no ROCKNIX ABL and no device menu.
+  `vendor_boot` partitions. There is no OpenABL and no device menu.
 - **No built-in gamepad.** Use a Bluetooth or USB controller. The capacitive
   shoulder triggers show up as their own input devices (4 zones).
 - **No release image.** Nubia's firmware cannot be redistributed, so you
-  build the kit yourself from Nubia's OTA and a SteamOS ARM release (below).
+  build the kit yourself from Nubia's OTA and a Zaviya release (below).
 
 > [!WARNING]
 > Tested on one NX669J-UN only. Game Mode, Wi-Fi, Bluetooth pads, speakers,
@@ -34,7 +34,7 @@ scripts/extract-nx669j-firmware.sh NX669J-update.zip
 external-and-mods/kernel-sm8350/build.sh
 
 # 3. The kit, from a release's rootfs (it is the same on every chip)
-./make-steamos-sm8350.sh --from-img steamos-arm-handhelds-v1.2.img
+./make-steamos-sm8350.sh --from-img zaviya-v1.2.img
 ```
 
 Instead of a release, step 3 can take the rootfs `make-steamos-sm8650.sh`
@@ -66,7 +66,7 @@ fastboot reboot
 
 If it comes straight back to fastboot (about 15 s), the bootloader refused
 the image. `vendor_boot-debug.img` boots with a verbose console and, when it
-finds no SteamOS on `userdata` (expected on this first try), opens a debug
+finds no Zaviya on `userdata` (expected on this first try), opens a debug
 shell over USB:
 
 - a serial port (`/dev/ttyACM0` on Linux, a COM port on Windows): e.g.

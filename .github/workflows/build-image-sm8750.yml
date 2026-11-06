@@ -1,4 +1,4 @@
-# Build the final flashable SteamOS Odin 3 (Snapdragon 8 Elite / SM8750) image.
+# Build the final flashable Zaviya Odin 3 (Snapdragon 8 Elite / SM8750) image.
 #
 # Depends on pre-built artifacts from build-kernel-sm8750.yml and build-mesa-sm8750.yml.
 # Run those first, then trigger this workflow.
@@ -9,7 +9,7 @@ on:
     inputs:
       kernel_source:
         description: >-
-          Kernel source: 'source' (custom SteamOS kernel with tracefs, verified) or 'prebuilt' (base 7.2.0 release fallback)
+          Kernel source: 'source' (custom Zaviya kernel with tracefs, verified) or 'prebuilt' (base 7.2.0 release fallback)
         required: false
         default: 'source'
         type: choice
@@ -201,7 +201,7 @@ jobs:
           df -h /
 
       # ── Build the image ──────────────────────────────────────────────
-      - name: Build SteamOS Odin 3 image
+      - name: Build Zaviya Odin 3 image
         run: |
           if [ "${{ inputs.kernel_source }}" = "source" ] || [ -n "${{ inputs.kernel_run_id }}" ]; then
             export SM8750_KERNEL=source
@@ -242,16 +242,16 @@ jobs:
           IMG="${STEAMOS_WORK}/steamos-odin3.img"
           echo "Compressing $IMG ..."
           ls -lh "$IMG"
-          zstd -T0 -3 "$IMG" -o steamos-odin3.img.zst
-          ls -lh steamos-odin3.img.zst
-          sha256sum steamos-odin3.img.zst > steamos-odin3.img.zst.sha256
+          zstd -T0 -3 "$IMG" -o zaviya-odin3.img.zst
+          ls -lh zaviya-odin3.img.zst
+          sha256sum zaviya-odin3.img.zst > zaviya-odin3.img.zst.sha256
 
       - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: steamos-odin3-image
+          name: zaviya-odin3-image
           path: |
-            steamos-odin3.img.zst
-            steamos-odin3.img.zst.sha256
+            zaviya-odin3.img.zst
+            zaviya-odin3.img.zst.sha256
           retention-days: 14
           compression-level: 0  # already zstd compressed
