@@ -100,23 +100,6 @@ for p in root.glob("localization/steamui_*-json.js"):
         changed += 1
         print(f"named the welcome title in {p.name}", file=sys.stderr)
 
-# Images ship ForceOOBE so a new install gets Steam's setup. Steam only clears
-# it on its factory path, so setup would come back after every restart. Clear it
-# when setup completes, with the call Steam itself uses. Login completes it too.
-DONE = 'SetOOBEComplete(){console.warn("SetOOBEComplete");'
-for p in list(root.glob("chunk*.js")) + list(root.glob("library.js")):
-    txt = p.read_text(errors="replace")
-    if DONE not in txt:
-        continue
-    m = re.search(r'\(0,([\w$]+\.[\w$]+)\)\("force_oobe",!1\)', txt)
-    if not m:
-        print(f"no force_oobe setter in {p.name}", file=sys.stderr)
-        continue
-    done_new = DONE + f'(0,{m.group(1)})("force_oobe",!1);'
-    if done_new not in txt:
-        p.write_text(txt.replace(DONE, done_new))
-        changed += 1
-        print(f"setup completion clears force_oobe in {p.name}", file=sys.stderr)
 print(f"steamui files patched: {changed}", file=sys.stderr)
 PY
 exit 0
