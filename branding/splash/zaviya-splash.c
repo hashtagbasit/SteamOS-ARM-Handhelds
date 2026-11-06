@@ -4,7 +4,6 @@
  * picture up so there's no black gap before gamescope.
  *
  *   zaviya-splash                  run on the panel
- *   zaviya-splash --intro DIR      write the intro as BMP frames (bootloader logo)
  *   zaviya-splash --movie DIR      write the Steam startup movie frames
  *
  * SIGUSR1 means the session is starting. No libdrm, so it can start before
@@ -212,32 +211,6 @@ static int write_bmp(const char *path, const struct picture *pic, const struct l
 /* Same size as on a 1080p panel, so the handover doesn't jump. */
 #define BMP_W 740
 #define BMP_H 594
-#define INTRO_FPS 15
-
-static int write_intro(const char *dir)
-{
-	struct picture pic;
-	char path[4096];
-	int frames = (int)(INTRO_S * INTRO_FPS) + 1;
-	FILE *f;
-
-	if (load_picture(&pic, BMP_W, BMP_H))
-		return 1;
-	for (int i = 0; i < frames; i++) {
-		struct look l = intro_look((float)i / INTRO_FPS);
-
-		snprintf(path, sizeof(path), "%s/%03d.bmp", dir, i);
-		if (write_bmp(path, &pic, &l))
-			return 1;
-	}
-	snprintf(path, sizeof(path), "%s/fps", dir);
-	f = fopen(path, "w");
-	if (!f)
-		return 1;
-	fprintf(f, "%d\n", INTRO_FPS);
-	fclose(f);
-	return 0;
-}
 
 /* Starts where the panel left off, breathes, and fades into Steam. */
 static int write_movie(const char *dir)
@@ -583,8 +556,6 @@ static int run_on_panel(void)
 
 int main(int argc, char **argv)
 {
-	if (argc == 3 && !strcmp(argv[1], "--intro"))
-		return write_intro(argv[2]);
 	if (argc == 3 && !strcmp(argv[1], "--movie"))
 		return write_movie(argv[2]);
 #ifndef NO_DRM

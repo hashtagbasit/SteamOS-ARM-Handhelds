@@ -158,33 +158,13 @@ def sync(boot, force=False):
     return True
 
 
-def sync_logo(boot, src):
-    """The bootloader's boot logo. One the user put there themselves stays."""
-    dst = boot / 'logo'
-    mark = dst / '.zaviya'
-    if not src.is_dir() or (dst.exists() and not mark.exists()):
-        return
-    frames = {p.name: p for p in src.iterdir() if p.is_file()}
-    need = sum(p.stat().st_size for p in frames.values())
-    have = sum(p.stat().st_size for p in dst.glob('*')) if dst.exists() else 0
-    if need == have or shutil.disk_usage(boot).free < need - have + (1 << 20):
-        return
-    dst.mkdir(exist_ok=True)
-    mark.touch()
-    for name, path in frames.items():
-        write_atomic(dst / name, path.read_bytes())
-    os.sync()
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--boot', default='/boot', type=Path)
     ap.add_argument('--force', action='store_true')
-    ap.add_argument('--logo', default='/usr/share/zaviya/logo', type=Path)
     a = ap.parse_args()
     try:
         print('updated' if sync(a.boot, a.force) else 'up to date')
-        sync_logo(a.boot, a.logo)
     except (ValueError, OSError, struct.error) as e:
         print(f'kernel-efi-sync: {e}', file=sys.stderr)
         return 1

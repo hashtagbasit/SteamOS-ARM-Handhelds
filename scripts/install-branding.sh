@@ -17,10 +17,7 @@ install -D -m0644 "$OVL/usr/lib/systemd/system/sddm.service.d/20-zaviya-splash.c
 mkdir -p "$R/usr/lib/systemd/system/sysinit.target.wants"
 ln -sfn ../zaviya-splash.service "$R/usr/lib/systemd/system/sysinit.target.wants/zaviya-splash.service"
 
-# Frames for the bootloader's boot logo, kernel-efi-sync puts them on BOOT.
-rm -rf "$R/usr/share/zaviya/logo"
-install -d "$R/usr/share/zaviya/logo" "$R/usr/share/zaviya/movies"
-"$R/usr/lib/steamos-arm/zaviya-splash" --intro "$R/usr/share/zaviya/logo"
+install -d "$R/usr/share/zaviya/movies"
 install -m0644 "$B"/movies/*.webm "$R/usr/share/zaviya/movies/"
 
 # The logo as apps and the login screen use it.
