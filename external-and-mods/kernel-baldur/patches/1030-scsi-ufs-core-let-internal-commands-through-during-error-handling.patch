@@ -1,0 +1,31 @@
+From: Zaviya
+Subject: [PATCH] scsi: ufs: core: let internal commands through during error handling
+
+Error recovery quiesces the whole tagset, which includes the pseudo SCSI
+device that internal commands are sent on. Recovery then issues NOP OUT
+and other device commands that can never be dispatched, so it stalls and
+UFS I/O freezes. Unquiesce the pseudo device once the tagset is quiet, and
+quiesce it again before the tagset is released, to keep the counts even.
+---
+--- a/drivers/ufs/core/ufshcd.c
++++ b/drivers/ufs/core/ufshcd.c
+@@ -6764,13 +6764,19 @@ static void ufshcd_err_handling_prepare(struct ufs_hba *hba)
+ 		ufshcd_clk_scaling_allow(hba, false);
+ 	}
+ 	/* Wait for ongoing ufshcd_queuecommand() calls to finish. */
+ 	blk_mq_quiesce_tagset(&hba->host->tag_set);
++	/*
++	 * Internal commands are submitted on the pseudo SCSI device. Let them
++	 * through so that the error handler can recover the link.
++	 */
++	blk_mq_unquiesce_queue(hba->host->pseudo_sdev->request_queue);
+ 	cancel_work_sync(&hba->eeh_work);
+ }
+ 
+ static void ufshcd_err_handling_unprepare(struct ufs_hba *hba)
+ {
++	blk_mq_quiesce_queue_nowait(hba->host->pseudo_sdev->request_queue);
+ 	blk_mq_unquiesce_tagset(&hba->host->tag_set);
+ 	ufshcd_release(hba);
+ 	if (ufshcd_is_clkscaling_supported(hba))
+ 		ufshcd_clk_scaling_suspend(hba, false);
