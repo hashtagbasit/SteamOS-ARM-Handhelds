@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] regulator: core: log missing suspend configuration at debug level
 
 With rpmh-regulator implementing set_suspend_mode, every rail without a

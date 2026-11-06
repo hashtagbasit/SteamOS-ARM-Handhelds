@@ -1,6 +1,6 @@
 
 /*
- * SteamOS ARM additions for the AYANEO Pocket DMG (appended to the base
+ * Zaviya additions for the AYANEO Pocket DMG (appended to the base
  * qcs8550-ayaneo-pocketdmg.dts by kernel-common/build.sh).
  *
  * The touch node was written for the vendor "hyn" driver (vdd_ana-supply,

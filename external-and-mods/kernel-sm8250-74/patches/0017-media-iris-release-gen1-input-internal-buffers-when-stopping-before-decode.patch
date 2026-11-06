@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] media: iris: release gen1 input internal buffers when stopping before decode
 
 Stopping the input queue before capture is set up sends SESSION_STOP and

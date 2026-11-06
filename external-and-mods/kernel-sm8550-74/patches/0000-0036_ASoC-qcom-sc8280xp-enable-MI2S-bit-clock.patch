@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] ASoC: qcom: sc8280xp: enable the MI2S bit clock around MI2S streams
 
 Cards served by this driver can carry MI2S BE dai-links (the AYN Odin 2 /

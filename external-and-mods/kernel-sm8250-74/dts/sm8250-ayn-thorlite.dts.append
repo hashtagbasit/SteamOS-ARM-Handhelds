@@ -1,6 +1,6 @@
 
 /*
- * SteamOS ARM additions for the AYN Thor Lite (appended to the base
+ * Zaviya additions for the AYN Thor Lite (appended to the base
  * sm8250-ayn-thorlite.dts by kernel-common/build.sh).
  */
 

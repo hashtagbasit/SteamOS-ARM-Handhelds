@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] drm/msm/dp: stop audio before the main link goes idle
 
 On unplug, msm_dp_display_atomic_disable() pushes the main link to idle

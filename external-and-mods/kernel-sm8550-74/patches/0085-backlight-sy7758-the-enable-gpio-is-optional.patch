@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] backlight: sy7758: the enable GPIO is optional
 
 On boards that keep the chip enabled in hardware the device tree has no

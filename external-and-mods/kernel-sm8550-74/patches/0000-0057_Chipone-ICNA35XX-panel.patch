@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] drm/panel: chipone-icna35xx: use the base tree's driver (chipone,icna3512/3520)
 
 ---

@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] ASoC: codecs: wcd939x: fix the HPHL/HPHR Volume controls
 
 The HPHL and HPHR Volume controls were carried over from wcd938x, where

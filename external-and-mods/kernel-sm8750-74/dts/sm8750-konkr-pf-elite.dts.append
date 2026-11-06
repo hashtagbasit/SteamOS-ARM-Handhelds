@@ -1,5 +1,5 @@
 /*
- * SteamOS ARM additions for the KONKR Pocket FIT Elite (appended to
+ * Zaviya additions for the KONKR Pocket FIT Elite (appended to
  * sm8750-konkr-pf-elite.dts by kernel-common/build.sh). s2idle (as the reference portOS):
  * the Wi-Fi WAKE# line is active low, read as active high it can wake the SoC
  * straight back up; the codec keeps these rails enabled through the sleep,

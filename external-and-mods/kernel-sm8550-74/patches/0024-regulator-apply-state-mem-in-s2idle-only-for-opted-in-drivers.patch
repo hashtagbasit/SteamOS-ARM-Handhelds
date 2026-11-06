@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] regulator: apply regulator-state-mem in s2idle only for opted-in drivers
 
 Mapping s2idle to regulator-state-mem for every regulator changes

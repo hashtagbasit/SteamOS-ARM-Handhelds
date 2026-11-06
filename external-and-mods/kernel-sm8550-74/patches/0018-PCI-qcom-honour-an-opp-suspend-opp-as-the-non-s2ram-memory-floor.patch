@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] PCI: qcom: honour an opp-suspend OPP as the non-S2RAM memory floor
 
 On OPP platforms qcom_pcie_suspend_noirq() drops the OPP to NULL for

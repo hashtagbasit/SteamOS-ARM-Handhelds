@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] drm/panel: icna35xx: use the reference port driver
 
 Linux 7.4 has its own icna35xx driver with different compatibles and

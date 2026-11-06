@@ -774,7 +774,7 @@ static bool have_overlay_planes(struct drm_t *drm)
 }
 
 extern void mangoapp_output_update( uint64_t vblanktime );
-// SteamOS-ARM second screen, the compositor holding the lease: another
+// Zaviya second screen, the compositor holding the lease: another
 // program can be lent the same lease (an emulator drawing its touch screen on
 // the bottom panel). Meanwhile this gamescope is paused like a VT switch, its
 // flip reader is parked (the lease's event queue is shared, and the events
@@ -901,7 +901,7 @@ void flip_handler_thread_run(void)
 	drm_log.debugf("page_flip_handler_thread exiting");
 }
 
-// SteamOS-ARM second screen: see create_connector_lease().
+// Zaviya second screen: see create_connector_lease().
 static const char *s_pszLeaseConnector = getenv( "GAMESCOPE_LEASE_CONNECTOR" );
 static int s_nLeaseFd = -1;
 static uint32_t s_uLeasedConnectorId = 0;
@@ -954,7 +954,7 @@ static bool refresh_state( drm_t *drm )
 			}
 		}
 
-		// SteamOS-ARM: lent to the second-screen compositor.
+		// Zaviya: lent to the second-screen compositor.
 		if ( uConnectorId == s_uLeasedConnectorId || ( s_nLeaseFd >= 0 && is_lease_connector( pConnector ) ) )
 		{
 			drmModeFreeConnector( pConnector );
@@ -1615,7 +1615,7 @@ gamescope_liftoff_log_handler(enum liftoff_log_priority liftoff_priority, const 
 }
 
 // ---------------------------------------------------------------------------
-// SteamOS-ARM: second screen (AYN Thor, AYANEO Pocket DS).
+// Zaviya: second screen (AYN Thor, AYANEO Pocket DS).
 //
 // GAMESCOPE_LEASE_CONNECTOR=<name> keeps that connector out of this gamescope
 // and lends it, together with a spare CRTC and primary plane, to another
@@ -2144,7 +2144,7 @@ bool init_drm(struct drm_t *drm, int width, int height, int refresh)
 	if (drmGetCap(drm->fd, DRM_CAP_ADDFB2_MODIFIERS, &cap) == 0 && cap != 0) {
 		drm->allow_modifiers = true;
 	}
-	// SteamOS-ARM: linear scanout buffers only (no tiling or UBWC), for display
+	// Zaviya: linear scanout buffers only (no tiling or UBWC), for display
 	// drivers that list compressed formats they don't show correctly.
 	if ( drm->allow_modifiers && env_to_bool( getenv( "GAMESCOPE_DISABLE_MODIFIERS" ) ) )
 	{
@@ -2241,7 +2241,7 @@ bool init_drm(struct drm_t *drm, int width, int height, int refresh)
 	// 2. When compositing HDR content as a fallback when we undock, it avoids introducing
 	// a bunch of horrible banding when going to G2.2 curve.
 	// It ensures that we can dither that.
-	// SteamOS-ARM: GAMESCOPE_PREFER_8BIT scans out 8 bpc like a desktop
+	// Zaviya: GAMESCOPE_PREFER_8BIT scans out 8 bpc like a desktop
 	// compositor, for display drivers whose 10-bit scanout stays black.
 	g_nDRMFormat = DRM_FORMAT_INVALID;
 	if ( env_to_bool( getenv( "GAMESCOPE_PREFER_8BIT" ) ) ) {
@@ -3197,7 +3197,7 @@ namespace gamescope
 
 	void CDRMConnector::ParseEDID()
 	{
-		// SteamOS-ARM-SM8650: DSI panels (KONKR Pocket FIT) have no EDID. Without
+		// Zaviya: DSI panels (KONKR Pocket FIT) have no EDID. Without
 		// this, the early returns below skip the "unknown internal display ->
 		// use every listed mode's refresh" fallback, the refresh table stays
 		// empty and Steam offers no refresh-rate slider.

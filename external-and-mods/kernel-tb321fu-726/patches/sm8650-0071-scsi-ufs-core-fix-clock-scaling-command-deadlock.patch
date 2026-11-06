@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] scsi: ufs: core: fix clock scaling command deadlock
 
 Take the clock-scaling writer lock, and the write-booster mutex where

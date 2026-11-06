@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] ASoC: qcom: sc8280xp: suspend the card and its streams
 
 The card sets no PM ops, and qcom_snd_parse_of() marks every DPCM link

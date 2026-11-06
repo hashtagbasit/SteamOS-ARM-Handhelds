@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] ASoC: codecs: lpass-tx-macro: track every active decimator
 
 The capture mixer kept a single active_decimator per AIF next to the

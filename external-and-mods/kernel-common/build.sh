@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Kernel for SteamOS ARM, one build per SoC:
+# Kernel for Zaviya, one build per SoC:
 #   bash external-and-mods/kernel-common/build.sh sm8650|sm8550
 # (external-and-mods/kernel-<soc>/build.sh does the same).
 #

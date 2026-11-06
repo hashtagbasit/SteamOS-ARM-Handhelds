@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] PCI: host-common: let only endpoints veto D3cold
 
 The root port is still in D0 when the host controller suspends, so

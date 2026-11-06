@@ -7,7 +7,7 @@ charging and positive while discharging.
 Taken from https://github.com/GUF296/linux branch TB321FU-7.1.1
 (5df8e852e), the Lenovo Legion Tab Gen 3 / Y700 2025 (TB321FU) bring-up.
 
-Rebased onto 7.2.8 for SteamOS ARM Port: the battery descriptor choice moved
+Rebased onto 7.2.8 for Zaviya: the battery descriptor choice moved
 in the probe.
 
 ---

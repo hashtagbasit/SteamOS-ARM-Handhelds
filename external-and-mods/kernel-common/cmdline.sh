@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ABL cmdline for SteamOS ARM. ABL picks the DTB by model, never put
+# ABL cmdline for Zaviya. ABL picks the DTB by model, never put
 # devicetree=/dtb= here. root must be PARTUUID (or /dev/…), the initramfs
 # does not resolve root=UUID=.
 #

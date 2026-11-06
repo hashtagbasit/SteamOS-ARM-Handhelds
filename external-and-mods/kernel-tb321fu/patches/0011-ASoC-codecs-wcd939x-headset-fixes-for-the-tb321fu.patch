@@ -6,7 +6,7 @@ Headset detection changes from the TB321FU bring-up.
 Taken from https://github.com/GUF296/linux branch TB321FU-7.1.1
 (5df8e852e), the Lenovo Legion Tab Gen 3 / Y700 2025 (TB321FU) bring-up.
 
-Rebased onto 7.2.8 for SteamOS ARM Port: the codec probe waits with
+Rebased onto 7.2.8 for Zaviya: the codec probe waits with
 sdw_slave_wait_for_init() there.
 
 ---

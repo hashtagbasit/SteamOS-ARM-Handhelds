@@ -34,7 +34,7 @@ if grep -qw 'steamos.screenlog=1' /proc/cmdline; then
       # then what the display hardware was scanning out.
       printf '\033[2J\033[H'
       {
-        echo "=== SteamOS ARM debug report 1/3, uptime $(cut -d' ' -f1 /proc/uptime)s: take a photo ==="
+        echo "=== Zaviya debug report 1/3, uptime $(cut -d' ' -f1 /proc/uptime)s: take a photo ==="
         echo "--- firmware copy"
         journalctl -b -o cat -u steamos-arm-tablet-firmware.service | grep -vE 'searching|own copy' | tail -n 8
         echo "--- display and GPU (kernel)"
@@ -47,7 +47,7 @@ if grep -qw 'steamos.screenlog=1' /proc/cmdline; then
       sleep 30
       printf '\033[2J\033[H'
       {
-        echo "=== SteamOS ARM debug report 2/3: take a photo ==="
+        echo "=== Zaviya debug report 2/3: take a photo ==="
         journalctl -b -o cat _UID=1000 | grep -iE 'gamescope|drm|vulkan|vk_|wsi|xwayland' | grep -viE 'steamvr|openvr|pipewire' | head -n 75
       } 2>&1 | cut -c1-118
       sleep 30
@@ -55,7 +55,7 @@ if grep -qw 'steamos.screenlog=1' /proc/cmdline; then
       # and connector state.
       printf '\033[2J\033[H'
       {
-        echo "=== SteamOS ARM debug report 3/3: display state in Game Mode, take a photo ==="
+        echo "=== Zaviya debug report 3/3: display state in Game Mode, take a photo ==="
         awk '/^plane\[/ { p = $0; keep = 0; next }
              p != "" && /^\tcrtc=/ { keep = ($0 !~ /null/); if (keep) print p; p = "" }
              /^(crtc|connector)\[/ { keep = 1; p = "" }

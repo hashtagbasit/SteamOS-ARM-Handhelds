@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] HID: uhid: read the output queue under qlock
 
 uhid_queue() stores outq[head] and then advances head while holding qlock,

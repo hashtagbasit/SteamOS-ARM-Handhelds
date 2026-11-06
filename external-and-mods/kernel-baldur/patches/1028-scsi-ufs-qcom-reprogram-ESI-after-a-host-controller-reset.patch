@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] scsi: ufs: qcom: reprogram ESI after a host controller reset
 
 ufs_qcom_config_esi() returns early once the ESI interrupts are set up.

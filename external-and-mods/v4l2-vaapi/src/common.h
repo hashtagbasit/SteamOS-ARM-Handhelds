@@ -1,7 +1,7 @@
 /*
  * msm_drv_video: a VA-API decode driver for V4L2 stateful (memory-to-memory)
  * decoders, written for the Snapdragon video cores (iris / venus) that the
- * SteamOS ARM handhelds expose as /dev/videoN.
+ * Zaviya handhelds expose as /dev/videoN.
  *
  * VA-API hands a driver pre-parsed pictures: parameter structures plus raw
  * slice NAL units. A stateful decoder wants a plain Annex-B stream. So per

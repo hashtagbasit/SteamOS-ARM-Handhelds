@@ -4,7 +4,7 @@
 # apply-overlays.sh take like one of ours:
 #   <out>/<krel>/boot/KERNEL(.md5)  modules/<krel>  firmware/  config-<krel>
 # Usage (as root, in the build VM):
-#   scripts/import-sm8550-kernel.sh <SteamOS-ARM-sm8550.img[.gz]> [out-parent]
+#   scripts/import-sm8550-kernel.sh <Zaviya-sm8550.img[.gz]> [out-parent]
 set -euo pipefail
 
 src="${1:?image (.img or .img.gz)}"

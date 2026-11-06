@@ -43,7 +43,7 @@ struct k_drm_msm_gem_new { uint64_t size; uint32_t flags, handle; };
 #define K_MSM_BO_WC 0x00020000
 #define K_DRM_RDWR 02
 
-#define VENDOR "SteamOS ARM V4L2 stateful decoder"
+#define VENDOR "Zaviya V4L2 stateful decoder"
 
 static const VAProfile profiles[] = {
 	VAProfileH264ConstrainedBaseline, VAProfileH264Main, VAProfileH264High,

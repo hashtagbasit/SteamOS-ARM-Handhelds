@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Kernel for SteamOS ARM on the REDMAGIC 6 (SM8350):
+# Kernel for Zaviya on the REDMAGIC 6 (SM8350):
 #   bash external-and-mods/kernel-sm8350/build.sh [--repack-boot]
 #
 # Mainline ${KVER} + patches/ (NX669J DTS, panel, fan, triggers, GT9897) on

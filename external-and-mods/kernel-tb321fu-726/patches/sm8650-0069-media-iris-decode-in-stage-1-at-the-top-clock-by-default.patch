@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] media: iris: decode in stage 1 at the top clock by default
 
 Stage 2 and the lowest sustaining clock suit playback, which decodes

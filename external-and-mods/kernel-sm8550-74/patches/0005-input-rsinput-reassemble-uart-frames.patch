@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] input: rsinput: reassemble UART frames instead of dropping them
 
 rsinput_rx() treated each serdev callback as exactly one frame,

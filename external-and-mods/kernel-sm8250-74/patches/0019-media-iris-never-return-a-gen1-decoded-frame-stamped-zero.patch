@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] media: iris: never return a gen1 decoded frame stamped zero
 
 Steam's arm64 Remote Play client numbers its bitstream buffers from 0 and

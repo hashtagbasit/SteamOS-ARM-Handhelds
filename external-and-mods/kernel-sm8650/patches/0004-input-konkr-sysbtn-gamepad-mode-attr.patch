@@ -1,4 +1,4 @@
-From: SteamOS-ARM-SM8650
+From: Zaviya
 Subject: [PATCH] input: konkr_sysbtn: add gamepad_mode attribute
 
 Lets userspace switch the built-in pad between the fake Xbox 360 mode

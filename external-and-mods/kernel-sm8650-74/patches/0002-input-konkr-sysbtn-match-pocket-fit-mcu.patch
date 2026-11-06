@@ -1,4 +1,4 @@
-From: SteamOS-ARM-SM8650
+From: Zaviya
 Subject: [PATCH] input: konkr_sysbtn: also bind the Pocket FIT (SM8650) MCU
 
 The non-Elite Pocket FIT has its controller MCU on the same geni SE

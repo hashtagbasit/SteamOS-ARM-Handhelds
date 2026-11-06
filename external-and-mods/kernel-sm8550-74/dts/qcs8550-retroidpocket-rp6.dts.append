@@ -1,6 +1,6 @@
 
 /*
- * SteamOS ARM additions for the Retroid Pocket 6 (appended to the base
+ * Zaviya additions for the Retroid Pocket 6 (appended to the base
  * qcs8550-retroidpocket-rp6.dts by kernel-common/build.sh; the TOP-DPAD
  * tree includes this one).
  *

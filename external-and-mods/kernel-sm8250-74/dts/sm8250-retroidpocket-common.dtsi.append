@@ -1,6 +1,6 @@
 
 /*
- * SteamOS ARM additions for the Retroid Pocket 5 / Flip 2 / Mini / Mini V2
+ * Zaviya additions for the Retroid Pocket 5 / Flip 2 / Mini / Mini V2
  * (appended to the base sm8250-retroidpocket-common.dtsi by
  * kernel-common/build.sh).
  */

@@ -547,7 +547,7 @@ static void wlserver_handle_touch_destroy(struct wl_listener *listener, void *da
 	free( touch );
 }
 
-// SteamOS-ARM: dual-screen handhelds (AYN Thor, AYANEO Pocket DS) have a
+// Zaviya: dual-screen handhelds (AYN Thor, AYANEO Pocket DS) have a
 // second touchscreen on the panel the main gamescope does not drive. Both are
 // I2C, so the heuristic above would map the second one onto the main screen and
 // every touch on it would land in Steam.
@@ -1949,7 +1949,7 @@ static bool create_night_gamma_control()
 }
 
 // ---------------------------------------------------------------------------
-// SteamOS-ARM second screen: drm-lease-v1 for the panel this gamescope leases
+// Zaviya second screen: drm-lease-v1 for the panel this gamescope leases
 // out (GAMESCOPE_LEASE_CONNECTOR). A program that wants to draw on it (the
 // DS and 3DS emulators' touch screen on the Thor's bottom panel) asks here;
 // the bottom-screen gamescope steps aside while it has it and comes back
@@ -2204,7 +2204,7 @@ static void kms_device_handle_change( struct wl_listener *listener, void *data )
 	nudge_steamcompmgr();
 }
 
-// SteamOS-ARM second screen: the main gamescope lends us one panel through a
+// Zaviya second screen: the main gamescope lends us one panel through a
 // DRM lease (GAMESCOPE_LEASE_CONNECTOR there). The lease fd is already the
 // DRM master for that panel; no session device to open.
 static int s_nLeaseKmsFd = -1;
@@ -3756,7 +3756,7 @@ static void apply_touchscreen_orientation(GamescopePanelOrientation orientation,
 	*y = ty;
 }
 
-// SteamOS-ARM bottom screen: GAMESCOPE_HOME_GESTURE=<file>. A swipe up from
+// Zaviya bottom screen: GAMESCOPE_HOME_GESTURE=<file>. A swipe up from
 // the bottom edge never reaches the app; it touches <file>, and the
 // bottom-screen dashboard (watching it) brings itself back to the front.
 static const char *s_pszHomeGestureFile = getenv( "GAMESCOPE_HOME_GESTURE" );

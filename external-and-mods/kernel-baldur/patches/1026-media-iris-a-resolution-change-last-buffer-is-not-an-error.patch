@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] media: iris: a resolution change's last buffer is not an error
 
 When the firmware reports a resolution change, it returns an empty

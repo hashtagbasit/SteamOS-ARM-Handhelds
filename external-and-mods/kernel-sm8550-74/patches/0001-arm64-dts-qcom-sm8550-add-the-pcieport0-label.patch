@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] arm64: dts: qcom: sm8550: add the pcieport0 label
 
 Linux 7.4 already has the PCIe root port nodes (and moves the PHY into

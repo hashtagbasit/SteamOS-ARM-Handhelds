@@ -1,5 +1,5 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: SteamOS-ARM-RM6 <exclaim_plethora227@simplelogin.com>
+From: Zaviya-RM6 <exclaim_plethora227@simplelogin.com>
 Date: Wed, 30 Sep 2026 03:40:00 -0500
 Subject: [PATCH] drm/panel: nubia-nx669j: fix backlight control
 

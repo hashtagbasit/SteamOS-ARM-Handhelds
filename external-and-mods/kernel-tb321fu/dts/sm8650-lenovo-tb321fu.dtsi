@@ -1865,7 +1865,7 @@
 /* Keep UART14 enabled for WCN7850 Bluetooth bring-up. */
 
 /*
- * SteamOS ARM Port changes on top of the GUF296 tree, from the TB321FU
+ * Zaviya changes on top of the GUF296 tree, from the TB321FU
  * port notes:
  *  - the microphones need MIC BIAS4 on AMIC4 and SoundWire port 1 for capture
  *    (fixed above)

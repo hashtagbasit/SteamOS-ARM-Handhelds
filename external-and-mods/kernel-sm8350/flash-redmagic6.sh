@@ -1,5 +1,5 @@
 #!/bin/sh
-# SteamOS ARM for the REDMAGIC 6 (NX669J): install from fastboot mode.
+# Zaviya for the REDMAGIC 6 (NX669J): install from fastboot mode.
 #
 # Hold Power + Volume Down to reach fastboot, bootloader unlocked.
 # This ERASES Android and everything on the phone (userdata).

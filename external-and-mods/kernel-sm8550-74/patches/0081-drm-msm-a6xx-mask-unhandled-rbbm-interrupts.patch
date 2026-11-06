@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] drm/msm/a6xx: mask RBBM interrupts that nothing handles
 
 A7XX_INT_MASK enables GPC_ERROR, PM4CPINTERRUPT, CP_RB_DONE_TS,

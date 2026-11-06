@@ -9,7 +9,7 @@ SEC_TDM_RX_0 never get a bit clock (no_clks=1, start failed). GUF's TDM startup 
 chained in front of the MI2S/SoundWire BE startup.
 
 
-Rebased onto 7.2.8 for SteamOS ARM Port: the back-end startup chains to
+Rebased onto 7.2.8 for Zaviya: the back-end startup chains to
 qcom_snd_sdw_startup, which 7.2.8 uses for these links.
 
 diff --git a/sound/soc/qcom/qdsp6/audioreach.c b/sound/soc/qcom/qdsp6/audioreach.c

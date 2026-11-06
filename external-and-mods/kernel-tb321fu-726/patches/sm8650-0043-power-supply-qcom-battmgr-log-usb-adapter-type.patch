@@ -1,4 +1,4 @@
-From: SteamOS ARM Port <noreply@invalid>
+From: Zaviya <noreply@invalid>
 Subject: [PATCH] power: supply: qcom_battmgr: log USB adapter type
 
 Qualcomm's battery manager firmware exposes both USB_TYPE and

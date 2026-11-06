@@ -1,4 +1,4 @@
-From: SteamOS-ARM-SM8650 port
+From: Zaviya port
 Subject: [PATCH] drm/panel: ar14-144hz: also list 120/90/60 Hz modes
 
 The Pocket FIT panel driver exposes only its native 144 Hz mode, so gamescope

@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] drm/panel: wt0600-2k: of_drm_get_panel_orientation is now drm_of_get_panel_orientation
 
 Linux 7.4 renamed the helper to drm_of_get_panel_orientation() (declared in

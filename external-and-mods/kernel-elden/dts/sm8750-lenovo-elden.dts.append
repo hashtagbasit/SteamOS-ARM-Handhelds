@@ -1,6 +1,6 @@
 
 /*
- * SteamOS ARM Port: start the USB controller as a host. Its role normally
+ * Zaviya: start the USB controller as a host. Its role normally
  * comes from UCSI, which runs on the ADSP, and the ADSP's firmware is on the
  * root filesystem: before that is mounted the controller would sit in device
  * mode and the image on a USB drive (the installer) would never show up.

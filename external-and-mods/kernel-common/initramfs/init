@@ -1,5 +1,5 @@
 #!/bin/busybox sh
-# Boot initramfs for SteamOS-ARM-SM8650. Mounts the root, leaves the kernel
+# Boot initramfs for Zaviya. Mounts the root, leaves the kernel
 # log from this boot in bootlog.txt on the FAT boot partition (the only way
 # to diagnose a black screen without a serial console), then switch_roots.
 # konkr.bootlog_wait=N on the cmdline adds N extra 4-second log snapshots
@@ -64,8 +64,8 @@ usb_shell() {
   mkdir -p "$g/strings/0x409" "$g/configs/c.1/strings/0x409" \
     "$g/functions/acm.usb0" "$g/functions/ncm.usb0"
   echo 0x1d6b >"$g/idVendor"; echo 0x0104 >"$g/idProduct"
-  echo "SteamOS ARM" >"$g/strings/0x409/manufacturer"
-  echo "SteamOS ARM debug shell" >"$g/strings/0x409/product"
+  echo "Zaviya" >"$g/strings/0x409/manufacturer"
+  echo "Zaviya debug shell" >"$g/strings/0x409/product"
   # Windows rejects a gadget without a serial number string (Code 43,
   # "invalid serial number string descriptor").
   echo "steamos-arm-debug" >"$g/strings/0x409/serialnumber"

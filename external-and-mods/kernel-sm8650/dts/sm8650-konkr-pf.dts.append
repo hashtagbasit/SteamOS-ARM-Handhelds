@@ -1,5 +1,5 @@
 
-/* --- SteamOS-ARM-SM8650 additions --------------------------------------- */
+/* --- Zaviya additions --------------------------------------- */
 
 / {
 	chassis-type = "handheld";

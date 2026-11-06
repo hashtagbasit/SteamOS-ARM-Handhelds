@@ -3,7 +3,7 @@
 
 echo "" > /dev/console
 echo "=============================================" > /dev/console
-echo "   SteamOS ARM — AYN Odin 3 (SM8750)        " > /dev/console
+echo "   Zaviya — AYN Odin 3 (SM8750)        " > /dev/console
 echo "=============================================" > /dev/console
 echo "Locating and mounting SteamOS system (root)..." > /dev/console
 

@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] media: iris: defer gen1 capture setup until the sequence is known
 
 V4L2 lets a stateful decoder client start the capture queue before the

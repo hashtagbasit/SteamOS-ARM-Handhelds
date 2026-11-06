@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] drm/msm: honor the mmap offset in the GEM fault handler
 
 msm_gem_fault() takes the page index from the fault address relative to

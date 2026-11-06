@@ -2,7 +2,7 @@
 /*
  * AYANEO Pocket MICRO 2 (SM8250 / Snapdragon 865).
  *
- * Board description for SteamOS ARM, from the stock Android device tree.
+ * Board description for Zaviya, from the stock Android device tree.
  * The ROCKNIX ABL picks it by qcom,board-id (0x0b).
  */
 

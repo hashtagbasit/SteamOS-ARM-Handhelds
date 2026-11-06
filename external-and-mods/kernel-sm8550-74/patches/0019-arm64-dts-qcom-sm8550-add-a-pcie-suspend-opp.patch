@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] arm64: dts: qcom: sm8550: add a PCIe suspend OPP
 
 Give pcie0 a suspend-only OPP so pcie-qcom keeps a nonzero DDR/LLCC

@@ -1,5 +1,5 @@
 /*
- * SteamOS ARM additions for the AYN Odin 3 (appended to cq8725s-ayn-odin3.dts
+ * Zaviya additions for the AYN Odin 3 (appended to cq8725s-ayn-odin3.dts
  * by kernel-common/build.sh). s2idle (as the reference portOS): the codec keeps these
  * rails enabled through the sleep, idle them in LPM.
  */

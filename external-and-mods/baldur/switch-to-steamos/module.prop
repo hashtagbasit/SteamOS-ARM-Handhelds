@@ -3,4 +3,4 @@ name=Switch to SteamOS
 version=1
 versionCode=1
 author=hashtagbasit
-description=Lenovo Legion Y700 Gen 5: the Action button restarts into SteamOS ARM on the microSD card. To come back, use Restart into Android in SteamOS (or hold volume up + down for 10 s).
+description=Lenovo Legion Y700 Gen 5: the Action button restarts into Zaviya on the microSD card. To come back, use Restart into Android in SteamOS (or hold volume up + down for 10 s).

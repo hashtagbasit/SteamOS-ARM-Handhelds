@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] drm/msm/a6xx: Enable IFPC on Adreno 740, same as the overclocked Adreno 741
 
 Linux 7.4 moved the Adreno 7xx entries to a7xx_catalog.c; the original patch

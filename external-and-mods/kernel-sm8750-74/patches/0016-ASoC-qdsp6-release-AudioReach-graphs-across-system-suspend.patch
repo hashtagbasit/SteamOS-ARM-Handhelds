@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] ASoC: qdsp6: release AudioReach graphs across system suspend
 
 An open AudioReach graph keeps the ADSP out of power collapse, so a PCM

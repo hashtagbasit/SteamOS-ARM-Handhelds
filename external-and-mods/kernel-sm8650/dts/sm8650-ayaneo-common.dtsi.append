@@ -1,5 +1,5 @@
 
-/* --- SteamOS-ARM-SM8650 additions (Pocket FIT and Pocket S2) ------------- */
+/* --- Zaviya additions (Pocket FIT and Pocket S2) ------------- */
 
 /*
  * Volume up is not a wake source: a press in a bag or while holding the

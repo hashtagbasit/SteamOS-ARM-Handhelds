@@ -1,4 +1,4 @@
-From: SteamOS ARM port
+From: Zaviya
 Subject: [PATCH] ASoC: qdsp6: q6apm: fail the graph open when the DSP rejects it
 
 q6apm_get_audioreach_graph() ignores the result of the graph-open
