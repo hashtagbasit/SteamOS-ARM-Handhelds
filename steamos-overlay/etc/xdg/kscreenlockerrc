@@ -4,3 +4,9 @@ LockOnResume=false
 LockOnStart=false
 Timeout=0
 LockGrace=0
+
+[Greeter]
+WallpaperPlugin=org.kde.image
+
+[Greeter][Wallpaper][org.kde.image][General]
+Image=/usr/share/wallpapers/Zaviya
