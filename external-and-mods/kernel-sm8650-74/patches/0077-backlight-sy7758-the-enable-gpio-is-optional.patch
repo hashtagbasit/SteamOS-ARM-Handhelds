@@ -1,0 +1,24 @@
+From: SteamOS ARM port
+Subject: [PATCH] backlight: sy7758: the enable GPIO is optional
+
+On boards that keep the chip enabled in hardware the device tree has no
+enable GPIO. The probe then fails with -ENOENT, the panel defers forever
+waiting for its backlight, and with it the display, the GPU and the
+DisplayPort sound card never come up. The driver does nothing with the
+GPIO after probe, so carry on without one.
+
+---
+ drivers/video/backlight/sy7758.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/drivers/video/backlight/sy7758.c
++++ b/drivers/video/backlight/sy7758.c
+@@ -185,7 +185,7 @@ static int sy7758_probe(struct i2c_client *client)
+ 	fsleep(100);
+ 
+ 	/* Get enable GPIO and set to high */
+-	sydev->gpio = devm_gpiod_get(dev, "enable", GPIOD_OUT_HIGH);
++	sydev->gpio = devm_gpiod_get_optional(dev, "enable", GPIOD_OUT_HIGH);
+ 	if (IS_ERR(sydev->gpio))
+ 		return dev_err_probe(dev, PTR_ERR(sydev->gpio),
+ 				     "failed to get enable GPIO\n");
