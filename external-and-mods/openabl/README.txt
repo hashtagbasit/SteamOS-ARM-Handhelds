@@ -1,13 +1,12 @@
 OpenABL @VERSION@ for @SOC@ (@DEVICES@)
 
-The bootloader menu that lets this device start SteamOS from the microSD
-card or internal storage, and still start Android. It's what ROCKNIX ABL
-became, from the same developers: https://github.com/OpenHandheldCollective/OpenABL
-(GPL-3.0, (c) Open Handheld Collective). Only needed once. Already have
-ROCKNIX ABL? That keeps working, OpenABL is the newer one.
+The bootloader menu that lets this device start Zaviya from the microSD
+card or internal storage, and still start Android.
+https://github.com/OpenHandheldCollective/OpenABL
+(GPL-3.0, (c) Open Handheld Collective). Only needed once.
 
 You need Android's "run script as root" option (in the device's settings).
-The scripts are plain dd lines, the same as ROCKNIX's, because those tools
+The scripts are plain dd lines because those tools
 run a script line by line and don't show its output.
 
 1. Copy this whole openabl folder to the top of the device's internal

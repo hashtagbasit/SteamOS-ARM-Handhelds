@@ -37,8 +37,7 @@ elf="$tmp/openabl-v$ABL_VERSION/$soc/abl_signed-$soc.elf"
 [[ -f $elf ]] || die "abl_signed-$soc.elf not in the release"
 [[ "$(sha256sum "$elf" | cut -d' ' -f1)" == "$want" ]] || die "abl_signed-$soc.elf hash mismatch"
 
-# Flat, like ROCKNIX's own image. The scripts are ROCKNIX's: plain dd lines
-# with the literal /sdcard/openabl path. The vendor "run script as root"
+# Flat. The scripts are plain dd lines with the literal /sdcard/openabl path. The vendor "run script as root"
 # tools (AYN's at least) run them line by line, show no output, and loops,
 # tests and $(...) there wrote nothing (#69).
 out=$BOOT/openabl

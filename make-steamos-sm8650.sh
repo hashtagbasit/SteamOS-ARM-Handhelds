@@ -504,10 +504,10 @@ EOF
 ABL reads KERNEL from this FAT partition.
 Do not rename KERNEL. After flashing to a bigger card, home grows on first boot.
 root=PARTUUID=${disk_id}-02
-ABL (ROCKNIX ABL for ${SOC^^}): Set device model -> your handheld.
-To install or update the ABL from Android, see rocknix_abl/README.txt.
+OpenABL: Set device model -> your handheld.
+To install or update it from Android, see openabl/README.txt.
 EOF
-  sudo_run env STEAMOS_WORK="${STEAMOS_WORK:-/work}" bash "${ROOT}/scripts/stage-rocknix-abl.sh" "${MNT}/boot" "${SOC}"
+  sudo_run env STEAMOS_WORK="${STEAMOS_WORK:-/work}" bash "${ROOT}/scripts/stage-openabl.sh" "${MNT}/boot" "${SOC}"
   # Lenovo tablet boot files (the image on a USB drive starts it there):
   # TB321FU_KERNEL_OUT is that tablet's kernel output.
   if [[ -n "${TB321FU_KERNEL_OUT:-}" ]]; then
