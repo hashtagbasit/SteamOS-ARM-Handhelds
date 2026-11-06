@@ -4,13 +4,13 @@
 
 ## What these tools do
 
-The scripts in **external-and-mods/ufs-install** repartition the **internal UFS** storage on Qualcomm SM8650 handhelds (KONKR Pocket FIT, AYANEO Pocket S2), SM8550 handhelds (AYN Odin 2, Odin 2 Mini, Odin 2 Portal), and SM8750 handhelds (AYN Odin 3; KONKR Pocket FIT Elite untested) to install **this project's SteamOS** alongside **Android**, using a **ROCKNIX ABL** dual-boot layout with **three Linux partitions** (`ROCKNIX` + `STORAGE` + `HOME`).
+The scripts in **external-and-mods/ufs-install** repartition the **internal UFS** storage on Qualcomm SM8650 handhelds (KONKR Pocket FIT, AYANEO Pocket S2), SM8550 handhelds (AYN Odin 2, Odin 2 Mini, Odin 2 Portal), and SM8750 handhelds (AYN Odin 3; KONKR Pocket FIT Elite untested) to install **Zaviya** alongside **Android**, using **OpenABL** with a dual-boot layout of **three Linux partitions** (boot + `STORAGE` + `HOME`).
 
 This is **not** a supported manufacturer procedure. It is an **experimental community tool**.
 
 ## Data loss
 
-Running `install-masios-to-internal.sh` (unless using `--resume` / `--deploy-only` on **existing** SteamOS 3-partition layouts only):
+Running `install-to-internal.sh` (unless using `--resume` / `--deploy-only` on **existing** Zaviya 3-partition layouts only):
 
 - **Wipes Android `userdata`** — all apps, photos, game saves, accounts, and settings on internal Android storage are **permanently erased** (equivalent to repartition + factory reset).
 - **May destroy other data** on internal UFS if the partition table is modified incorrectly.
@@ -28,8 +28,8 @@ After installation or a failed attempt:
 
 ## Requirements (your responsibility)
 
-- **ROCKNIX ABL** already installed and working (1.1.8 or compatible).
-- Boot **SteamOS from microSD** (not from UFS) when running the installer.
+- **OpenABL** already installed and working.
+- Boot **Zaviya from the microSD card** (not from UFS) when running the installer.
 - A **`/boot/KERNEL`** from this project's SD image whose initramfs understands `root=PARTLABEL=` (the installer checks this).
 - Correct **ABL device profile** (“Set the Device” → your exact model).
 
@@ -59,7 +59,7 @@ If you do not agree, **do not run the installer**.
 
 ## Other UFS layouts
 
-These scripts target the **SteamOS three-partition layout** (`ROCKNIX` + `STORAGE` + `HOME`). They will **refuse** an old two-partition `ROCKNIX` + `STORAGE` install. Use ABL **UNINSTALL CFW** (and remove a leftover `HOME` if needed) before a fresh install.
+These scripts target the **Zaviya three-partition layout** (boot + `STORAGE` + `HOME`). They will **refuse** an old two-partition boot + `STORAGE` install. Use ABL **UNINSTALL CFW** (and remove a leftover `HOME` if needed) before a fresh install.
 
 ## License
 

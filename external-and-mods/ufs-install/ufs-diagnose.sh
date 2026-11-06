@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# UFS / dual-boot diagnostic (run as root from SteamOS on microSD)
+# UFS / dual-boot diagnostic (run as root from Zaviya on microSD)
 set -euo pipefail
 
 export PATH="/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
@@ -51,18 +51,18 @@ echo
 echo "--- Partition table ---"
 lsblk -o NAME,SIZE,FSTYPE,LABEL,PARTLABEL "$DEVICE"
 
-RK=$(part_by_label "$DEVICE" ROCKNIX || true)
+BOOTP=$(part_by_label "$DEVICE" "$BOOT_LABEL" || true)
 ST=$(part_by_label "$DEVICE" STORAGE || true)
 HM=$(part_by_label "$DEVICE" HOME || true)
 UD=$(part_by_label "$DEVICE" userdata || true)
 
-if [[ -n "$RK" && -n "$ST" && -n "$HM" ]]; then
-  LAYOUT="steamos-3part"
-elif [[ -n "$RK" && -n "$ST" ]]; then
+if [[ -n "$BOOTP" && -n "$ST" && -n "$HM" ]]; then
+  LAYOUT="three-part"
+elif [[ -n "$BOOTP" && -n "$ST" ]]; then
   LAYOUT="old-2part"
-elif [[ -n "$RK" && -z "$ST" ]]; then
+elif [[ -n "$BOOTP" && -z "$ST" ]]; then
   LAYOUT="incompatible-or-partial"
-elif [[ -z "$RK" && -z "$ST" ]]; then
+elif [[ -z "$BOOTP" && -z "$ST" ]]; then
   LAYOUT="android-only"
 else
   LAYOUT="mixed-or-unknown"
@@ -71,22 +71,22 @@ fi
 echo
 echo "--- Detected layout: ${LAYOUT} ---"
 case "$LAYOUT" in
-  steamos-3part)
-    echo "  SteamOS / ROCKNIX ABL (3 Linux partitions):"
-    echo "    ROCKNIX  = boot / KERNEL  (${RK})"
-    echo "    STORAGE  = SteamOS root   (${ST})"
+  three-part)
+    echo "  Zaviya (3 Linux partitions):"
+    echo "    boot    = KERNEL  (${BOOTP})"
+    echo "    STORAGE  = Zaviya root   (${ST})"
     echo "    HOME     = /home          (${HM})"
     ;;
   old-2part)
-    echo "  Older ROCKNIX-style (2 Linux partitions, no HOME):"
-    echo "    ROCKNIX  = boot / KERNEL  (${RK})"
+    echo "  Older layout (2 Linux partitions, no HOME):"
+    echo "    boot    = KERNEL  (${BOOTP})"
     echo "    STORAGE  = Linux rootfs  (${ST})"
-    echo "  This SteamOS installer will not reuse that layout. UNINSTALL CFW first."
+    echo "  This Zaviya installer will not reuse that layout. UNINSTALL CFW first."
     ;;
   incompatible-or-partial)
-    echo "  ROCKNIX present but STORAGE/HOME missing, or layout is incomplete."
-    echo "    ROCKNIX  = boot / KERNEL  (${RK:-missing})"
-    echo "    STORAGE  = SteamOS root   (${ST:-missing})"
+    echo "  boot partition present but STORAGE/HOME missing, or layout is incomplete."
+    echo "    boot    = KERNEL  (${BOOTP:-missing})"
+    echo "    STORAGE  = Zaviya root   (${ST:-missing})"
     echo "    HOME     = /home          (${HM:-missing})"
     ;;
   android-only)
@@ -106,15 +106,15 @@ else
   warn "/boot/KERNEL not found on SD"
 fi
 
-if [[ -n "$RK" && -b "$RK" ]]; then
+if [[ -n "$BOOTP" && -b "$BOOTP" ]]; then
   echo
-  echo "--- Internal ROCKNIX partition (${RK}) ---"
+  echo "--- Internal boot partition (${BOOTP}) ---"
   mkdir -p /tmp/rkdiag
-  if mount "$RK" /tmp/rkdiag 2>/dev/null; then
+  if mount "$BOOTP" /tmp/rkdiag 2>/dev/null; then
     ls -la /tmp/rkdiag/
     if [[ -f /tmp/rkdiag/KERNEL ]]; then
       echo "Internal KERNEL root target: $(describe_kernel_root /tmp/rkdiag/KERNEL)"
-      if verify_ufs_rocknix_kernel_cmdline /tmp/rkdiag/KERNEL 2>/dev/null; then
+      if verify_ufs_kernel_cmdline /tmp/rkdiag/KERNEL 2>/dev/null; then
         log "Internal KERNEL cmdline OK for UFS boot (root=PARTLABEL=STORAGE)"
       elif verify_internal_kernel_cmdline /tmp/rkdiag/KERNEL 2>/dev/null; then
         warn "Internal KERNEL still has SD root=UUID= — UFS boot may black-screen without SD"
@@ -124,11 +124,11 @@ if [[ -n "$RK" && -b "$RK" ]]; then
         warn "Fix: sudo ./ufs-fix-internal-boot.sh --kernel-only"
       fi
     else
-      warn "NO KERNEL on ROCKNIX partition (Linux will black-screen)"
+      warn "NO KERNEL on boot partition (Linux will black-screen)"
     fi
     umount /tmp/rkdiag
   else
-    warn "Could not mount ${RK}"
+    warn "Could not mount ${BOOTP}"
   fi
 fi
 
@@ -169,25 +169,25 @@ echo "================================================================"
 echo "  WHAT TO DO"
 echo "================================================================"
 case "$LAYOUT" in
-  steamos-3part)
-    echo "  Fresh tutorial:     sudo ./install-masios-to-internal.sh"
-    echo "  Failed mid-install: sudo ./install-masios-to-internal.sh --resume"
+  three-part)
+    echo "  Fresh tutorial:     sudo ./install-to-internal.sh"
+    echo "  Failed mid-install: sudo ./install-to-internal.sh --resume"
     echo "  Boot/cmdline fix:   sudo ./ufs-fix-internal-boot.sh"
     echo "  Android recovery:   Factory data reset (userdata was wiped on install)"
     ;;
   old-2part)
-    echo "  Expected layout:    ROCKNIX + STORAGE + HOME"
-    echo "  This device has:    ROCKNIX + STORAGE only"
-    echo "  Action:             ABL 'UNINSTALL CFW', then fresh SteamOS UFS install"
+    echo "  Expected layout:    boot + STORAGE + HOME"
+    echo "  This device has:    boot + STORAGE only"
+    echo "  Action:             ABL 'UNINSTALL CFW', then fresh Zaviya UFS install"
     ;;
   incompatible-or-partial|mixed-or-unknown)
-    echo "  Expected layout:    ROCKNIX + STORAGE + HOME"
-    echo "  Partial install:    sudo ./install-masios-to-internal.sh --deploy-only"
+    echo "  Expected layout:    boot + STORAGE + HOME"
+    echo "  Partial install:    sudo ./install-to-internal.sh --deploy-only"
     echo "  Other layouts:      ABL 'UNINSTALL CFW' (remove leftover HOME if needed)"
-    echo "  Boot/cmdline fix:   only if ROCKNIX + STORAGE + HOME already exist"
+    echo "  Boot/cmdline fix:   only if boot + STORAGE + HOME already exist"
     ;;
   android-only)
-    echo "  Ready for fresh install: sudo ./install-masios-to-internal.sh"
+    echo "  Ready for fresh install: sudo ./install-to-internal.sh"
     ;;
 esac
 echo

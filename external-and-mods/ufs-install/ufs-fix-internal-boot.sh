@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Repair SteamOS / ROCKNIX internal boot on UFS (run as root from microSD).
+# Repair Zaviya internal boot on UFS (run as root from microSD).
 set -euo pipefail
 
 VERSION="2.0.0"
@@ -22,12 +22,12 @@ usage() {
   cat <<EOF
 ufs-fix-internal-boot v${VERSION}
 
-Repair SteamOS / ROCKNIX internal boot (KERNEL + fstab).
-Writes ROCKNIX/KERNEL with root=PARTLABEL=STORAGE (UFS-safe, not SD UUID).
-Writes STORAGE /etc/fstab for ROCKNIX + STORAGE + HOME.
+Repair Zaviya internal boot (KERNEL + fstab).
+Writes boot/KERNEL with root=PARTLABEL=STORAGE (UFS-safe, not SD UUID).
+Writes STORAGE /etc/fstab for boot + STORAGE + HOME.
 
 Options:
-  --kernel-only   Fix KERNEL on ROCKNIX partition only
+  --kernel-only   Fix KERNEL on boot partition only
   --fstab-only    Fix /etc/fstab on STORAGE only
   --dry-run       Show actions without writing
   --force         Skip confirmation
@@ -55,17 +55,17 @@ part_by_label() {
 
 detect_layout() {
   local device=$1
-  HAS_ROCKNIX=0 HAS_STORAGE=0 HAS_HOME=0
+  HAS_BOOT=0 HAS_STORAGE=0 HAS_HOME=0
 
-  [[ -n $(part_by_label "$device" ROCKNIX || true) ]] && HAS_ROCKNIX=1
+  [[ -n $(part_by_label "$device" "$BOOT_LABEL" || true) ]] && HAS_BOOT=1
   [[ -n $(part_by_label "$device" STORAGE || true) ]] && HAS_STORAGE=1
   [[ -n $(part_by_label "$device" HOME || true) ]] && HAS_HOME=1
 
-  if (( HAS_ROCKNIX && HAS_STORAGE && HAS_HOME )); then
-    echo "steamos-3part"
-  elif (( HAS_ROCKNIX && HAS_STORAGE )); then
+  if (( HAS_BOOT && HAS_STORAGE && HAS_HOME )); then
+    echo "three-part"
+  elif (( HAS_BOOT && HAS_STORAGE )); then
     echo "old-2part"
-  elif (( HAS_ROCKNIX && ! HAS_STORAGE )); then
+  elif (( HAS_BOOT && ! HAS_STORAGE )); then
     echo "incompatible-or-partial"
   else
     echo "none"
@@ -82,23 +82,23 @@ root_on_same_disk() {
 patch_kernel() {
   local rk_dev=$1 tmp=$2
   if (( DRY_RUN )); then
-    log "[dry-run] pack /boot/KERNEL → ROCKNIX/KERNEL (root=PARTLABEL=STORAGE)"
+    log "[dry-run] pack /boot/KERNEL → boot/KERNEL (root=PARTLABEL=STORAGE)"
     return
   fi
   have_bootimg_tools || die "python3 is required"
-  log "Writing UFS-safe KERNEL to ROCKNIX (root=PARTLABEL=STORAGE)..."
-  install_kernel_for_ufs_rocknix /boot/KERNEL "${tmp}/KERNEL" \
-    || die "Failed to pack ROCKNIX KERNEL"
+  log "Writing UFS-safe KERNEL to the boot partition (root=PARTLABEL=STORAGE)..."
+  install_kernel_for_ufs /boot/KERNEL "${tmp}/KERNEL" \
+    || die "Failed to pack boot KERNEL"
   (cd "${tmp}" && md5sum KERNEL > KERNEL.md5)
-  verify_ufs_rocknix_kernel_cmdline "${tmp}/KERNEL" \
+  verify_ufs_kernel_cmdline "${tmp}/KERNEL" \
     || die "KERNEL cmdline still wrong after repair"
-  log "ROCKNIX KERNEL: $(describe_kernel_root "${tmp}/KERNEL")"
+  log "boot KERNEL: $(describe_kernel_root "${tmp}/KERNEL")"
 }
 
 fix_fstab_on_storage() {
   local st_dev=$1 tmp=$2
   if (( DRY_RUN )); then
-    log "[dry-run] write SteamOS 3-partition fstab on ${st_dev}"
+    log "[dry-run] write Zaviya 3-partition fstab on ${st_dev}"
     return
   fi
   log "Fixing /etc/fstab on ${st_dev}..."
@@ -118,7 +118,7 @@ main() {
   done
 
   [[ $EUID -eq 0 ]] || die "Run as root: sudo $0"
-  [[ -f /boot/KERNEL ]] || die "Missing /boot/KERNEL on SD (boot SteamOS from microSD first)"
+  [[ -f /boot/KERNEL ]] || die "Missing /boot/KERNEL on SD (boot Zaviya from microSD first)"
 
   DEVICE=$(detect_ufs_device)
   [[ -n "$DEVICE" ]] || die "No UFS with userdata partition found."
@@ -128,7 +128,7 @@ main() {
   fi
 
   LAYOUT=$(detect_layout "$DEVICE")
-  RK_DEV=$(part_by_label "$DEVICE" ROCKNIX || true)
+  BOOT_DEV=$(part_by_label "$DEVICE" "$BOOT_LABEL" || true)
   ST_DEV=$(part_by_label "$DEVICE" STORAGE || true)
   HM_DEV=$(part_by_label "$DEVICE" HOME || true)
 
@@ -137,22 +137,22 @@ main() {
 
   case "$LAYOUT" in
     old-2part)
-      die "Old two-partition layout (ROCKNIX + STORAGE, no HOME).
-Reinstall with the SteamOS 3-partition installer after ABL 'UNINSTALL CFW'."
+      die "Old two-partition layout (boot + STORAGE, no HOME).
+Reinstall with the Zaviya 3-partition installer after ABL 'UNINSTALL CFW'."
       ;;
     incompatible-or-partial)
-      die "Incompatible or partial UFS layout. Expected ROCKNIX + STORAGE + HOME.
-Re-run: sudo ./install-masios-to-internal.sh --deploy-only
+      die "Incompatible or partial UFS layout. Expected boot + STORAGE + HOME.
+Re-run: sudo ./install-to-internal.sh --deploy-only
 Or use ABL 'UNINSTALL CFW' before a fresh install."
       ;;
     none)
-      die "No SteamOS / ROCKNIX internal partitions found."
+      die "No Zaviya internal partitions found."
       ;;
   esac
 
   echo
-  echo "This fix writes ROCKNIX/KERNEL with root=PARTLABEL=STORAGE (UFS-safe)."
-  echo "STORAGE fstab will mount ROCKNIX=/boot and HOME=/home."
+  echo "This fix writes boot/KERNEL with root=PARTLABEL=STORAGE (UFS-safe)."
+  echo "STORAGE fstab will mount boot=/boot and HOME=/home."
   echo "SD /boot/KERNEL is left unchanged."
   echo
 
@@ -166,11 +166,11 @@ Or use ABL 'UNINSTALL CFW' before a fresh install."
   trap 'umount "$TMP_BOOT" 2>/dev/null; umount "$TMP_ROOT" 2>/dev/null; rmdir "$TMP_BOOT" "$TMP_ROOT" 2>/dev/null' EXIT
 
   if (( FIX_KERNEL )); then
-    mount "$RK_DEV" "$TMP_BOOT"
-    patch_kernel "$RK_DEV" "$TMP_BOOT"
+    mount "$BOOT_DEV" "$TMP_BOOT"
+    patch_kernel "$BOOT_DEV" "$TMP_BOOT"
     sync
     umount "$TMP_BOOT"
-    log "KERNEL fixed on ${RK_DEV}"
+    log "KERNEL fixed on ${BOOT_DEV}"
   fi
 
   if (( FIX_FSTAB )); then

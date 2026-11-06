@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Install the SteamOS running from the microSD card to internal UFS.
+# Install the Zaviya running from the microSD card to internal UFS.
 # KONKR Pocket FIT / AYANEO Pocket S2 (SM8650), SM8550 handhelds such as
 # the AYN Odin 2 / Odin 2 Mini / Odin 2 Portal, and the AYN Odin 3 / KONKR
-# Pocket FIT Elite (SM8750, untested), with ROCKNIX ABL 1.1.8+.
+# Pocket FIT Elite (SM8750, untested), with OpenABL.
 #
-#   ... | userdata (Android, you pick) | ROCKNIX 2G | STORAGE 20G | HOME (rest) |
+#   ... | userdata (Android, you pick) | boot 2G | system 20G | home (rest) |
 #
 # Android's partitions stay as they are; only userdata's end moves, and it is
 # erased. The old partition table is saved to the SD card's /boot/ufs-backup
 # first, and `ufs-partition.py restore` puts it back.
 #
-# Usage (from SteamOS on the SD card, as root):
-#   install-masios-to-internal.sh                  interactive
-#   install-masios-to-internal.sh --android-gb 32
-#   install-masios-to-internal.sh --dry-run        show the plan, write nothing
-#   install-masios-to-internal.sh --resume         partitions exist: copy again
+# Usage (from Zaviya on the SD card, as root):
+#   install-to-internal.sh                  interactive
+#   install-to-internal.sh --android-gb 32
+#   install-to-internal.sh --dry-run        show the plan, write nothing
+#   install-to-internal.sh --resume         partitions exist: copy again
 #
 # Options:
 #   --android-gb N     Android userdata size (GiB)
-#   --storage-gb N     SteamOS system partition (GiB, default 20)
+#   --storage-gb N     Zaviya system partition (GiB, default 20)
 #   --home all|essentials|none
 #                      what to bring from the SD's /home (default all);
 #                      essentials leaves installed games behind
@@ -29,6 +29,7 @@ set -euo pipefail
 export PATH="/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+BOOT_LABEL="$(cat "$HERE/boot-label")"
 PART=(python3 "$HERE/ufs-partition.py")
 BOOTIMG=(python3 "$HERE/ufs-bootimg.py")
 
@@ -70,14 +71,14 @@ for t in sfdisk mkfs.vfat mkfs.ext4 rsync findmnt lsblk python3 md5sum blockdev;
 done
 
 # TABLET: a Lenovo tablet booted by its own bootloader, running from our image
-# on a USB drive (no ROCKNIX ABL, no microSD slot): its boot files go to the
+# on a USB drive (no OpenABL, no microSD slot): its boot files go to the
 # ESP and its boot partition instead of a KERNEL for the ABL.
 TABLET=""
 compat="$(tr '\0' '\n' </sys/firmware/devicetree/base/compatible)"
 grep -qx 'lenovo,tb321fu' <<<"$compat" && TABLET=tb321fu
 grep -qx 'lenovo,elden' <<<"$compat" && TABLET=elden
 grep -qx 'qcom,sm8250' <<<"$compat" \
-  && die "internal install isn't supported on Snapdragon 865 devices yet, keep running SteamOS from the microSD card"
+  && die "internal install isn't supported on Snapdragon 865 devices yet, keep running Zaviya from the microSD card"
 [[ -n "$TABLET" ]] || grep -qxE 'qcom,sm8650|qcom,sm8550|qcom,sm8750' <<<"$compat" \
   || die "this installer is for SM8650, SM8550 and SM8750 devices (KONKR Pocket FIT / Pocket FIT Elite, AYANEO Pocket S2, AYN Odin 2 / Odin 2 Mini / Odin 2 Portal / Odin 3) and the Lenovo Legion Y700 Gen 3 / Gen 4"
 MODEL="$(tr -d '\0' </sys/firmware/devicetree/base/model)"
@@ -128,11 +129,11 @@ case "$P_MODE" in
   fresh)
     (( RESUME )) && die "--resume needs an existing install; this disk has none" ;;
   installed)
-    (( RESUME )) || die "SteamOS partitions already exist. Use SteamOS Update to preserve games and saves. --resume reformats system and HOME, erasing internal user data. For a fresh install, remove them first in the ABL menu (UNINSTALL CFW)." ;;
+    (( RESUME )) || die "Zaviya partitions already exist. Use Zaviya Update to preserve games and saves. --resume reformats system and HOME, erasing internal user data. For a fresh install, remove them first in the ABL menu (UNINSTALL CFW)." ;;
   occupied)
     die "unknown partitions after userdata (${P_OCCUPIED}). Remove them with the ABL menu (UNINSTALL CFW) first; nothing was changed." ;;
   toosmall)
-    die "not enough room after userdata for SteamOS" ;;
+    die "not enough room after userdata for Zaviya" ;;
   *) die "unexpected disk state ${P_MODE}" ;;
 esac
 [[ -z "$EXPECT" || "$EXPECT" == "$P_TABLE_FINGERPRINT" ]] \
@@ -191,7 +192,7 @@ if (( ! RESUME )); then
     (( FORCE )) && die "--android-gb is required with --force"
     echo
     echo "Android keeps its system; its user data (apps, photos, accounts) is erased."
-    echo "Android userdata can be ${P_ANDROID_MIN_GIB}..${P_ANDROID_MAX_GIB} GiB; SteamOS gets the rest."
+    echo "Android userdata can be ${P_ANDROID_MIN_GIB}..${P_ANDROID_MAX_GIB} GiB; Zaviya gets the rest."
     read -r -p "Android size in GiB: " ANDROID_GB
   fi
   [[ "$ANDROID_GB" =~ ^[0-9]+$ ]] || die "Android size must be a whole number of GiB"
@@ -220,7 +221,7 @@ root_used=$(df -B1 --output=used / | tail -1)
 echo
 echo "Plan for $DISK:"
 if (( RESUME )); then
-  echo "  REINSTALL: reformat ROCKNIX / STORAGE / HOME; all internal Linux games, saves and login data are ERASED"
+  echo "  REINSTALL: reformat boot / system / home; all internal Linux games, saves and login data are ERASED"
 else
   sed 's/^/  /' <<<"$PLAN"
   echo "  Android userdata is ERASED (Android sets itself up again on its next boot)"
@@ -293,7 +294,7 @@ install_tablet_boot() {
         *"CSOT panel"*) panel=csot ;;
         *) die "can't tell the panel from \"$MODEL\"" ;;
       esac
-      log "Legion Y700 Gen 3 ($panel panel): GRUB and the kernel on ROCKNIX"
+      log "Legion Y700 Gen 3 ($panel panel): GRUB and the kernel on the boot partition"
       # The drive's BOOT already has it all (stage-tablet-boot.sh); take it
       # from there, with only this panel's entry and no menu wait.
       local dtb="sm8650-lenovo-tb321fu-$panel.dtb" f
@@ -313,13 +314,13 @@ entries = re.findall(r'menuentry "[^"]*" \{.*?\n\}', text, re.S)
 mine = [e for e in entries if "/dtb/" + dtb in e]
 if not mine:
     sys.exit(1)
-entry = re.sub(r'menuentry "[^"]*"', 'menuentry "SteamOS ARM Port"', mine[0], count=1)
+entry = re.sub(r'menuentry "[^"]*"', 'menuentry "Zaviya"', mine[0], count=1)
 open(dst, "w").write("set timeout=0\nset default=0\nset gfxpayload=keep\n\n" + entry + "\n")
 PY
       # This ESP's own marker (the USB drive's stays on the drive), in both
       # GRUB stages.
       local mark="steamos-arm-boot-$(head -c 6 /dev/urandom | od -An -tx1 | tr -d ' \n')"
-      echo "SteamOS ARM Port boot partition (GRUB looks for this file)" >"$WORK/boot/$mark"
+      echo "Zaviya boot partition (GRUB looks for this file)" >"$WORK/boot/$mark"
       sed -i -E "s|--file /[^ ]+ --set=root|--file /$mark --set=root|" \
         "$WORK/boot/EFI/BOOT/qcomramp.cfg" "$WORK/boot/EFI/BOOT/grub.cfg"
       grep -q -- "--file /$mark --set=root" "$WORK/boot/EFI/BOOT/qcomramp.cfg" \
@@ -344,18 +345,18 @@ if (( ! RESUME )); then
     --android-gib "$ANDROID_GB" --expect "$P_TABLE_FINGERPRINT" --backup-dir "$BACKUP_DIR"
 fi
 udevadm settle -t 10 >/dev/null 2>&1 || true
-RK="$(part_of ROCKNIX)"; ST="$(part_of STORAGE)"; HM="$(part_of HOME)"
-[[ -b "$RK" && -b "$ST" && -b "$HM" ]] || die "new partitions didn't show up; reboot to the SD and run with --resume"
-for p in "$RK" "$ST" "$HM"; do
+BOOTP="$(part_of "$BOOT_LABEL")"; ST="$(part_of STORAGE)"; HM="$(part_of HOME)"
+[[ -b "$BOOTP" && -b "$ST" && -b "$HM" ]] || die "new partitions didn't show up; reboot to the SD and run with --resume"
+for p in "$BOOTP" "$ST" "$HM"; do
   if findmnt -rno TARGET -S "$p" >/dev/null; then die "$p is mounted; unmount it first"; fi
 done
 
 log "formatting"
-mkfs.vfat -F 32 -S "$P_SECTOR_SIZE" -n ROCKNIX "$RK" >/dev/null
+mkfs.vfat -F 32 -S "$P_SECTOR_SIZE" -n "$BOOT_LABEL" "$BOOTP" >/dev/null
 mkfs.ext4 -F -q -L STORAGE -m 1 "$ST"
 mkfs.ext4 -F -q -L home -m 0 "$HM"
 
-mnt "$RK" "$WORK/boot"
+mnt "$BOOTP" "$WORK/boot"
 mnt "$ST" "$WORK/root"
 mnt "$HM" "$WORK/home"
 # The SD's root filesystem alone, read-only: no /proc, /run, /home or /boot
@@ -367,11 +368,11 @@ mount -o remount,bind,ro "$WORK/src"
 log "copying the system (a few minutes)"
 rsync -aAXH --numeric-ids --info=progress2 "$WORK/src/" "$WORK/root/"
 
-FSTAB='# SteamOS on internal UFS (partitions by GPT name)
+FSTAB="# Zaviya on internal UFS (partitions by GPT name)
 PARTLABEL=STORAGE  /      ext4  defaults,noatime                  0 1
-PARTLABEL=ROCKNIX  /boot  vfat  defaults,umask=0077,nofail        0 2
+PARTLABEL=$BOOT_LABEL  /boot  vfat  defaults,umask=0077,nofail        0 2
 PARTLABEL=HOME     /home  ext4  defaults,noatime,commit=30        0 2
-'
+"
 printf '%s' "$FSTAB" >"$WORK/root/etc/fstab"
 if [[ -d "$WORK/root/var/lib/overlays/etc/upper" ]]; then
   printf '%s' "$FSTAB" >"$WORK/root/var/lib/overlays/etc/upper/fstab"
@@ -434,9 +435,9 @@ cmp -s <(printf '%s' "$FSTAB") "$WORK/root/etc/fstab" || die "fstab not written"
 
 cleanup
 echo
-log "done. SteamOS is on internal storage."
+log "done. Zaviya is on internal storage."
 if [[ -n "$TABLET" ]]; then
-  echo "  - Power off and unplug the USB drive, then power on: it starts SteamOS from"
+  echo "  - Power off and unplug the USB drive, then power on: it starts Zaviya from"
   echo "    internal storage."
   echo "  - Android's boot image is saved in /home/.ufs-backup (stock-boot_*.img). To go back"
   echo "    to Android, flash it from a PC: fastboot flash boot stock-boot_<slot>.img"

@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
-Name=Easy UFS Installer
+Name=Zaviya Installer
 GenericName=Install Linux to internal UFS
-Comment=Requires a user password. Installs SteamOS to UFS (boot + root + home).
-Exec=easy-ufs-installer
-Icon=easy-ufs-installer
+Comment=Requires a user password. Installs Zaviya to internal storage (boot + system + home).
+Exec=zaviya-installer
+Icon=zaviya-installer
 Terminal=false
 Categories=System;Settings;X-ARM-Manager;
 Keywords=ufs;internal;android;storage;install;dual-boot;

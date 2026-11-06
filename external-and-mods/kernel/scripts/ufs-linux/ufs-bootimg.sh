@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# MaSi ABL boot/KERNEL helpers (diagnostics + legacy repair).
+# ABL boot/KERNEL helpers (diagnostics + legacy repair).
 # Normal flow: one KERNEL for microSD + UFS —
 #   root=UUID=<sd> + masi.ufsroot=PARTLABEL=STORAGE  (after update.sh)
 #   or legacy root=PARTLABEL=STORAGE only
-# Copy the same file to ROCKNIX — no cmdline patch.
+# Copy the same file to boot — no cmdline patch.
 set -euo pipefail
 
 UFS_INTERNAL_CMDLINE='clk_ignore_unused pd_ignore_unused quiet rw rootwait root=PARTLABEL=STORAGE rootfstype=ext4 errors=remount-ro mem_sleep_default=deep ufshcd_core.uic_cmd_timeout=3000'

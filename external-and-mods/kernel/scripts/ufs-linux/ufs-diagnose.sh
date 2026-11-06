@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# UFS / dual-boot diagnostic (run as root from MaSi-OS on microSD)
+# UFS / dual-boot diagnostic (run as root from Zaviya on microSD)
 set -euo pipefail
 
 # shellcheck source=ufs-bootimg.sh
@@ -72,19 +72,19 @@ echo
 echo "--- Detected layout: ${LAYOUT} ---"
 case "$LAYOUT" in
   masios-rocknix)
-    echo "  MaSi-OS / ROCKNIX style (2 Linux partitions):"
-    echo "    ROCKNIX  = boot / KERNEL  (${RK})"
+    echo "  Zaviya (2 Linux partitions):"
+    echo "    boot  = boot / KERNEL  (${RK})"
     echo "    STORAGE  = Linux rootfs  (${ST})"
     ;;
   alt3)
     echo "  3-partition vendor style (3 Linux partitions):"
-    echo "    ROCKNIX     = ESP / ABL reads KERNEL  (${RK})"
+    echo "    boot     = ESP / ABL reads KERNEL  (${RK})"
     echo "    BOOT = /boot (ext4)             (${AB})"
     echo "    ROOT = root (btrfs)             (${AR})"
-    echo "  MaSi-OS fix scripts do NOT apply to that 3-partition root layout."
+    echo "  Zaviya fix scripts do NOT apply to that 3-partition root layout."
     ;;
   partial-boot-only)
-    warn "Only ROCKNIX exists; STORAGE/alt-root missing (partial/failed install)."
+    warn "Only boot exists; STORAGE/alt-root missing (partial/failed install)."
     ;;
   android-only)
     echo "  No internal Linux partitions. Android-only or after factory reset."
@@ -105,7 +105,7 @@ fi
 
 if [[ -n "$RK" && -b "$RK" ]]; then
   echo
-  echo "--- Internal ROCKNIX partition (${RK}) ---"
+  echo "--- Internal boot partition (${RK}) ---"
   mkdir -p /tmp/rkdiag
   if mount "$RK" /tmp/rkdiag 2>/dev/null; then
     ls -la /tmp/rkdiag/
@@ -118,7 +118,7 @@ if [[ -n "$RK" && -b "$RK" ]]; then
         warn "Fix: sudo ./ufs-fix-internal-boot.sh --kernel-only"
       fi
     else
-      warn "NO KERNEL on ROCKNIX partition (Linux will black-screen)"
+      warn "NO KERNEL on boot partition (Linux will black-screen)"
     fi
     umount /tmp/rkdiag
   else
@@ -156,25 +156,25 @@ echo "  WHAT TO DO"
 echo "================================================================"
 case "$LAYOUT" in
   masios-rocknix)
-    echo "  Fresh tutorial:     sudo ./install-masios-to-internal.sh"
-    echo "  Failed mid-install: sudo ./install-masios-to-internal.sh --resume"
+    echo "  Fresh tutorial:     sudo ./install-to-internal.sh"
+    echo "  Failed mid-install: sudo ./install-to-internal.sh --resume"
     echo "  Boot/cmdline fix:   sudo ./ufs-fix-internal-boot.sh"
     echo "  Android recovery:   Factory data reset (userdata was wiped on install)"
     ;;
   alt3)
-    echo "  This is a 3-partition vendor layout. Do not use MaSi-OS UFS fix scripts."
+    echo "  This is a 3-partition vendor layout. Do not use Zaviya UFS fix scripts."
     echo "  Use that image's own installer/reset tools, or EDL flash."
     ;;
   partial-boot-only|mixed-or-unknown)
-    echo "  Partial install:    re-run install OR ABL 'Uninstall ROCKNIX'"
+    echo "  Partial install:    re-run install OR ABL 'UNINSTALL CFW'"
     echo "                      OR that image's own installer reset / EDL flash"
     ;;
   android-only)
-    echo "  Ready for fresh install: sudo ./install-masios-to-internal.sh"
+    echo "  Ready for fresh install: sudo ./install-to-internal.sh"
     ;;
 esac
 echo
 echo "  Restore full Android userdata size (expand partition):"
 echo "    NOT done by ufs-fix-internal-boot.sh"
-echo "    Use ABL 'Uninstall ROCKNIX' OR that image's installer reset OR EDL flash"
+echo "    Use ABL 'UNINSTALL CFW' OR that image's installer reset OR EDL flash"
 echo "================================================================"

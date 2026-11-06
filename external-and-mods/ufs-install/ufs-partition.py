@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inspect, repartition and restore internal UFS for the SteamOS install.
+"""Inspect, repartition and restore internal UFS for the Zaviya install.
 
   ufs-partition.py detect  [--disk /dev/sda] [--storage-gib 20]
   ufs-partition.py apply   --android-gib N --expect FINGERPRINT --backup-dir DIR
@@ -10,7 +10,7 @@
 
 Layout after apply (everything before userdata is never touched):
 
-  ... | userdata (N GiB) | ROCKNIX 2 GiB | STORAGE (20 GiB) | HOME (rest) |
+  ... | userdata (N GiB) | boot 2 GiB | STORAGE (20 GiB) | HOME (rest) |
 
 Rules:
   - Only the partition named "userdata" changes, and only its end. Its
@@ -38,6 +38,7 @@ import sys
 import time
 from pathlib import Path
 
+BOOT_LABEL = (Path(__file__).resolve().parent / "boot-label").read_text().strip()
 GIB = 1 << 30
 MIB = 1 << 20
 BOOT_GIB = 2
@@ -46,8 +47,8 @@ DEFAULT_STORAGE_GIB = 20
 # out of space soon after setup.
 MIN_ANDROID_GIB = 16
 MIN_HOME_GIB = 16
-OURS = ("ROCKNIX", "STORAGE", "HOME")
-# ROCKNIX: an EFI System Partition. The ABL boots Linux from it whatever
+OURS = (BOOT_LABEL, "STORAGE", "HOME")
+# The boot partition: an EFI System Partition. The ABL boots Linux from it whatever
 # its type (our initramfs finds it by name), but Android only came up again
 # with an ESP there: with a "basic data" FAT after userdata, two Pocket FIT
 # and one Pocket S2 install lost Android, while an ESP-first layout (same ABL)
@@ -147,7 +148,7 @@ def plan(t: dict, ud: dict, android_gib: int, storage_gib: int) -> dict:
     return {
         "sector_size": ss, "userdata_start": ud["start"], "userdata_size": ud_size,
         "new": [
-            ("ROCKNIX", boot_start, boot_size, TYPE_ESP),
+            (BOOT_LABEL, boot_start, boot_size, TYPE_ESP),
             ("STORAGE", st_start, st_size, TYPE_LINUX),
             ("HOME", home_start, home_size, TYPE_LINUX),
         ],
@@ -440,7 +441,7 @@ def cmd_restore(a) -> None:
 
 def cmd_reset_android(a) -> None:
     """For installs made before blank_metadata(): Android won't boot after
-    the SteamOS install. Wipe Android's data the way fastboot -w does
+    the Zaviya install. Wipe Android's data the way fastboot -w does
     (userdata's head + metadata). The partition table is not touched."""
     t = read_table(a.disk)
     ud = userdata(t)
@@ -458,14 +459,14 @@ def cmd_reset_android(a) -> None:
 
 
 def cmd_fix_types(a) -> None:
-    """For installs made before the ESP type: retype ROCKNIX to an ESP, and
+    """For installs made before the ESP type: retype the boot partition to an ESP, and
     give userdata Qualcomm's type back if a hand-made layout replaced it with
     the generic Linux one. Only type GUIDs change; no data is touched."""
     t = read_table(a.disk)
     changes = []
     for q in t["partitions"]:
         num = part_num(a.disk, q["node"])
-        if q["name"] == "ROCKNIX" and q["type"].upper() != TYPE_ESP:
+        if q["name"] == BOOT_LABEL and q["type"].upper() != TYPE_ESP:
             changes.append((num, q["name"], q["type"], TYPE_ESP))
         if q["name"] == "userdata" and q["type"].upper() == TYPE_LINUX:
             changes.append((num, q["name"], q["type"], TYPE_QC_USERDATA))

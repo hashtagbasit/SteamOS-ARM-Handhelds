@@ -38,44 +38,50 @@ if [[ -d "$R/var/lib/overlays/etc/upper" ]]; then
     "$R/var/lib/overlays/etc/upper/xdg/menus/applications-merged/arm-manager.menu"
 fi
 
-# ── Easy UFS Installer (ARM-Manager, no desktop icon) ───────────────────────
-log "Easy UFS Installer"
-share_ufs="$R/usr/share/easy-ufs-install"
+# ── Zaviya Installer (ARM-Manager, no desktop icon) ─────────────────────────
+log "Zaviya Installer"
+# A rootfs updated from an older image still has the old names.
+rm -rf "$R/usr/share/easy-ufs-install"
+rm -f "$bin/easy-ufs-installer" "$bin"/install-*-to-internal* \
+  "$apps/easy-ufs-installer.desktop" "$icons/scalable/apps/easy-ufs-installer.svg"
+share_ufs="$R/usr/share/zaviya-install"
 rm -rf "$share_ufs"
 mkdir -p "$share_ufs"
 cp -a "${MOD}/ufs-install/." "$share_ufs/"
 chmod 0755 "$share_ufs/"*.sh "$share_ufs/"*.py 2>/dev/null || true
-cat >"$bin/easy-ufs-installer" <<'EOF'
+cat >"$bin/zaviya-installer" <<'EOF'
 #!/bin/bash
-export EASY_UFS_INSTALL_ROOT=/usr/share/easy-ufs-install
-exec python3 "${EASY_UFS_INSTALL_ROOT}/easy-ufs-installer.py" "$@"
+export ZAVIYA_INSTALL_ROOT=/usr/share/zaviya-install
+exec python3 "${ZAVIYA_INSTALL_ROOT}/zaviya-installer.py" "$@"
 EOF
-chmod 0755 "$bin/easy-ufs-installer"
-for s in install-masios-to-internal ufs-bootimg ufs-diagnose ufs-fix-internal-boot ufs-probe-sizes; do
+chmod 0755 "$bin/zaviya-installer"
+for s in install-to-internal ufs-bootimg ufs-diagnose ufs-fix-internal-boot ufs-probe-sizes; do
   if [[ -x "${MOD}/ufs-install/${s}.sh" ]]; then
     cat >"$bin/${s}.sh" <<EOF
 #!/bin/bash
-exec /usr/share/easy-ufs-install/${s}.sh "\$@"
+exec /usr/share/zaviya-install/${s}.sh "\$@"
 EOF
     chmod 0755 "$bin/${s}.sh" || true
     ln -sfn "${s}.sh" "$bin/${s}" || true
   fi
 done
-# The app runs the installer and its probe through pkexec. SteamOS has no
+# The app runs the installer and its probe through pkexec. Zaviya has no
 # user password, so the person at the device may run these two without one.
 install -Dm0644 "${MOD}/ufs-install/polkit/org.steamos-arm.easy-ufs-install.policy" \
   "$R/usr/share/polkit-1/actions/org.steamos-arm.easy-ufs-install.policy"
 # restore / inspect: `sudo ufs-partition.py restore --backup …` (printed by the installer)
 for s in ufs-partition ufs-bootimg; do
-  ln -sfn /usr/share/easy-ufs-install/${s}.py "$bin/${s}.py"
+  ln -sfn /usr/share/zaviya-install/${s}.py "$bin/${s}.py"
 done
-[[ -f "${MOD}/ufs-install/easy-ufs-installer.svg" ]] && \
-  install -m 0644 "${MOD}/ufs-install/easy-ufs-installer.svg" \
-    "$icons/scalable/apps/easy-ufs-installer.svg"
-install -m 0644 "${MOD}/ufs-install/easy-ufs-installer.desktop" \
-  "$apps/easy-ufs-installer.desktop"
+[[ -f "${MOD}/ufs-install/zaviya-installer.svg" ]] && \
+  install -Dm 0644 "${MOD}/ufs-install/zaviya-installer.svg" \
+    "$icons/scalable/apps/zaviya-installer.svg"
+install -m 0644 "${MOD}/ufs-install/zaviya-installer.desktop" \
+  "$apps/zaviya-installer.desktop"
 rm -f "$HOME_DST/Desktop/Easy UFS Installer.desktop" \
-  "$R/etc/skel/Desktop/Easy UFS Installer.desktop"
+  "$R/etc/skel/Desktop/Easy UFS Installer.desktop" \
+  "$HOME_DST/Desktop/Zaviya Installer.desktop" \
+  "$R/etc/skel/Desktop/Zaviya Installer.desktop"
 
 # Offline update staging GUI and privileged helper.
 mkdir -p "$R/usr/share/konkr-update"

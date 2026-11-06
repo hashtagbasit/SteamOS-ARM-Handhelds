@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Repair MaSi-OS / ROCKNIX internal boot on UFS (run as root from microSD).
+# Repair Zaviya internal boot on UFS (run as root from microSD).
 set -euo pipefail
 
 VERSION="1.3.0"
@@ -21,11 +21,11 @@ usage() {
   cat <<EOF
 ufs-fix-internal-boot v${VERSION}
 
-Repair MaSi-OS / ROCKNIX internal boot (copy KERNEL + optional fstab).
-Copies /boot/KERNEL to ROCKNIX — same file as microSD (no cmdline patch on current builds).
+Repair Zaviya internal boot (copy KERNEL + optional fstab).
+Copies /boot/KERNEL to boot — same file as microSD (no cmdline patch on current builds).
 
 Options:
-  --kernel-only   Copy KERNEL to ROCKNIX partition only
+  --kernel-only   Copy KERNEL to boot partition only
   --fstab-only    Fix /etc/fstab on STORAGE only
   --dry-run       Show actions without writing
   --force         Skip confirmation
@@ -81,11 +81,11 @@ root_on_same_disk() {
 patch_kernel() {
   local rk_dev=$1 tmp=$2
   if (( DRY_RUN )); then
-    log "[dry-run] copy /boot/KERNEL → ROCKNIX/KERNEL"
+    log "[dry-run] copy /boot/KERNEL → boot/KERNEL"
     return
   fi
   if read_bootimg_cmdline /boot/KERNEL 2>/dev/null | grep -qE 'masi\.ufsroot=PARTLABEL=STORAGE|root=PARTLABEL=STORAGE'; then
-    log "Copying /boot/KERNEL to ROCKNIX (same file as microSD)..."
+    log "Copying /boot/KERNEL to boot (same file as microSD)..."
     cp -a /boot/KERNEL "${tmp}/KERNEL"
   else
     log "Legacy KERNEL — patching cmdline (needs abootimg)..."
@@ -127,7 +127,7 @@ main() {
   done
 
   [[ $EUID -eq 0 ]] || die "Run as root: sudo $0"
-  [[ -f /boot/KERNEL ]] || die "Missing /boot/KERNEL on SD (boot MaSi-OS from microSD first)"
+  [[ -f /boot/KERNEL ]] || die "Missing /boot/KERNEL on SD (boot Zaviya from microSD first)"
 
   DEVICE=$(detect_ufs_device)
   [[ -n "$DEVICE" ]] || die "No UFS with userdata partition found."
@@ -148,16 +148,16 @@ main() {
       die "3-partition vendor layout detected. Use the image installer instead."
       ;;
     partial)
-      die "Partial install: ROCKNIX exists but STORAGE is missing.
-Re-run: sudo ./install-masios-to-internal.sh --deploy-only"
+      die "Partial install: boot exists but STORAGE is missing.
+Re-run: sudo ./install-to-internal.sh --deploy-only"
       ;;
     none)
-      die "No MaSi-OS / ROCKNIX internal partitions found."
+      die "No Zaviya internal partitions found."
       ;;
   esac
 
   echo
-  echo "This fix will copy /boot/KERNEL to ROCKNIX/KERNEL (same file as microSD)."
+  echo "This fix will copy /boot/KERNEL to boot/KERNEL (same file as microSD)."
   echo
 
   if (( ! FORCE && ! DRY_RUN )); then

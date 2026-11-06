@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sizing probe for the Easy UFS Installer GUI. Prints KEY=VALUE lines from
+# Sizing probe for the Zaviya installer GUI. Prints KEY=VALUE lines from
 # ufs-partition.py detect (the same numbers the installer uses), plus the
 # older keys the GUI reads.
 set -euo pipefail

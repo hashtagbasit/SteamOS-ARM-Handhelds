@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# install-masios-to-internal.sh
+# install-to-internal.sh
 #
-# Install MaSi-OS (or any Armbian SM8550 image with ROCKNIX ABL) on internal UFS
+# Install Zaviya on internal UFS
 # alongside Android (dual-boot).
 #
-# Partition layout (ROCKNIX ABL compatible):
+# Partition layout (OpenABL compatible):
 #   userdata  -> Android (resized, all data erased)
-#   ROCKNIX   -> 2 GiB FAT32: kernel/boot (KERNEL + KERNEL.md5)
+#   boot   -> 2 GiB FAT32: kernel/boot (KERNEL + KERNEL.md5)
 #   STORAGE   -> ext4: full Linux root filesystem
 #
 # Requirements:
-#   - Run as root from MaSi-OS/Armbian on microSD
-#   - ROCKNIX ABL installed on the device
-#   - /boot/KERNEL (MaSi-OS multidevice ROCKNIX ABL bootimg — same file for SD and UFS)
+#   - Run as root from Zaviya on microSD
+#   - OpenABL installed on the device
+#   - /boot/KERNEL (Zaviya multidevice OpenABL bootimg — same file for SD and UFS)
 #   - Qualcomm SM8550 SoC (AYN Odin 2, Thor, Odin 2 Mini/Portal, etc.)
 #
 # Usage:
-#   sudo ./install-masios-to-internal.sh
-#   sudo ./install-masios-to-internal.sh --android-gb 64
-#   sudo ./install-masios-to-internal.sh --resume
+#   sudo ./install-to-internal.sh
+#   sudo ./install-to-internal.sh --android-gb 64
+#   sudo ./install-to-internal.sh --resume
 
 set -euo pipefail
 
@@ -32,7 +32,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ufs-bootimg.sh"
 BOOT_SRC="/boot"
 
 # Partition constants (same as the ABL installtointernal)
-BOOT_PART_MIB=2048              # ROCKNIX boot partition (fixed)
+BOOT_PART_MIB=2048              # boot boot partition (fixed)
 BOOT_PART_GIB=2
 MIN_ANDROID_GIB=16              # mandatory minimum for Android
 RECOMMENDED_ANDROID_GIB=64      # suggested for apps, games, media
@@ -120,7 +120,7 @@ part_by_label() {
 
 usage() {
   cat <<EOF
-MaSi-OS / UFS Linux install-to-internal v${VERSION}
+Zaviya / UFS Linux install-to-internal v${VERSION}
 
 Install the current Linux system on internal UFS alongside Android.
 
@@ -128,7 +128,7 @@ Options:
   --android-gb N   Android userdata size in GB (skips interactive prompt)
   --dry-run        Simulate without writing to disk
   --force          Skip final confirmation prompt
-  --resume         Skip repartitioning; copy boot+rootfs onto existing ROCKNIX/STORAGE
+  --resume         Skip repartitioning; copy boot+rootfs onto existing boot/STORAGE
   --deploy-only    Same as --resume (partitions exist; copy KERNEL + rootfs only)
                    (use after a failed install that created partitions but did not finish)
   -h, --help       Show this help
@@ -215,7 +215,7 @@ validate_supported_board() {
       return 0
       ;;
     *)
-      warn "Board '${board}' is not on the verified MaSi-OS device list."
+      warn "Board '${board}' is not on the verified Zaviya device list."
       warn "Tested: ayn-odin2, ayn-odin2mini, ayn-odin2portal, ayn-thor"
       read -rp "Continue anyway? [y/N]: " ans
       [[ "$ans" =~ ^[Yy]$ ]] || die "Aborted by user."
@@ -330,7 +330,7 @@ check_root() {
 }
 
 check_boot_files() {
-  [[ -f "${BOOT_SRC}/KERNEL" ]] || die "Missing ${BOOT_SRC}/KERNEL — run MaSi-OS ./make.sh && sudo ./update.sh first"
+  [[ -f "${BOOT_SRC}/KERNEL" ]] || die "Missing ${BOOT_SRC}/KERNEL — run Zaviya ./make.sh && sudo ./update.sh first"
   local ksize cmdline
   ksize=$(stat -c%s "${BOOT_SRC}/KERNEL")
   if (( ksize < 1000000 )); then
@@ -345,7 +345,7 @@ or legacy:
   root=PARTLABEL=STORAGE
 Got: $(read_bootimg_cmdline "${BOOT_SRC}/KERNEL" 2>/dev/null || echo '(unreadable)')
 Rebuild and install on THIS device:
-  cd ~/Projects/kernel-new-base   # or MaSi-OS-Kernel-Updater checkout
+  cd ~/Projects/kernel-new-base   # or Zaviya-Kernel-Updater checkout
   ./make.sh && sudo ./update.sh"
   fi
   log "Boot files OK: ${BOOT_SRC}/KERNEL ($(numfmt --to=iec-i --suffix=B "$ksize" 2>/dev/null || echo "${ksize} B"))"
@@ -381,33 +381,33 @@ check_running_from_removable() {
 check_existing_install() {
   local device=$1 label rk st
 
-  log "Checking for existing internal Linux partitions (labels: ROCKNIX, STORAGE)..."
+  log "Checking for existing internal Linux partitions (boot and STORAGE partition labels)..."
   rk=$(part_by_label "$device" ROCKNIX || true)
   st=$(part_by_label "$device" STORAGE || true)
 
   if [[ -n "$rk" && -n "$st" ]]; then
     if (( RESUME )); then
-      warn "Resume mode: using existing ROCKNIX (${rk}) and STORAGE (${st}) — no repartitioning."
+      warn "Resume mode: using existing boot (${rk}) and STORAGE (${st}) — no repartitioning."
       RK_PART_DEV="$rk"
       ST_PART_DEV="$st"
       RK_NUM="${rk##*[!0-9]}"
       ST_NUM="${st##*[!0-9]}"
       return 0
     fi
-    die "Internal Linux partitions already exist (ROCKNIX + STORAGE).
+    die "Internal Linux partitions already exist (boot + STORAGE).
 If a previous install failed partway through, re-run with:
   sudo $0 --resume
-Otherwise use ABL 'Uninstall ROCKNIX' before a fresh install."
+Otherwise use ABL 'UNINSTALL CFW' before a fresh install."
   fi
 
   while IFS= read -r label; do
     [[ -n "$label" ]] || continue
     if [[ "$label" == "ROCKNIX" || "$label" == "STORAGE" ]]; then
       die "Partial internal Linux layout (label '${label}' only).
-Re-run with --resume after fixing partitions, or use ABL 'Uninstall ROCKNIX'."
+Re-run with --resume after fixing partitions, or use ABL 'UNINSTALL CFW'."
     fi
   done < <(timeout "$IO_TIMEOUT_SEC" lsblk -rn -o PARTLABEL "$device")
-  log "No ROCKNIX/STORAGE partition labels on UFS (OK for first install)."
+  log "No boot/STORAGE partition labels on UFS (OK for first install)."
 }
 
 check_dependencies() {
@@ -445,8 +445,8 @@ show_storage_overview() {
   echo "  This script will SPLIT that region into three partitions:"
   echo
   echo "    [ Android userdata ]  size YOU choose  (all Android data will be erased)"
-  echo "    [ ROCKNIX boot     ]  ${BOOT_PART_GIB} GB fixed   (kernel: KERNEL file)"
-  echo "    [ Linux STORAGE    ]  remaining space  (full MaSi-OS system)"
+  echo "    [ boot boot     ]  ${BOOT_PART_GIB} GB fixed   (kernel: KERNEL file)"
+  echo "    [ Linux STORAGE    ]  remaining space  (full Zaviya system)"
   echo
   echo "  You control how much goes to Android."
   echo "    Boot + Linux automatically get everything left over."
@@ -519,8 +519,8 @@ show_allocation_plan() {
   echo "================================================================"
   echo
   printf "  %-22s %6s GB   %s\n" "Android (userdata):" "${ANDROID_GB}" "${UD_PART_DEV}"
-  printf "  %-22s %6s GB   %s  [KERNEL, KERNEL.md5]\n" "Boot (ROCKNIX):" "${BOOT_PART_GIB}" "${RK_PART_DEV}"
-  printf "  %-22s %6s GB   %s  [MaSi-OS rootfs]\n" "Linux (STORAGE):" "${LINUX_GIB}" "${ST_PART_DEV}"
+  printf "  %-22s %6s GB   %s  [KERNEL, KERNEL.md5]\n" "Boot (boot):" "${BOOT_PART_GIB}" "${RK_PART_DEV}"
+  printf "  %-22s %6s GB   %s  [Zaviya rootfs]\n" "Linux (STORAGE):" "${LINUX_GIB}" "${ST_PART_DEV}"
   echo "  ─────────────────────────────────────────────────────────────"
   printf "  %-22s %6s GB\n" "Total allocated:" "$(( ANDROID_GB + BOOT_PART_GIB + LINUX_GIB ))"
   echo
@@ -534,7 +534,7 @@ show_allocation_plan() {
 confirm_destructive() {
   (( FORCE )) && return 0
   if (( RESUME )); then
-    read -rp "Copy boot+rootfs to existing ROCKNIX/STORAGE (no repartition)? [y/N]: " ans
+    read -rp "Copy boot+rootfs to existing boot/STORAGE (no repartition)? [y/N]: " ans
   else
     read -rp "Proceed with partitioning and installation? [y/N]: " ans
   fi
@@ -607,13 +607,13 @@ mount_target_partitions() {
 
 copy_boot() {
   if (( DRY_RUN )); then
-    log "[dry-run] copy ${BOOT_SRC}/KERNEL → ROCKNIX/KERNEL (same file as microSD)"
+    log "[dry-run] copy ${BOOT_SRC}/KERNEL → boot/KERNEL (same file as microSD)"
     return
   fi
-  log "Copying KERNEL to ROCKNIX (same bootimg as microSD — no cmdline patch)..."
+  log "Copying KERNEL to boot (same bootimg as microSD — no cmdline patch)..."
   cp -a "${BOOT_SRC}/KERNEL" "${TMP_BOOT}/KERNEL"
   md5sum "${TMP_BOOT}/KERNEL" | awk '{print $1}' > "${TMP_BOOT}/KERNEL.md5"
-  [[ -f "${TMP_BOOT}/KERNEL" ]] || die "KERNEL was not written to ROCKNIX partition"
+  [[ -f "${TMP_BOOT}/KERNEL" ]] || die "KERNEL was not written to boot partition"
   verify_internal_kernel_cmdline "${TMP_BOOT}/KERNEL" \
     || die "Verify failed: KERNEL not dual-boot capable (need root=UUID + masi.ufsroot=PARTLABEL=STORAGE, or root=PARTLABEL=STORAGE). Run ./make.sh && sudo ./update.sh"
   sync
@@ -624,7 +624,7 @@ verify_install() {
     return
   fi
   log "Verifying installation before reboot..."
-  [[ -f "${TMP_BOOT}/KERNEL" ]] || die "Verify failed: no KERNEL on ROCKNIX partition"
+  [[ -f "${TMP_BOOT}/KERNEL" ]] || die "Verify failed: no KERNEL on boot partition"
   verify_internal_kernel_cmdline "${TMP_BOOT}/KERNEL" \
     || die "Verify failed: KERNEL cmdline is not dual-boot (need root=UUID + masi.ufsroot, or root=PARTLABEL=STORAGE)"
   [[ -d "${TMP_ROOT}/etc" ]] || die "Verify failed: STORAGE rootfs looks empty"
@@ -653,7 +653,7 @@ write_fstab() {
     return
   fi
   cat > "${TMP_ROOT}/etc/fstab" <<'EOF'
-# Generated by install-masios-to-internal.sh — internal UFS boot
+# Generated by install-to-internal.sh — internal UFS boot
 PARTLABEL=STORAGE  /      ext4  defaults,noatime,commit=120,errors=remount-ro  0 1
 PARTLABEL=ROCKNIX  /boot  vfat  defaults                                          0 2
 tmpfs              /tmp   tmpfs defaults,nosuid                                   0 0
@@ -688,7 +688,7 @@ print_summary() {
   echo "    Linux system     : ${ST_PART_DEV}  (${st_sz} GB)"
   echo
   echo "  Boot:"
-  echo "    ABL Linux mode, no SD card  ->  MaSi-OS from UFS"
+  echo "    ABL Linux mode, no SD card  ->  Zaviya from UFS"
   echo "    Hold Vol+ while powering on ->  force Android"
   echo "    First Android boot          ->  setup wizard (expected)"
   echo
@@ -696,12 +696,12 @@ print_summary() {
     warn "Dry-run mode: nothing was written to disk."
   else
     echo "  IMPORTANT:"
-    echo "    1. Same KERNEL on SD and ROCKNIX (root=PARTLABEL=STORAGE + masi.sdroot)."
+    echo "    1. Same KERNEL on SD and internal boot (root=PARTLABEL=STORAGE + masi.sdroot)."
     echo "    2. First internal Linux test: remove microSD if boot fails (see docs)."
     echo "    3. Android: boot recovery -> Factory data reset (userdata was wiped)."
     echo "  If Linux black-screens: sudo masi-ufs-diagnose"
     echo "  Quick repair (partitions OK): sudo ufs-fix-internal-boot.sh"
-    echo "  Kernel update later: cd Kernel_MaSi-OS && sudo ./update.sh"
+    echo "  Kernel update later: cd Kernel_Zaviya && sudo ./update.sh"
   fi
 }
 

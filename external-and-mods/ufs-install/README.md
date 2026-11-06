@@ -1,10 +1,10 @@
 # Install to internal storage
 
-Moves the SteamOS you're running from the microSD card onto the internal
+Moves the system you're running from the microSD card onto the internal
 storage, next to Android. For the KONKR Pocket FIT (and the AYANEO Pocket S2,
 untested), both SM8650, SM8550 handhelds (AYN Odin 2, Odin 2 Mini, Odin 2
 Portal), the AYN Odin 3, and the KONKR Pocket FIT Elite (SM8750, untested)
-with ROCKNIX ABL 1.1.8 or newer.
+with OpenABL.
 
 > **This erases Android's user data** (apps, photos, accounts) and changes the
 > internal partition table. Android itself stays and sets itself up again.
@@ -12,12 +12,12 @@ with ROCKNIX ABL 1.1.8 or newer.
 
 ## How to
 
-Boot SteamOS from the SD card, then either open **Easy UFS Installer** in
+Boot Zaviya from the SD card, then either open **Zaviya Installer** in
 Desktop Mode, or in a terminal:
 
 ```bash
-sudo install-masios-to-internal.sh --dry-run     # shows the plan, writes nothing
-sudo install-masios-to-internal.sh               # asks for the Android size
+sudo install-to-internal.sh --dry-run     # shows the plan, writes nothing
+sudo install-to-internal.sh               # asks for the Android size
 ```
 
 When it's done: power off and take the SD card out. In the ABL menu (hold
@@ -35,18 +35,18 @@ You pick how much of the SD's `/home` comes along:
 
 ## Reinstall versus update
 
-Use **SteamOS Update** for an existing installation. The installer’s `--resume` option resumes a failed initial deployment by formatting boot, system and HOME again. It erases internal Linux games, saves and account data before copying the selected SD data. It is not an in-place update or a data-preserving repair.
+Use **Zaviya Update** for an existing installation. The installer’s `--resume` option resumes a failed initial deployment by formatting boot, system and HOME again. It erases internal Linux games, saves and account data before copying the selected SD data. It is not an in-place update or a data-preserving repair.
 
 ## Layout
 
 ```
 before:  ... | userdata ─────────────────────────────────────────── |
-after:   ... | userdata (you pick) | ROCKNIX 2G | STORAGE 20G | HOME |
+after:   ... | userdata (you pick) | boot 2G | STORAGE 20G | HOME |
 ```
 
 - Nothing before `userdata` is touched. `userdata` keeps its start, type, GUID
   and attributes; only its end moves.
-- `ROCKNIX` (FAT32) holds the `KERNEL` the ABL boots, `STORAGE` is `/`,
+- The boot partition (FAT32) holds the `KERNEL` the ABL boots, `STORAGE` is `/`,
   `HOME` is `/home`. Everything is mounted by partition name, so the internal
   install doesn't depend on the SD card.
 
@@ -80,7 +80,7 @@ next boot. **UNINSTALL CFW** in the ABL menu also removes the Linux partitions.
 Installs made before v1.3 gave the Linux boot partition the "basic data"
 type, and Android doesn't start with that next to it (the Snapdragon logo,
 then off). Retyping it as an EFI System Partition brought Android back on a
-Pocket FIT, with SteamOS still booting from internal. Boot the SD card and
+Pocket FIT, with Zaviya still booting from internal. Boot the SD card and
 run:
 
 ```bash
@@ -89,7 +89,7 @@ sudo ufs-partition.py fix-types
 sudo ufs-partition.py reset-android --yes   # Android sets itself up fresh
 ```
 
-`fix-types` only changes partition type IDs; SteamOS on internal storage
+`fix-types` only changes partition type IDs; Zaviya on internal storage
 keeps working and nothing is erased. `reset-android` clears Android's
 already-erased data area so its next boot starts like a reset device.
 
@@ -97,17 +97,18 @@ already-erased data area so its next boot starts like a reset device.
 
 Boot the SD card and run `sudo ufs-diagnose.sh`, then
 `sudo ufs-fix-internal-boot.sh` (rewrites the KERNEL and fstab), or
-`sudo install-masios-to-internal.sh --resume` to copy the system again onto the
+`sudo install-to-internal.sh --resume` to copy the system again onto the
 existing partitions.
 
 ## Files
 
 | File | What it does |
 |---|---|
-| `install-masios-to-internal.sh` | the installer |
+| `install-to-internal.sh` | the installer |
 | `ufs-partition.py` | reads, repartitions and restores the internal partition table |
+| `boot-label` | the boot partition's on-disk name (older installs and the initramfs use it) |
 | `ufs-bootimg.py` | reads, checks and retargets the ABL `KERNEL` |
-| `easy-ufs-installer.py` | the Desktop Mode app |
+| `zaviya-installer.py` | the Desktop Mode app |
 | `ufs-probe-sizes.sh` | sizes for the app |
 | `ufs-diagnose.sh`, `ufs-fix-internal-boot.sh` | repair tools |
 

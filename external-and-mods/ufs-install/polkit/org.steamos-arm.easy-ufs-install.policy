@@ -3,25 +3,25 @@
  "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
-  <vendor>Unofficial SteamOS ARM</vendor>
+  <vendor>Zaviya</vendor>
   <action id="org.steamos-arm.easy-ufs-install">
-    <description>Install SteamOS to internal storage</description>
-    <message>Installing SteamOS to internal storage needs administrator rights</message>
+    <description>Install Zaviya to internal storage</description>
+    <message>Installing Zaviya to internal storage needs administrator rights</message>
     <defaults>
       <allow_any>no</allow_any>
       <allow_inactive>no</allow_inactive>
       <allow_active>yes</allow_active>
     </defaults>
-    <annotate key="org.freedesktop.policykit.exec.path">/usr/share/easy-ufs-install/install-masios-to-internal.sh</annotate>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/share/zaviya-install/install-to-internal.sh</annotate>
   </action>
   <action id="org.steamos-arm.easy-ufs-probe">
-    <description>Check internal storage for SteamOS</description>
+    <description>Check internal storage for Zaviya</description>
     <message>Checking internal storage needs administrator rights</message>
     <defaults>
       <allow_any>no</allow_any>
       <allow_inactive>no</allow_inactive>
       <allow_active>yes</allow_active>
     </defaults>
-    <annotate key="org.freedesktop.policykit.exec.path">/usr/share/easy-ufs-install/ufs-probe-sizes.sh</annotate>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/share/zaviya-install/ufs-probe-sizes.sh</annotate>
   </action>
 </policyconfig>

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sync boot/KERNEL to internal UFS ROCKNIX partition (same file as microSD — no cmdline patch).
+# Sync boot/KERNEL to internal UFS boot partition (same file as microSD — no cmdline patch).
 set -euo pipefail
 
 update_internal_ufs_kernel() {
@@ -7,24 +7,24 @@ update_internal_ufs_kernel() {
     local rk_dev mount="/run/masi-ufs-rocknix" need_umount=0
 
     [[ -f "${kernel}" ]] || {
-        echo "  UFS: skip ROCKNIX sync (no ${kernel})" >&2
+        echo "  UFS: skip boot sync (no ${kernel})" >&2
         return 0
     }
 
     rk_dev="$(lsblk -rn -o NAME,PARTLABEL 2>/dev/null | awk '$2=="ROCKNIX"{print "/dev/"$1; exit}')"
     [[ -n "${rk_dev}" ]] || {
-        echo "  UFS: no ROCKNIX partition — skip internal KERNEL sync" >&2
+        echo "  UFS: no boot partition — skip internal KERNEL sync" >&2
         return 0
     }
 
-    echo "==> UFS ROCKNIX ← ${kernel}" >&2
+    echo "==> UFS boot ← ${kernel}" >&2
 
     if findmnt -rn -S "$rk_dev" >/dev/null 2>&1; then
         mount="$(findmnt -rn -o TARGET -S "$rk_dev")"
     else
         mkdir -p "$mount"
         mount "$rk_dev" "$mount" || {
-            echo "  WARNING: could not mount ${rk_dev} — skip ROCKNIX KERNEL sync" >&2
+            echo "  WARNING: could not mount ${rk_dev} — skip boot KERNEL sync" >&2
             return 0
         }
         need_umount=1
@@ -39,7 +39,7 @@ update_internal_ufs_kernel() {
         rmdir "$mount" 2>/dev/null || true
     fi
 
-    echo "  UFS ROCKNIX KERNEL updated (${rk_dev})" >&2
+    echo "  UFS boot KERNEL updated (${rk_dev})" >&2
 }
 
 install_ufs_linux_scripts() {
@@ -53,15 +53,14 @@ install_ufs_linux_scripts() {
 
     echo "==> UFS internal install scripts → ${dest}/" >&2
     mkdir -p "${dest}"
-    install -m755 "${src}/install-masios-to-internal.sh" "${dest}/"
+    install -m755 "${src}/install-to-internal.sh" "${dest}/"
     install -m755 "${src}/ufs-bootimg.sh" "${dest}/"
     install -m755 "${src}/ufs-fix-internal-boot.sh" "${dest}/"
     install -m755 "${src}/ufs-diagnose.sh" "${dest}/"
 
     mkdir -p /usr/local/bin
-    ln -sf "${dest}/install-masios-to-internal.sh" /usr/local/bin/masi-install-to-ufs 2>/dev/null || true
     ln -sf "${dest}/ufs-diagnose.sh" /usr/local/bin/masi-ufs-diagnose 2>/dev/null || true
 
-    echo "  Internal UFS: sudo masi-install-to-ufs" >&2
+    echo "  Internal UFS: sudo ${dest}/install-to-internal.sh" >&2
     echo "  Diagnose:     sudo masi-ufs-diagnose" >&2
 }

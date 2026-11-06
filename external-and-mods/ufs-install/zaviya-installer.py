@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Easy UFS Installer — GUI for installing Linux to internal UFS."""
+"""Zaviya Installer: GUI for installing Zaviya to internal UFS."""
 
 from __future__ import annotations
 
@@ -14,29 +14,17 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk, Pango
 
-APP_NAME = "Easy UFS Installer"
+APP_NAME = "Zaviya Installer"
 APP_VERSION = "2.0.0"
 
-SHARE = Path(os.environ.get("EASY_UFS_INSTALL_ROOT", "/usr/share/easy-ufs-install"))
-INSTALL_SH = SHARE / "install-masios-to-internal.sh"
+SHARE = Path(os.environ.get("ZAVIYA_INSTALL_ROOT", "/usr/share/zaviya-install"))
+INSTALL_SH = SHARE / "install-to-internal.sh"
 PROBE_SH = SHARE / "ufs-probe-sizes.sh"
 DIAGNOSE_SH = SHARE / "ufs-diagnose.sh"
 
-WARNING_TEXT = (
-    "WARNING — THIS WILL MODIFY THE INTERNAL STORAGE OF YOUR DEVICE\n\n"
-    "This tool repartitions internal UFS and installs SteamOS alongside Android "
-    "(ROCKNIX ABL 3-partition layout: boot + root + home).\n\n"
-    "• Android userdata will be ERASED (factory-reset style).\n"
-    "• Incorrect use MAY cause data loss or make Android/Linux unbootable.\n"
-    "• Run this from microSD Linux, not from an already-installed UFS root.\n"
-    "• Keep ROCKNIX ABL installed and a working /boot/KERNEL on the SD.\n\n"
-    "Nothing should go wrong if you follow the steps, but DATA LOSS IS POSSIBLE.\n"
-    "Proceed only if you understand the risk."
-)
-
 
 def _is_tablet() -> bool:
-    """Lenovo Legion Y700 Gen 3 / Gen 4: no ROCKNIX ABL, runs from USB."""
+    """Lenovo Legion Y700 Gen 3 / Gen 4: no OpenABL, runs from USB."""
     try:
         compat = Path("/sys/firmware/devicetree/base/compatible").read_bytes()
     except OSError:
@@ -95,11 +83,6 @@ class MainWindow(Gtk.Window):
         title.set_xalign(0)
         root.pack_start(title, False, False, 0)
 
-        warn = Gtk.Label(label=WARNING_TEXT)
-        warn.set_xalign(0)
-        warn.set_line_wrap(True)
-        warn.set_selectable(True)
-        warn.override_color(Gtk.StateFlags.NORMAL, None)
         frame = Gtk.Frame(label="Read carefully")
         frame.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
@@ -110,23 +93,23 @@ class MainWindow(Gtk.Window):
             "<span foreground='#b00020'><b>WARNING — THIS WILL MODIFY THE INTERNAL "
             "STORAGE OF YOUR DEVICE</b></span>\n\n"
             + GLib.markup_escape_text(
-                ("This tool repartitions internal UFS and installs SteamOS next to Android's "
-                 "data (ROCKNIX boot + STORAGE root + HOME), then writes SteamOS's boot image "
+                ("This tool repartitions internal UFS and installs Zaviya next to Android's "
+                 "data (boot + system + home), then writes Zaviya's boot image "
                  "over Android's. Android's boot image is saved to /home/.ufs-backup first.\n\n"
                  "• Android userdata will be ERASED (factory-reset style).\n"
                  "• The old partition table is saved to the USB drive first (/boot/ufs-backup).\n"
                  "• Incorrect use MAY cause data loss or make Android/Linux unbootable.\n"
-                 "• Run this from SteamOS on the USB drive, not from an already-installed one.\n\n"
+                 "• Run this from Zaviya on the USB drive, not from an already-installed one.\n\n"
                  if TABLET else
-                 "This tool repartitions internal UFS and installs SteamOS alongside Android "
-                 "(ROCKNIX ABL: ROCKNIX boot + STORAGE root + HOME).\n\n"
+                 "This tool repartitions internal UFS and installs Zaviya alongside Android "
+                 "(boot + system + home).\n\n"
                  "• Android userdata will be ERASED (factory-reset style).\n"
                  "• The old partition table is saved to the SD card first (/boot/ufs-backup), "
                  "so the space can be given back to Android later.\n"
                  "• Incorrect use MAY cause data loss or make Android/Linux unbootable.\n"
                  "• Run this from microSD Linux, not from an already-installed UFS root.\n"
-                 "• Keep ROCKNIX ABL installed and a working /boot/KERNEL on the SD.\n\n") +
-                "No password needed. If you set one with passwd, SteamOS may ask for it.\n\n"
+                 "• Keep OpenABL installed and a working /boot/KERNEL on the SD.\n\n") +
+                "No password needed. If you set one with passwd, Zaviya may ask for it.\n\n"
                 "Nothing should go wrong if you follow the steps, but DATA LOSS IS POSSIBLE.\n"
                 "Proceed only if you understand the risk."
             )
@@ -149,7 +132,7 @@ class MainWindow(Gtk.Window):
         self.size_spin = Gtk.SpinButton(adjustment=adj, climb_rate=1, digits=0)
         self.size_spin.set_numeric(True)
         grid.attach(self.size_spin, 1, 0, 1, 1)
-        self.linux_label = Gtk.Label(label="SteamOS partitions: —", xalign=0)
+        self.linux_label = Gtk.Label(label="Zaviya partitions: none", xalign=0)
         self.linux_label.set_line_wrap(True)
         grid.attach(self.linux_label, 0, 1, 2, 1)
         grid.attach(Gtk.Label(label=f"Bring from {SOURCE}'s /home:", xalign=0), 0, 2, 1, 1)
@@ -205,7 +188,7 @@ class MainWindow(Gtk.Window):
             total = int(self._info.get("ORIG_ANDROID_GIB", "0"))
             home = total - android - boot - root
             self.linux_label.set_text(
-                f"ROCKNIX boot {boot} GB  |  STORAGE root {root} GB  |  HOME ~{home} GB"
+                f"boot {boot} GB  |  system {root} GB  |  home ~{home} GB"
             )
         except ValueError:
             pass
@@ -243,8 +226,8 @@ class MainWindow(Gtk.Window):
                 self.install_btn.set_sensitive(mode in ("fresh", "installed") and from_sd)
                 self.size_spin.set_sensitive(not self._reinstall)
                 if self._reinstall and from_sd:
-                    self._append("SteamOS is already on internal storage, or an install didn't finish. "
-                                 "Install again erases internal SteamOS, games and saves included, and copies "
+                    self._append("Zaviya is already on internal storage, or an install didn't finish. "
+                                 "Install again erases internal Zaviya, games and saves included, and copies "
                                  f"{SOURCE} again. Android isn't touched.")
                 if not from_sd:
                     self._append(f"Running from internal storage: boot {SOURCE} to install.")
@@ -260,9 +243,9 @@ class MainWindow(Gtk.Window):
                 old_two = info.get("OLD_TWOPART_INSTALL", "0") == "1"
                 extra = ""
                 if existing:
-                    extra = " (SteamOS already installed — use SteamOS Update; reinstall erases internal games and saves)"
+                    extra = " (Zaviya already installed, use Zaviya Update; reinstall erases internal games and saves)"
                 elif old_two:
-                    extra = " (old 2-partition ROCKNIX+STORAGE — UNINSTALL CFW before a fresh SteamOS install)"
+                    extra = " (old 2-partition layout, UNINSTALL CFW before a fresh Zaviya install)"
                 self.status.set_text(
                     f"UFS {info.get('DEVICE')} · total ~{info.get('DISK_TOTAL_GIB')} GB · "
                     f"userdata now ~{info.get('ORIG_ANDROID_GIB')} GB · "
@@ -281,7 +264,7 @@ class MainWindow(Gtk.Window):
         if not self.ack.get_active():
             self._append("Tick the confirmation checkbox first.")
             return
-        script = INSTALL_SH if INSTALL_SH.is_file() else Path(__file__).resolve().parent / "install-masios-to-internal.sh"
+        script = INSTALL_SH if INSTALL_SH.is_file() else Path(__file__).resolve().parent / "install-to-internal.sh"
         if not script.is_file():
             self._append(f"Missing installer: {script}")
             return
@@ -297,11 +280,11 @@ class MainWindow(Gtk.Window):
         )
         reinstall = getattr(self, "_reinstall", False)
         dialog.format_secondary_text(
-            "Internal SteamOS (ROCKNIX, STORAGE and HOME) will be ERASED and copied again, "
+            "Internal Zaviya (boot, system and home) will be ERASED and copied again, "
             "games and saves on it included. Android isn't touched. Continue?"
             if reinstall else
             f"Android userdata will be set to {android_gb} GB and ERASED.\n"
-            f"Creates ROCKNIX ({boot_gb} GB boot) + STORAGE ({root_gb} GB root) + HOME (remaining).\n"
+            f"Creates boot ({boot_gb} GB) + system ({root_gb} GB) + home (remaining).\n"
             "Internal partitions will be rewritten. Continue?"
         )
         response = dialog.run()
@@ -349,7 +332,7 @@ class MainWindow(Gtk.Window):
         """A window over everything until the install ends. A line in the
         status label was easy to miss on a small screen, and people closed the
         installer or restarted halfway, leaving internal storage half done."""
-        dialog = Gtk.Dialog(title="Installing SteamOS", transient_for=self, modal=True)
+        dialog = Gtk.Dialog(title="Installing Zaviya", transient_for=self, modal=True)
         dialog.set_deletable(False)
         dialog.connect("delete-event", lambda *_a: True)
         box = dialog.get_content_area()
@@ -357,7 +340,7 @@ class MainWindow(Gtk.Window):
         box.set_border_width(18)
         label = Gtk.Label()
         label.set_markup(
-            "<span size='large'><b>Installing SteamOS to internal storage</b></span>\n\n"
+            "<span size='large'><b>Installing Zaviya to internal storage</b></span>\n\n"
             "This takes about 5 to 10 minutes. Don't close this window, restart or\n"
             "turn the device off until it says the install has finished.")
         label.set_line_wrap(True)

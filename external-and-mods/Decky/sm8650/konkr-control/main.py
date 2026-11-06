@@ -25,6 +25,10 @@ DAEMON = "odin3d" if ODIN3D else "konkrd"
 BLACKLIST = "/etc/modprobe.d/konkr-mcu.conf"
 FLIP = "/etc/steamos-arm/flip-screen"
 REQUEST = "/run/konkrd/request"
+INSTALL_DIR = "/usr/share/zaviya-install"
+INSTALL_UNIT = "zaviya-install"
+INSTALL_LOG = "/run/zaviya-install.log"
+ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 
 def gen5() -> bool:
@@ -45,6 +49,38 @@ def tablet() -> bool:
     except OSError:
         return False
     return any(c in compat for c in ("lenovo,tb321fu", "lenovo,elden", "lenovo,baldur"))
+
+
+def install_unsupported() -> bool:
+    """The installer runs from a microSD card or USB drive, and not on SM8250."""
+    if "qcom,sm8250" in rd("/sys/firmware/devicetree/base/compatible").split("\0") or gen5():
+        return True
+    src = subprocess.run(["findmnt", "-no", "SOURCE", "/"], capture_output=True, text=True).stdout.strip()
+    disk = subprocess.run(["lsblk", "-no", "PKNAME", src], capture_output=True, text=True).stdout.split("\n")[0].strip()
+    if not disk:
+        return True
+    return not (disk.startswith("mmcblk") or "/usb" in os.path.realpath(f"/sys/class/block/{disk}"))
+
+
+def unit_props() -> dict[str, str]:
+    out = subprocess.run(["systemctl", "show", INSTALL_UNIT, "-p", "LoadState,ActiveState,SubState,Result,ExecMainStatus"],
+                         capture_output=True, text=True).stdout
+    return dict(ln.split("=", 1) for ln in out.splitlines() if "=" in ln)
+
+
+def last_log_line() -> str:
+    try:
+        with open(INSTALL_LOG, "rb") as fh:
+            fh.seek(0, os.SEEK_END)
+            fh.seek(max(0, fh.tell() - 4096))
+            tail = fh.read().decode(errors="replace")
+    except OSError:
+        return ""
+    # rsync redraws its progress line with \r
+    lines = [ANSI.sub("", ln).strip() for ln in re.split(r"[\r\n]", tail)]
+    return next((ln for ln in reversed(lines) if ln), "")
+
+
 PROFILES = ("silent", "balanced", "turbo")
 ACTIONS = ("profile-next", "rgb-next", "sticks-toggle", "fan-boost", "game", "none")
 
@@ -321,12 +357,13 @@ class Plugin:
             "game": game_fan_state(st),
             "power_led": st["power_led"],
             "menu_clicks": st["menu_clicks"],
+            "tablet": tablet(),
             "has_flip": tablet(),
             # The Lenovo tablets have no fan: no Fan page, no fan choices per game.
             "has_fan": not tablet(),
             "flip": os.path.exists(FLIP),
             # Tablets: SteamOS on the microSD card next to Android. Handhelds:
-            # OpenABL / ROCKNIX ABL, whose menu picks Android or Linux.
+            # OpenABL, whose menu picks Android or Linux.
             "has_dualboot": not tablet() or subprocess.run(["sh", "-c", "findmnt -no SOURCE / | grep -q mmcblk || "
                                                             "[ \"$(lsblk -no PARTLABEL \"$(findmnt -no SOURCE /)\")\" = steamos ]"]).returncode == 0,
             "dualboot_label": ("Restart into ZUI" if gen5() else "Restart into ZUXOS") if tablet() else "Restart into Android",
@@ -559,3 +596,72 @@ class Plugin:
         st["power_led"] = bool(on)
         save(st)
         return st["power_led"]
+
+    async def install_probe(self, **_: Any) -> dict[str, Any]:
+        """Sizes and state of the internal disk, from the installer's probe."""
+        if await asyncio.to_thread(install_unsupported):
+            return {"unsupported": True}
+        script = f"{INSTALL_DIR}/ufs-probe-sizes.sh"
+        if not os.path.isfile(script):
+            return {"error": "The installer is missing from this image"}
+        r = await asyncio.to_thread(subprocess.run, [script], capture_output=True, text=True)
+        out: dict[str, Any] = {}
+        for ln in r.stdout.splitlines():
+            if "=" in ln:
+                k, v = ln.split("=", 1)
+                out[k] = v
+        if r.returncode != 0 or "ERROR" in out:
+            return {"error": out.get("ERROR") or r.stderr.strip() or f"exit {r.returncode}"}
+        return out
+
+    async def install_start(self, android_gb: int = 0, home_mode: str = "all", fingerprint: str = "",
+                            reinstall: bool = False, **_: Any) -> dict[str, Any]:
+        """Runs the installer as a system unit, so it outlives Steam and this plugin."""
+        if home_mode not in ("all", "essentials", "none"):
+            return {"error": "Unknown choice for what to bring"}
+        if not re.fullmatch(r"[0-9a-f]{16}", str(fingerprint)):
+            return {"error": "No partition table to check against; reopen the panel"}
+        try:
+            android_gb = int(android_gb)
+        except (TypeError, ValueError):
+            return {"error": "Android size must be a whole number"}
+        if await asyncio.to_thread(install_unsupported):
+            return {"error": "Not supported here"}
+        props = await asyncio.to_thread(unit_props)
+        if props.get("LoadState") == "loaded" and props.get("ActiveState") in ("active", "activating") \
+                and props.get("SubState") in ("start", "running"):
+            return {"error": "An install is already running"}
+        # A finished unit is kept (--remain-after-exit) so its result can be read.
+        await asyncio.to_thread(subprocess.run, ["systemctl", "stop", INSTALL_UNIT], capture_output=True)
+        await asyncio.to_thread(subprocess.run, ["systemctl", "reset-failed", INSTALL_UNIT], capture_output=True)
+        try:
+            open(INSTALL_LOG, "w").close()
+        except OSError as e:
+            return {"error": str(e)}
+        size = ["--resume"] if reinstall else ["--android-gb", str(android_gb)]
+        r = await asyncio.to_thread(subprocess.run, [
+            "systemd-run", f"--unit={INSTALL_UNIT}", "--remain-after-exit",
+            f"--property=StandardOutput=append:{INSTALL_LOG}", f"--property=StandardError=append:{INSTALL_LOG}",
+            f"{INSTALL_DIR}/install-to-internal.sh", "--force", "--expect", fingerprint, "--home", home_mode, *size,
+        ], capture_output=True, text=True)
+        if r.returncode != 0:
+            return {"error": r.stderr.strip() or f"exit {r.returncode}"}
+        return {"ok": True}
+
+    async def install_status(self, **_: Any) -> dict[str, str]:
+        """idle: no unit. running, then done (exit 0) or failed. The unit stays
+        after it ends (--remain-after-exit) because --collect would drop a
+        failed one before its result could be read."""
+        p = await asyncio.to_thread(unit_props)
+        active, sub = p.get("ActiveState", ""), p.get("SubState", "")
+        if p.get("LoadState") != "loaded":
+            state = "idle"
+        elif active == "failed":
+            state = "failed"
+        elif active in ("active", "activating") and sub in ("start", "running"):
+            state = "running"
+        elif active == "active":
+            state = "done"
+        else:
+            state = "idle"
+        return {"state": state, "line": await asyncio.to_thread(last_log_line) if state != "idle" else ""}

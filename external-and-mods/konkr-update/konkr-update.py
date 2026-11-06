@@ -229,7 +229,7 @@ def verify_signature(manifest_path, sig_path, pub=SIGNING_KEY):
         raise ValueError('update signature does not verify: not an official release')
 
 
-BOOTIMG = Path('/usr/share/easy-ufs-install/ufs-bootimg.py')
+BOOTIMG = Path('/usr/share/zaviya-install/ufs-bootimg.py')
 
 
 def bootimg_helper(payload=None):
