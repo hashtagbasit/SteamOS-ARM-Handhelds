@@ -46,6 +46,10 @@ const C = {
     ready: "#6ee7b7", warn: "#f5c46a", bad: "#f87171",
 };
 
+// Our buttons set their own background, which hides Steam's focus highlight.
+const FOCUS_CSS = `.zaviya-loadout .gpfocus { outline: 2px solid #C9A24D !important; outline-offset: 2px; filter: brightness(1.25); }`;
+const FocusStyle = () => jsx("style", { children: FOCUS_CSS });
+
 // --------------------------------------------------------------- bits --
 const iconCache = new Map();
 function AppIcon({ path, size }) {
@@ -234,7 +238,8 @@ function Details({ app, chip, closeModal, refresh }) {
     } else if (app.available) {
         buttons.push(jsx(DFL.DialogButton, { onClick: done(() => E.install(app.id)), children: app.elsewhere ? "Set up" : "Install" }, "inst"));
     }
-    return jsx(DFL.ModalRoot, { onCancel: closeModal, closeModal, children: jsxs("div", { style: { color: C.text }, children: [
+    return jsx(DFL.ModalRoot, { onCancel: closeModal, closeModal, children: jsxs("div", { className: "zaviya-loadout", style: { color: C.text }, children: [
+        jsx(FocusStyle, {}),
         jsxs("div", { style: { display: "flex", gap: "16px", alignItems: "center" }, children: [
             jsx(AppIcon, { path: app.icon, size: 72 }),
             jsxs("div", { style: { minWidth: 0 }, children: [
@@ -407,7 +412,8 @@ function AddGame({ info, closeModal, refresh }) {
             closeModal();
         });
     };
-    return jsx(DFL.ModalRoot, { onCancel: closeModal, closeModal, children: jsxs("div", { style: { color: C.text }, children: [
+    return jsx(DFL.ModalRoot, { onCancel: closeModal, closeModal, children: jsxs("div", { className: "zaviya-loadout", style: { color: C.text }, children: [
+        jsx(FocusStyle, {}),
         jsx("div", { style: { fontSize: "20px", fontWeight: 700 }, children: info.as ? `Add to Steam: ${kinds[info.as]}` : "Can't add this" }),
         jsx(Small, { style: { margin: "4px 0 12px", wordBreak: "break-all" }, children: info.path }),
         info.as ? jsx(DFL.TextField, { label: "Name in your library", value: name, onChange: (e) => setName(e.target.value) }) : null,
@@ -523,7 +529,8 @@ function Page() {
         return jsx(Grid, { apps: st.apps.filter((a) => t.kinds.includes(a.kind)), chip, refresh });
     };
     const wrap = (child) => jsx("div", { style: { padding: "4px 24px 40px", color: C.text }, children: child });
-    return jsxs("div", { style: { marginTop: "40px", height: "calc(100% - 40px)", background: C.ink, display: "flex", flexDirection: "column" }, children: [
+    return jsxs("div", { className: "zaviya-loadout", style: { marginTop: "40px", height: "calc(100% - 40px)", background: C.ink, display: "flex", flexDirection: "column" }, children: [
+        jsx(FocusStyle, {}),
         jsxs("div", { style: { display: "flex", alignItems: "center", gap: "16px", padding: "14px 24px 6px" }, children: [
             jsx("div", { style: { fontSize: "22px", fontWeight: 800, color: C.text }, children: "Zaviya Loadout" }),
             jsx("div", { style: { flex: 1 }, children: jsx(DFL.TextField, { placeholder: "Search apps and emulators", value: q, onChange: (e) => setQ(e.target.value) }) }),
