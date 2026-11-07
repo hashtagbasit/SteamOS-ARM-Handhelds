@@ -10,18 +10,3 @@ updates:
       actions:
         patterns:
           - '*'
-
-  - package-ecosystem: gradle
-    directory: /android-installer
-    ignore:
-      - dependency-name: '*'
-        update-types:
-          - version-update:semver-major
-    schedule:
-      interval: monthly
-    labels:
-      - dependencies
-    groups:
-      gradle:
-        patterns:
-          - '*'

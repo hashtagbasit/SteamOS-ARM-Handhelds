@@ -126,7 +126,7 @@ check() {
   for d in ${PATCH_DIRS:-}; do base_paths+=("$d"); done
   # A recipe without PATCH_DIRS is mainline plus its own patches only.
   if [[ ${#base_paths[@]} -gt 0 && ! -d "$base_dir/.git" ]]; then
-    git clone --quiet --depth 1 --filter=blob:none --sparse --branch "$BASE_REF" \
+    git clone --quiet --depth 1 --filter=blob:none --sparse --branch "$ROCKNIX_REF" \
       "$BASE_REPO_URL" "$base_dir"
     git -C "$base_dir" sparse-checkout set "${base_paths[@]}"
     git -C "$base_dir" checkout --quiet
