@@ -1,6 +1,6 @@
 # How Zaviya runs on the KONKR Pocket FIT
 
-Zaviya, which is SteamOS for ARM, on the **KONKR Pocket FIT (Snapdragon G3 Gen 3 = SM8650, Adreno 750)**, with
+Zaviya is based on SteamOS for ARM. On the **KONKR Pocket FIT (Snapdragon G3 Gen 3 = SM8650, Adreno 750)**, it adds
 Pocket FIT-specific controls and a set of native performance fixes. The
 AYANEO Pocket S2 shares the base dtsi and gets a DTB too (untested).
 

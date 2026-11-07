@@ -36,7 +36,7 @@ jobs:
         run: df -h /
 
       # The build needs a git checkout of ROCKNIX/distribution at the
-      # pinned tag. The repo is huge so we sparse-checkout only the paths
+      # pinned tag. The repo is huge so this sparse-checks out only the paths
       # that build.sh + soc.env actually reference.
       - name: Sparse-clone base distribution
         run: |

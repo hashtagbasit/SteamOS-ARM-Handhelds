@@ -1,6 +1,6 @@
 # Licenses
 
-SteamOS ARM Port (which includes work from MaSi's SteamOS-ARM-SM8550) is a Linux
+Zaviya (which includes work from MaSi's SteamOS-ARM-SM8550) is a Linux
 distribution made up of many open-source components. Each component is provided under its own license.
 
 ## Project software
@@ -24,9 +24,9 @@ renamed (`VK_LAYER_LSFGVK_frame_generation_arm64`) so it can sit next to the
 plugin's x86 layer. Lossless Scaling itself is sold separately on Steam and is
 not included.
 
-## Valve SteamOS and Steam
+## SteamOS and Steam
 
-Steam, SteamOS, Steam Deck, and related marks are trademarks of Valve
-Corporation. Official SteamOS userspace and the Steam client remain subject
-to Valve's terms. This repository does **not** redistribute the official
+Steam, SteamOS, Steam Deck, and related marks are trademarks of
+their owner. Official SteamOS userspace and the Steam client remain subject
+to their owner's terms. This repository does **not** redistribute the official
 SteamOS root filesystem or Steam client binaries.

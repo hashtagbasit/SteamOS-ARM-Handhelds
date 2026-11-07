@@ -59,7 +59,7 @@ The base release's prebuilt kernel ships without `CONFIG_FTRACE`. Without ftrace
 - steamos-manager stalls Game Mode boot by ~3 minutes
 - "Switch to Desktop" and update checks don't work
 
-Building from source with our `steamos.config` fragment enables tracefs with
+Building from source with the project's `steamos.config` fragment enables tracefs with
 zero runtime overhead (`CONFIG_ENABLE_DEFAULT_TRACERS=y`).
 
 ---

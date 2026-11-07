@@ -1,6 +1,6 @@
 # The bottom screen (AYN Thor, AYANEO Pocket DS)
 
-On the dual screen devices the game runs on the top screen and the bottom one gets a small dashboard in Game Mode. As far as I know nobody has done this on SteamOS before.
+On the dual screen devices the game runs on the top screen and the bottom one gets a small dashboard in Game Mode.
 
 What's on it:
 

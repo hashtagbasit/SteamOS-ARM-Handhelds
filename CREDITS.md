@@ -1,13 +1,12 @@
 # Credits
 
-**Zaviya** (it used to be called SteamOS ARM Port) is based on Valve's SteamOS for ARM and runs it on Snapdragon 8 Gen 3
-(SM8650: KONKR Pocket FIT, AYANEO Pocket S2) and 8 Gen 2 (SM8550: AYN, AYANEO
-and Retroid handhelds). Some of its groundwork (the image builder and a few scripts) came
+**Zaviya** (formerly known as Unofficial SteamOS ARM Port) is based on SteamOS for ARM and runs on
+Snapdragon 8 Elite, 8 Gen 3, 8 Gen 2 and 865 handhelds and on Lenovo Legion tablets. Some of its groundwork (the image builder and a few scripts) came
 from MaSi's **SteamOS-ARM-SM8550**, so everything MaSi credits below still applies.
 
 ## This project
 
-| Source | URL | What we use |
+| Source | URL | Used for |
 |--------|-----|-------------|
 | **MaSi / SteamOS-ARM-SM8550** | https://github.com/MaSieS4Fun/SteamOS-ARM-SM8550 | The whole base: image builder, SteamOS ARM overlay, Box64/Decky setup, scripts |
 | **ROCKNIX SM8650** | https://github.com/ROCKNIX/distribution | Kernel recipe (20260901, Linux 7.2.8), Pocket FIT panel/touch/MCU patches, DPU inline rotation and QSEED detail enhancer (tiopex), device tree, firmware, audio UCM |
@@ -32,7 +31,7 @@ from MaSi's **SteamOS-ARM-SM8550**, so everything MaSi credits below still appli
 
 ## From SteamOS-ARM-SM8550 (MaSi)
 
-**SteamOS-ARM-SM8550** adapts Valve's SteamOS ARM to Qualcomm SM8550
+**SteamOS-ARM-SM8550** adapts SteamOS for ARM to Qualcomm SM8550
 handhelds. This file lists the sources this repository is built from.
 
 Original licenses remain with their authors. Project glue (scripts,
@@ -63,10 +62,10 @@ Those two Decky plugins were adapted in SteamOS-Ubuntu from
 
 ## Base system
 
-| Source | URL | What we use |
+| Source | URL | Used for |
 |--------|-----|-------------|
-| **Valve SteamOS ARM** (Frame / Deckard) | Valve | Official aarch64 userspace, Plasma, gamescope session, Steam Gamepad UI. Reconstructed at build time; **not** stored in git. |
-| **Valve Steam (ARM64)** | Steam client | Game Mode client. Downloaded at image-build time; **not** stored in git. |
+| **SteamOS for ARM** (Frame / Deckard) | Upstream | Official aarch64 userspace, Plasma, gamescope session, Steam Gamepad UI. Reconstructed at build time; **not** stored in git. |
+| **Steam (ARM64)** | Steam client | Game Mode client. Downloaded at image-build time; **not** stored in git. |
 | **KDE Plasma / Frameworks** | https://kde.org | Official SteamOS desktop; kscreen and plasma-nm rebuilt to match SteamOS Qt/Plasma. |
 | **Arch Linux ARM (Gear extras)** | https://archlinuxarm.org | Selected Plasma extras (Ark, Kate, …) built against SteamOS libraries. |
 
@@ -77,7 +76,7 @@ Those two Decky plugins were adapted in SteamOS-Ubuntu from
 Inherited from **SteamOS-Ubuntu**. See
 [`external-and-mods/kernel/CREDITS.md`](external-and-mods/kernel/CREDITS.md).
 
-| Source | URL | What we use |
+| Source | URL | Used for |
 |--------|-----|-------------|
 | **SteamOS-Ubuntu** | https://github.com/MaSieS4Fun/SteamOS-Ubuntu | Kernel tree, ABL `KERNEL` packaging, firmware staging |
 | **MaSi-OS Kernel Updater** | https://github.com/MaSieS4Fun/MaSi-OS-Kernel-Updater | Same SM8550 kernel project |
@@ -90,7 +89,7 @@ Inherited from **SteamOS-Ubuntu**. See
 
 ## Decky Loader and bundled plugins
 
-| Source | URL | What we use |
+| Source | URL | Used for |
 |--------|-----|-------------|
 | **SteamOS-Ubuntu** | https://github.com/MaSieS4Fun/SteamOS-Ubuntu | SM8550-Power and SM8550-LED as shipped here |
 | **SteamDeckHomebrew / decky-loader** | https://github.com/SteamDeckHomebrew/decky-loader | PluginLoader (x86_64 via Box64) |
@@ -102,10 +101,10 @@ Inherited from **SteamOS-Ubuntu**. See
 
 ## Input, session, and graphics extras
 
-| Source | URL | What we use |
+| Source | URL | Used for |
 |--------|-----|-------------|
 | **ShadowBlip / InputPlumber** | https://github.com/ShadowBlip/InputPlumber | `deck-uhid` + keyboard target (OSK haptics) |
-| **gamescope (Valve)** | https://github.com/ValveSoftware/gamescope | Gaming Mode compositor (MSM / backlight patches in-tree) |
+| **gamescope** | https://github.com/ValveSoftware/gamescope | Gaming Mode compositor (MSM / backlight patches in-tree) |
 | **Mesa / Freedreno Turnip** | https://gitlab.freedesktop.org/mesa/mesa | Adreno 740 Vulkan (host-provided `.so` at image apply) |
 | **MangoHud** | https://github.com/flightlessmango/MangoHud | Performance overlay |
 | **lsfg-vk** | https://lsfg-vk.dev | Vulkan frame generation (2.0: CC BY-NC-ND 4.0) |
@@ -116,7 +115,7 @@ Inherited from **SteamOS-Ubuntu**. See
 
 ## Applications bundled by this overlay
 
-| Source | URL | What we use |
+| Source | URL | Used for |
 |--------|-----|-------------|
 | **MESA Easy Manager** | https://github.com/MaSieS4Fun/MESA-Easy-Manager | Turnip / Mesa helper |
 | **Proton ARM Easy Manager** | In-tree / inspired by ProtonPlus | ARM Proton helper |
@@ -129,7 +128,7 @@ Inherited from **SteamOS-Ubuntu**. See
 
 | Project | Relationship |
 |---------|--------------|
-| **SteamOS / Jupiter (Valve)** | Game Mode, Gamepad UI, official Plasma desktop |
+| **SteamOS / Jupiter** | Game Mode, Gamepad UI, official Plasma desktop |
 | **SteamOS-Ubuntu** | Kernel, Decky SM8550 plugins, SM8550 handheld bring-up |
 | **ROCKNIX** | ABL, UFS partition names, kernel patches |
 | **Hooandee** | Decky power and LED plugin design |
@@ -138,7 +137,7 @@ Inherited from **SteamOS-Ubuntu**. See
 
 ## Acknowledgements
 
-Thanks to **Valve**, the **SteamOS-Ubuntu** testers, **Hooandee**, and
+Thanks to the **SteamOS** developers, the **SteamOS-Ubuntu** testers, **Hooandee**, and
 maintainers of **kernel.org**, **Armbian**, **ROCKNIX**, **Batocera**,
 **SteamDeckHomebrew**, **ShadowBlip**, **PancakeTAS**, **Flightless Mango**,
 **ptitSeb**, **thorch-os**, and everyone who documented ABL / DTB slots
