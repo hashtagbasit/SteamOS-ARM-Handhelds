@@ -20,7 +20,7 @@ Building an unofficial SteamOS distribution involves both lightweight platform c
                                 │ Consumes pinned, pre-built assets
 ┌───────────────────────────────┴─────────────────────────────────┐
 │                    SLOW TIER (Core Binary Stacks)               │
-│  • Kernel: Linux 7.2.0 from source with tracefs enabled         │
+│  • Kernel: Linux 7.4-rc1 from source with tracefs enabled       │
 │  • Graphics: Mesa 26.2.6 (Turnip + Zink, 4 cross-slices)        │
 │  • Base OS: Valve Deckard SteamOS rootfs (casync chunk store)   │
 │  • Steam Client: Pre-bootstrapped sanitized ARM user seed       │
