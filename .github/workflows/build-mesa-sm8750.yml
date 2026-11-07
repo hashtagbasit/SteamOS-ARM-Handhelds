@@ -51,7 +51,7 @@ jobs:
             ninja-build pkg-config glslang-tools
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Load version manifest
         run: |
@@ -113,7 +113,7 @@ jobs:
           ls -lh mesa-sm8750.tar.zst
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mesa-sm8750
           path: mesa-sm8750.tar.zst
