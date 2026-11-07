@@ -53,3 +53,4 @@ Every script moves to `/data/local/tmp`, detaches, holds a wake lock, and report
 ## License
 
 GPL-2.0, like the rest of the project (see `../LICENSE`). Third-party licenses are in `LICENSES/`.
+
