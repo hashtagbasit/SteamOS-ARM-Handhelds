@@ -174,5 +174,6 @@ install -m0755 "$OVL/usr/lib/steamos/sm8550-bluetooth-setup" \
 "${SCRIPT_DIR}/install-device-defaults.sh" "$R" | tee -a "$LOG"
 "${SCRIPT_DIR}/install-hub.sh" "$R" "$R/home/steamos" | tee -a "$LOG"
 "${SCRIPT_DIR}/install-branding.sh" "$R"
+"${SCRIPT_DIR}/install-webhelper-acquire-layer.sh" "$R"
 
 log "== done (kernel ${KREL})"

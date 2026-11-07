@@ -1116,6 +1116,7 @@ install_file "$OVL/usr/lib/systemd/system/plugin_loader.service.d/50-steamos-arm
 # Loadout: emulators, PC game stores and apps (engine + Decky plugin).
 "${SCRIPT_DIR}/install-hub.sh" "$R" "$HOME_DST"
 "${SCRIPT_DIR}/install-branding.sh" "$R"
+"${SCRIPT_DIR}/install-webhelper-acquire-layer.sh" "$R"
 # Fix lsfg-vk home paths
 if [[ -f "$HOME_DST/.config/lsfg-vk/conf.toml" ]]; then
   sed -i 's|/home/steam/|/home/steamos/|g' "$HOME_DST/.config/lsfg-vk/conf.toml"

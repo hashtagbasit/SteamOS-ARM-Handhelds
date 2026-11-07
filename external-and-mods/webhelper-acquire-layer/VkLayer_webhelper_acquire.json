@@ -1,0 +1,17 @@
+{
+  "file_format_version": "1.0.0",
+  "layer": {
+    "name": "VK_LAYER_webhelper_acquire",
+    "type": "GLOBAL",
+    "library_path": "/usr/lib/steamos-arm/libVkLayer_webhelper_acquire.so",
+    "api_version": "1.3.221",
+    "implementation_version": "1",
+    "description": "Retries vkAcquireNextImageKHR timeouts for Steam's webhelper after resume from sleep",
+    "functions": {
+      "vkNegotiateLoaderLayerInterfaceVersion": "vkNegotiateLoaderLayerInterfaceVersion"
+    },
+    "disable_environment": {
+      "DISABLE_WEBHELPER_ACQUIRE_RETRY": "1"
+    }
+  }
+}

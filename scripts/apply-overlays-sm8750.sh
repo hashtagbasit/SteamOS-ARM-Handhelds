@@ -658,6 +658,7 @@ chown -R 1000:1000 "$HOME_DST/homebrew"
 # Loadout: emulators, PC game stores and apps (engine + Decky plugin).
 "${SCRIPT_DIR}/install-hub.sh" "$R" "$HOME_DST"
 "${SCRIPT_DIR}/install-branding.sh" "$R"
+"${SCRIPT_DIR}/install-webhelper-acquire-layer.sh" "$R"
 
 # GPU/GMU hang dumps kept past the kernel's five minutes (debug-logs copies them).
 install_file "$OVL/usr/lib/steamos-arm/save-devcoredump" "$R/usr/lib/steamos-arm/save-devcoredump" 0755
