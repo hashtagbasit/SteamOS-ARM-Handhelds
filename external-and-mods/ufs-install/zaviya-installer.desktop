@@ -2,7 +2,7 @@
 Type=Application
 Name=Zaviya Installer
 GenericName=Install Linux to internal UFS
-Comment=Requires a user password. Installs Zaviya to internal storage (boot + system + home).
+Comment=Installs Zaviya to internal storage (boot + system + home).
 Exec=zaviya-installer
 Icon=zaviya-installer
 Terminal=false

@@ -26,6 +26,9 @@ menus="$R/etc/xdg/menus/applications-merged"
 mkdir -p "$bin" "$apps" "$icons/scalable/apps" "$dirs" "$menus" \
   "$R/usr/share/icons/hicolor/256x256/apps"
 
+# The base audio config package drops its build file at the filesystem root.
+rm -f "$R/Makefile"
+
 # ── ARM-Manager menu ────────────────────────────────────────────────────────
 install -m 0644 "$OVL/usr/share/desktop-directories/arm-manager.directory" \
   "$dirs/arm-manager.directory"
@@ -48,9 +51,17 @@ share_ufs="$R/usr/share/zaviya-install"
 rm -rf "$share_ufs"
 mkdir -p "$share_ufs"
 cp -a "${MOD}/ufs-install/." "$share_ufs/"
-chmod 0755 "$share_ufs/"*.sh "$share_ufs/"*.py 2>/dev/null || true
+# The Steam shortcut seeder needs this on images without the games app too.
+cp -a "${MOD}/NO_Steam/no_steam_games/shortcuts_vdf.py" "$share_ufs/"
+# The app reads these as the desktop user, whatever modes the checkout has.
+chmod -R a+rX "$share_ufs"
+chmod 0755 "$share_ufs/"*.sh "$share_ufs/"*.py "$share_ufs/zaviya-install-start" 2>/dev/null || true
 cat >"$bin/zaviya-installer" <<'EOF'
 #!/bin/bash
+# Steam's libraries break the system GTK and python; the window runs without them.
+unset LD_LIBRARY_PATH LD_PRELOAD
+# Under gamescope there is no Wayland socket the window can use; go through X.
+[[ -n "${GAMESCOPE_WAYLAND_DISPLAY:-}" ]] && export GDK_BACKEND=x11
 export ZAVIYA_INSTALL_ROOT=/usr/share/zaviya-install
 exec python3 "${ZAVIYA_INSTALL_ROOT}/zaviya-installer.py" "$@"
 EOF

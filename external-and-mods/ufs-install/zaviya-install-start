@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Starts the install as a system unit, so it outlives the window and Steam.
+# Run by pkexec (polkit action org.steamos-arm.easy-ufs-start).
+#
+#   zaviya-install-start [--check] --expect FP --home all|essentials|none \
+#                        (--android-gb N | --resume)
+#
+# --check validates the arguments, prints the command it would run and exits
+# without touching anything.
+#
+# Exit codes: 0 started, 2 bad arguments, 3 an install is already running.
+set -euo pipefail
+export PATH="/usr/sbin:/usr/bin:/sbin:/bin"
+unset LD_LIBRARY_PATH LD_PRELOAD || true
+
+HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+UNIT=zaviya-install
+LOG=/run/zaviya-install.log
+
+bad() { echo "zaviya-install-start: $*" >&2; exit 2; }
+
+CHECK=0
+EXPECT=""
+HOME_MODE=""
+ANDROID=""
+RESUME=0
+[[ "${1:-}" == "--check" ]] && { CHECK=1; shift; }
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --expect)     [[ $# -ge 2 ]] || bad "--expect needs a value"; EXPECT="$2"; shift 2 ;;
+    --home)       [[ $# -ge 2 ]] || bad "--home needs a value"; HOME_MODE="$2"; shift 2 ;;
+    --android-gb) [[ $# -ge 2 ]] || bad "--android-gb needs a value"; ANDROID="$2"; shift 2 ;;
+    --resume)     RESUME=1; shift ;;
+    *)            bad "unknown argument: $1" ;;
+  esac
+done
+
+[[ "$EXPECT" =~ ^[0-9a-f]{16}$ ]] || bad "--expect needs a 16 character lowercase hex fingerprint"
+case "$HOME_MODE" in all|essentials|none) ;; *) bad "--home must be all, essentials or none" ;; esac
+if (( RESUME )); then
+  [[ -z "$ANDROID" ]] || bad "use either --android-gb or --resume, not both"
+  SIZE=(--resume)
+else
+  [[ "$ANDROID" =~ ^[1-9][0-9]*$ ]] || bad "--android-gb needs a positive whole number"
+  SIZE=(--android-gb "$ANDROID")
+fi
+
+CMD=(systemd-run "--unit=$UNIT" --remain-after-exit
+     "--property=StandardOutput=append:$LOG" "--property=StandardError=append:$LOG"
+     "$HERE/install-to-internal.sh" --force --expect "$EXPECT" --home "$HOME_MODE" "${SIZE[@]}")
+
+if (( CHECK )); then
+  printf '%q ' "${CMD[@]}"; echo
+  exit 0
+fi
+
+[[ $EUID -eq 0 ]] || { echo "zaviya-install-start: run as root (through pkexec)" >&2; exit 2; }
+
+# Same test as the plugin: a unit that is starting or running blocks a new one.
+active="$(systemctl show "$UNIT" -p LoadState,ActiveState,SubState 2>/dev/null || true)"
+if grep -qx 'LoadState=loaded' <<<"$active" \
+   && grep -qxE 'ActiveState=(active|activating)' <<<"$active" \
+   && grep -qxE 'SubState=(start|running)' <<<"$active"; then
+  echo "An install is already running" >&2
+  exit 3
+fi
+# A finished unit is kept (--remain-after-exit) so its result can be read.
+systemctl stop "$UNIT" >/dev/null 2>&1 || true
+systemctl reset-failed "$UNIT" >/dev/null 2>&1 || true
+: >"$LOG"
+chmod 0644 "$LOG"
+
+exec "${CMD[@]}"

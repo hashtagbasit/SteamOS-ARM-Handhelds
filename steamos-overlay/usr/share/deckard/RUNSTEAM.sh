@@ -302,4 +302,10 @@ mkdir -p "${HOME}/.local/share/Steam/logs"
 # Steam refuses LD_PRELOAD (unsafe unsetenv) and aborts its own startup UI.
 unset LD_PRELOAD || true
 
+# On a card or USB drive the library gets a "Zaviya Installer" entry; on internal
+# storage any such entry is removed. Never blocks Steam.
+if [[ -f /usr/share/zaviya-install/seed-installer-shortcut.py ]]; then
+  env -u LD_LIBRARY_PATH -u LD_PRELOAD python3 /usr/share/zaviya-install/seed-installer-shortcut.py >/dev/null 2>&1 || true
+fi
+
 exec "${STEAM_COMMAND[@]}" >"${HOME}/.local/share/Steam/logs/steam_output.log" 2>&1

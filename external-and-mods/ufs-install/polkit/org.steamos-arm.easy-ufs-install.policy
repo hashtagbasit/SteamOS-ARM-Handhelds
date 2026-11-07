@@ -24,4 +24,14 @@
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/share/zaviya-install/ufs-probe-sizes.sh</annotate>
   </action>
+  <action id="org.steamos-arm.easy-ufs-start">
+    <description>Start the Zaviya install</description>
+    <message>Installing Zaviya to internal storage needs administrator rights</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/share/zaviya-install/zaviya-install-start</annotate>
+  </action>
 </policyconfig>
