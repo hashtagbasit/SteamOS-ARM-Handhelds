@@ -1,0 +1,9 @@
+[Unit]
+Description=Lenovo tablets: keep the chosen charge limit when the firmware resets it
+ConditionFirmware=|device-tree-compatible(lenovo,tb321fu)
+ConditionFirmware=|device-tree-compatible(lenovo,elden)
+ConditionFirmware=|device-tree-compatible(lenovo,baldur)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/steamos-arm/tablet-charge-keep

@@ -1,0 +1,2 @@
+# Plugging in a charger can bring the firmware's own charge limit back.
+ACTION=="change", SUBSYSTEM=="power_supply", KERNEL=="qcom-battmgr-usb", TAG+="systemd", ENV{SYSTEMD_WANTS}+="steamos-arm-tablet-charge-keep.service"

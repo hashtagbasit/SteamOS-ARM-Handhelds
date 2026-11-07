@@ -550,6 +550,12 @@ O="${HERE}/../steamos-overlay"
 install -Dm0755 "$O/usr/lib/steamos-arm/tablet-charge-full" "$R/usr/lib/steamos-arm/tablet-charge-full"
 install -Dm0644 "$O/usr/lib/systemd/system/steamos-arm-tablet-charge-full.service" "$R/usr/lib/systemd/system/steamos-arm-tablet-charge-full.service"
 ln -sfn ../steamos-arm-tablet-charge-full.service "$R/usr/lib/systemd/system/multi-user.target.wants/steamos-arm-tablet-charge-full.service"
+install -Dm0755 "$O/usr/lib/steamos-arm/tablet-charge-keep" "$R/usr/lib/steamos-arm/tablet-charge-keep"
+install -Dm0644 "$O/usr/lib/systemd/system/steamos-arm-tablet-charge-keep.service" "$R/usr/lib/systemd/system/steamos-arm-tablet-charge-keep.service"
+install -Dm0644 "$O/usr/lib/systemd/system/steamos-arm-tablet-charge-keep.timer" "$R/usr/lib/systemd/system/steamos-arm-tablet-charge-keep.timer"
+mkdir -p "$R/usr/lib/systemd/system/timers.target.wants"
+ln -sfn ../steamos-arm-tablet-charge-keep.timer "$R/usr/lib/systemd/system/timers.target.wants/steamos-arm-tablet-charge-keep.timer"
+install -Dm0644 "$O/usr/lib/udev/rules.d/90-steamos-arm-tablet-charge-keep.rules" "$R/usr/lib/udev/rules.d/90-steamos-arm-tablet-charge-keep.rules"
 # Both Lenovo tablets: start dark and charge when the charger started the
 # tablet, keep the brightness across restarts, and put on screen why the
 # session didn't start when it doesn't.

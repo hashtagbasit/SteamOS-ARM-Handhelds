@@ -139,6 +139,17 @@ O="${HERE}/../steamos-overlay"
 install -Dm0755 "$O/usr/lib/steamos-arm/tablet-charge-full" "$R/usr/lib/steamos-arm/tablet-charge-full"
 install -Dm0644 "$O/usr/lib/systemd/system/steamos-arm-tablet-charge-full.service" "$R/usr/lib/systemd/system/steamos-arm-tablet-charge-full.service"
 ln -sfn ../steamos-arm-tablet-charge-full.service "$R/usr/lib/systemd/system/multi-user.target.wants/steamos-arm-tablet-charge-full.service"
+install -Dm0755 "$O/usr/lib/steamos-arm/tablet-charge-keep" "$R/usr/lib/steamos-arm/tablet-charge-keep"
+install -Dm0644 "$O/usr/lib/systemd/system/steamos-arm-tablet-charge-keep.service" "$R/usr/lib/systemd/system/steamos-arm-tablet-charge-keep.service"
+install -Dm0644 "$O/usr/lib/systemd/system/steamos-arm-tablet-charge-keep.timer" "$R/usr/lib/systemd/system/steamos-arm-tablet-charge-keep.timer"
+mkdir -p "$R/usr/lib/systemd/system/timers.target.wants"
+ln -sfn ../steamos-arm-tablet-charge-keep.timer "$R/usr/lib/systemd/system/timers.target.wants/steamos-arm-tablet-charge-keep.timer"
+install -Dm0644 "$O/usr/lib/udev/rules.d/90-steamos-arm-tablet-charge-keep.rules" "$R/usr/lib/udev/rules.d/90-steamos-arm-tablet-charge-keep.rules"
+# The side port's USB-C switch sits on this bus: a charger plugged in while it
+# is runtime suspended warns "Transfer while suspended".
+install -Dm0644 /dev/stdin "$R/usr/lib/udev/rules.d/90-steamos-arm-elden-i2c-awake.rules" <<'RULES'
+ACTION=="add", SUBSYSTEM=="platform", KERNEL=="a94000.i2c", ATTR{power/control}="on"
+RULES
 # The firmware copy from Android (split firmware joined now).
 install -Dm0755 "$O/usr/lib/steamos-arm/tablet-firmware" "$R/usr/lib/steamos-arm/tablet-firmware"
 install -Dm0755 "$O/usr/lib/steamos-arm/tablet-firmware-boot" "$R/usr/lib/steamos-arm/tablet-firmware-boot"

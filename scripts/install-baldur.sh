@@ -113,7 +113,7 @@ install -Dm0644 "$B/usr/lib/udev/rules.d/72-steamos-arm-btaddr.rules" "$R/usr/li
 log "platform files"
 
 # Switching, firmware from the card, growing to the card.
-for f in gen5-android gen5-emergency-key gen5-firstboot tablet-sd-grow tablet-charge-full; do
+for f in gen5-android gen5-emergency-key gen5-firstboot tablet-sd-grow tablet-charge-full tablet-charge-keep; do
   install -Dm0755 "$OV/usr/lib/steamos-arm/$f" "$R/usr/lib/steamos-arm/$f"
 done
 mkdir -p "$R/usr/lib/systemd/system/sysinit.target.wants" "$R/usr/lib/systemd/system/multi-user.target.wants"
@@ -125,6 +125,11 @@ for u in steamos-arm-gen5-emergency-key.service steamos-arm-tablet-sd-grow.servi
   install -Dm0644 "$OV/usr/lib/systemd/system/$u" "$R/usr/lib/systemd/system/$u"
   ln -sfn "../$u" "$R/usr/lib/systemd/system/multi-user.target.wants/$u"
 done
+install -Dm0644 "$OV/usr/lib/systemd/system/steamos-arm-tablet-charge-keep.service" "$R/usr/lib/systemd/system/steamos-arm-tablet-charge-keep.service"
+install -Dm0644 "$OV/usr/lib/systemd/system/steamos-arm-tablet-charge-keep.timer" "$R/usr/lib/systemd/system/steamos-arm-tablet-charge-keep.timer"
+mkdir -p "$R/usr/lib/systemd/system/timers.target.wants"
+ln -sfn ../steamos-arm-tablet-charge-keep.timer "$R/usr/lib/systemd/system/timers.target.wants/steamos-arm-tablet-charge-keep.timer"
+install -Dm0644 "$OV/usr/lib/udev/rules.d/90-steamos-arm-tablet-charge-keep.rules" "$R/usr/lib/udev/rules.d/90-steamos-arm-tablet-charge-keep.rules"
 
 # What doesn't exist here or must not run: the Frame's and the Odin 3's own
 # hardware services, SteamOS's partition-set plumbing (home and EFI by

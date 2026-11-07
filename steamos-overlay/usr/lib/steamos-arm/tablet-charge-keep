@@ -1,0 +1,42 @@
+#!/bin/bash
+# Lenovo tablets: the battery firmware puts Android's charge limit (75-80 %)
+# back well after boot, so tablet-charge-full alone isn't enough. Run from a
+# timer and on charger changes: put back what the user chose in Steam or
+# Control (limit or bypass), or 100 % with neither.
+bat=""
+for d in /sys/class/power_supply/*; do
+  [[ "$(cat "$d/type" 2>/dev/null)" == Battery && "$(cat "$d/scope" 2>/dev/null || echo System)" != Device \
+     && -w "$d/charge_control_end_threshold" ]] && { bat=$d; break; }
+done
+[[ -n "$bat" ]] || exit 0
+
+read -r end start < <(python3 - <<'PY'
+import json
+try:
+    own = json.load(open("/var/lib/steamos-arm/power.json"))
+except (OSError, ValueError):
+    own = {}
+try:
+    if own.get("bypass"):
+        end = int(own.get("bypass_level", 55))
+        print(end, end - 1)
+    else:
+        end = int(own.get("charge_limit", 100))
+        end = 100 if end < 0 else end
+        print(end, 95 if end >= 100 else end - 5)
+except (TypeError, ValueError):
+    print(100, 95)
+PY
+)
+[[ "$end" =~ ^[0-9]+$ && "$start" =~ ^[0-9]+$ ]] || exit 0
+cur="$(cat "$bat/charge_control_end_threshold" 2>/dev/null)"
+[[ "$cur" == "$end" ]] && exit 0
+# The firmware refuses a start above the current end.
+if (( ${cur:-0} < end )); then
+  echo "$end" >"$bat/charge_control_end_threshold" 2>/dev/null
+  [[ -w "$bat/charge_control_start_threshold" ]] && echo "$start" >"$bat/charge_control_start_threshold" 2>/dev/null
+else
+  [[ -w "$bat/charge_control_start_threshold" ]] && echo "$start" >"$bat/charge_control_start_threshold" 2>/dev/null
+  echo "$end" >"$bat/charge_control_end_threshold" 2>/dev/null
+fi
+exit 0
