@@ -260,10 +260,13 @@ steam_pad_config_watch() {  # steam_pad_config_watch <log> <lines before the wak
   for dev in "$XHCI_DRV"/[0-9a-f]*:*; do
     [[ -e $dev ]] || continue
     dev=${dev##*/}
+    # Stopped halfway (a new sleep starting): don't leave the USB port unbound.
+    trap 'echo "$dev" >"$XHCI_DRV/bind" 2>/dev/null; exit 0' TERM
     echo "$dev" >"$XHCI_DRV/unbind" 2>/dev/null || continue
     sleep 1
     sysbtn_rebind
     echo "$dev" >"$XHCI_DRV/bind" 2>/dev/null || log "pad-watch: usb rebind $dev failed"
+    trap - TERM
   done
 }
 
@@ -287,7 +290,12 @@ pad_watch() {
   systemctl restart inputplumber.service
 }
 
+pad_watch_stop() {
+  systemctl stop konkr-pad-watch.service 2>/dev/null || true
+}
+
 pad_watch_start() {
+  pad_watch_stop
   systemd-run --no-block --quiet --collect --unit=konkr-pad-watch \
     /usr/lib/konkr/konkr-sleep pad-watch 2>/dev/null || true
 }
@@ -321,6 +329,7 @@ lights_off() {
 
 pre() {
   local n u x
+  pad_watch_stop
   lights_off
   report_start
   wifi_mark
