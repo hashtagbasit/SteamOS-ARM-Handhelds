@@ -1,0 +1,103 @@
+name: PR test build comment
+
+# Posts the link to the test build produced by pr-test-build.yml.
+# Runs with write access, so it never checks out or executes pull request code.
+# Everything taken from the triggering run or its artifacts is treated as
+# untrusted and is only handled as data inside the script below.
+
+on:
+  workflow_run:
+    workflows: ['PR test build']
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: pr-test-build-comment-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  comment:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Create or update the comment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const { owner, repo } = context.repo;
+            const marker = '<!-- zaviya-pr-test-build -->';
+
+            if (!/^[0-9a-f]{40}$/.test(run.head_sha || '')) {
+              core.setFailed('Unexpected head commit in the triggering run.');
+              return;
+            }
+
+            // The artifact name carries the PR number, but a pull request can
+            // change its own workflow, so the number is verified below.
+            const artifacts = await github.paginate(
+              github.rest.actions.listWorkflowRunArtifacts,
+              { owner, repo, run_id: run.id, per_page: 100 },
+            );
+            const found = [];
+            for (const a of artifacts) {
+              const m = /^zaviya-installer-pr-([0-9]+)$/.exec(a.name);
+              if (m && !a.expired) found.push({ id: a.id, number: Number(m[1]) });
+            }
+            if (found.length !== 1) {
+              core.notice('No single test build artifact found for this run.');
+              return;
+            }
+            const { id: artifactId, number } = found[0];
+            if (!Number.isSafeInteger(number) || number < 1) {
+              core.setFailed('Invalid pull request number in the artifact name.');
+              return;
+            }
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner, repo, pull_number: number,
+            });
+            const sameRepo = pr.head.repo && run.head_repository &&
+              pr.head.repo.full_name === run.head_repository.full_name;
+            if (pr.state !== 'open' || pr.head.sha !== run.head_sha || !sameRepo) {
+              core.notice('The run does not belong to the current head of an open pull request. Nothing posted.');
+              return;
+            }
+
+            const short = run.head_sha.slice(0, 7);
+            const url = `https://github.com/${owner}/${repo}/actions/runs/${run.id}/artifacts/${artifactId}`;
+            const body = [
+              marker,
+              `Android installer test build for commit \`${short}\`.`,
+              '',
+              `[Download the test build](${url}) (a zip containing the APK).`,
+              '',
+              '- GitHub requires a signed-in account to download workflow artifacts.',
+              '- The APK is signed with a debug key and uses the same package name as the release app (`org.zaviya.installer`), so Android refuses it as an update over a release install. Uninstall the release app first, which clears its data.',
+              '- The build expires after 14 days.',
+            ].join('\n');
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              { owner, repo, issue_number: number, per_page: 100 },
+            );
+            const existing = comments.find(
+              (c) => c.user && c.user.login === 'github-actions[bot]' &&
+                (c.body || '').includes(marker),
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: number, body,
+              });
+            }

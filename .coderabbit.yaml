@@ -1,0 +1,145 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+tone_instructions: >-
+  Report only real bugs, security problems and regressions. No style comments.
+early_access: false
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: false
+  high_level_summary_in_walkthrough: false
+  review_status: false
+  review_info: false
+  review_details: false
+  review_progress: false
+  collapse_walkthrough: true
+  changed_files_summary: false
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  assess_linked_issues: false
+  related_issues: false
+  related_prs: false
+  suggested_labels: false
+  auto_apply_labels: false
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+  in_progress_fortune: false
+  poem: false
+  enable_prompt_for_ai_agents: false
+  slop_detection:
+    enabled: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    simplify:
+      enabled: false
+    autofix:
+      enabled: false
+    fix_ci:
+      enabled: false
+    resolve_merge_conflict:
+      enabled: false
+
+  pre_merge_checks:
+    docstrings:
+      mode: 'off'
+    title:
+      mode: 'off'
+    description:
+      mode: 'off'
+    issue_assessment:
+      mode: 'off'
+
+  # Third-party and imported trees are not reviewed. Patch sets, overlays and
+  # the project's own tools stay in.
+  path_filters:
+    - '!external-and-mods/gamescope/**'
+    - '!external-and-mods/MangoHud/**'
+    - '!external-and-mods/MangoHud-qualcomm/**'
+    - '!external-and-mods/lsfg-vk/**'
+    - '!external-and-mods/Decky/**'
+    - '!external-and-mods/kernel/**'
+    - '!external-and-mods/BOX64/**'
+    - '!external-and-mods/MESA-Easy-Manager/**'
+    - '!external-and-mods/Proton-ARM-Easy-Manager/**'
+    - '!external-and-mods/SteamROMManager/**'
+    - '!external-and-mods/NO_Steam/**'
+    - '!**/*.png'
+    - '!**/*.jpg'
+    - '!**/*.jpeg'
+    - '!**/*.gif'
+    - '!**/*.webp'
+    - '!**/*.svg'
+    - '!**/*.ico'
+    - '!**/*.icns'
+    - '!**/*.ttf'
+    - '!**/*.otf'
+    - '!**/*.woff'
+    - '!**/*.woff2'
+    - '!**/*.zip'
+    - '!**/*.tar'
+    - '!**/*.tar.gz'
+    - '!**/*.tgz'
+    - '!**/*.xz'
+    - '!**/*.flatpak'
+    - '!**/*.elf'
+    - '!**/*.img'
+    - '!**/*.min.js'
+    - '!**/*.min.css'
+    - '!**/*.map'
+    - '!**/*.lock'
+    - '!**/package-lock.json'
+    - '!**/dist/**'
+    - '!**/build/**'
+    - '!**/generated/**'
+    - '!**/*_generated.py'
+    - '!**/*.sha256'
+    - '!android-installer/gradle/wrapper/**'
+
+  path_instructions:
+    - path: 'external-and-mods/kernel-*/patches/**'
+      instructions: >-
+        Check correctness, locking, and resource cleanup on error paths.
+        Mainline coding style is not a concern.
+    - path: '**/*-overlay/**'
+      instructions: >-
+        Sleep, boot and install paths can leave a device unbootable. Flag
+        unsafe failure handling and missing quoting.
+    - path: 'scripts/**'
+      instructions: >-
+        Sleep, boot and install paths can leave a device unbootable. Flag
+        unsafe failure handling and missing quoting.
+    - path: '**/*.sh'
+      instructions: >-
+        Flag missing quoting and failure handling that could leave a device in
+        a half-installed or unbootable state.
+    - path: 'android-installer/**'
+      instructions: >-
+        The installer must never write to the wrong partition. Check every path
+        that can lose user data.
+    - path: 'external-and-mods/ufs-install/**'
+      instructions: >-
+        The installer must never write to the wrong partition. Check every path
+        that can lose user data.
+
+  tools:
+    markdownlint:
+      enabled: false
+
+chat:
+  art: false
+
+issue_enrichment:
+  auto_enrich:
+    enabled: false
+  planning:
+    enabled: false

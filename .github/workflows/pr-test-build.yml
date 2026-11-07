@@ -1,0 +1,50 @@
+name: PR test build
+
+# Builds the debug APK for pull requests that touch the Android installer.
+# Runs with a read-only token and no secrets, so it is safe for fork PRs.
+# The result is announced by pr-test-build-comment.yml (workflow_run).
+
+on:
+  pull_request:
+    paths:
+      - 'android-installer/**'
+      - '.github/workflows/pr-test-build.yml'
+
+permissions: {}
+
+concurrency:
+  group: pr-test-build-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: android-installer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-dependency-path: |
+            android-installer/**/*.gradle*
+            android-installer/gradle/wrapper/gradle-wrapper.properties
+      - name: Fetch pinned OpenABL assets
+        run: tools/fetch-openabl.sh
+      - name: Build debug APK
+        run: ./gradlew --no-daemon assembleDebug
+      - name: Upload APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: zaviya-installer-pr-${{ github.event.pull_request.number }}
+          path: android-installer/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
