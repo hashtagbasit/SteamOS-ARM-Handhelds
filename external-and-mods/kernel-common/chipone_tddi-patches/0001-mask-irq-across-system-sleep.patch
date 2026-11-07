@@ -1,0 +1,117 @@
+--- a/cts_driver.c
++++ b/cts_driver.c
+@@ -607,7 +607,89 @@
+ 	return charger_mode;
+ }
+ #endif
++
++#ifndef CONFIG_CTS_PM_GENERIC
++/*
++ * The i2c bus has no legacy suspend/resume hooks, so the .driver.suspend and
++ * .driver.resume above are never called. The panel is powered off in the
++ * display driver's PM prepare phase, which runs before any device's .suspend,
++ * so the interrupt has to be masked before the device phases begin; a PM
++ * notifier does that. The panel itself is not touched. disable_irq() waits
++ * for a running handler and nests with the driver's own disable bookkeeping.
++ * Only system suspend is handled. "masked" keeps the disable depth balanced
++ * when a POST notification arrives without a matching PREPARE.
++ */
++struct cts_sleep_mask {
++    struct notifier_block nb;
++    struct chipone_ts_data *cts_data;
++    bool masked;
++};
++
++static struct cts_sleep_mask *cts_sleep_mask;
++
++static int cts_pm_notify(struct notifier_block *nb, unsigned long action,
++        void *data)
++{
++    struct cts_sleep_mask *m = container_of(nb, struct cts_sleep_mask, nb);
++    int irq = m->cts_data->pdata->irq;
+ 
++    if (irq <= 0)
++        return NOTIFY_DONE;
++
++    switch (action) {
++    case PM_SUSPEND_PREPARE:
++        if (!m->masked) {
++            disable_irq(irq);
++            m->masked = true;
++        }
++        break;
++    case PM_POST_SUSPEND:
++        if (m->masked) {
++            m->masked = false;
++            enable_irq(irq);
++        }
++        break;
++    }
++
++    return NOTIFY_DONE;
++}
++
++static int cts_sleep_mask_register(struct device *dev,
++        struct chipone_ts_data *cts_data)
++{
++    struct cts_sleep_mask *m;
++    int ret;
++
++    m = devm_kzalloc(dev, sizeof(*m), GFP_KERNEL);
++    if (!m)
++        return -ENOMEM;
++
++    m->nb.notifier_call = cts_pm_notify;
++    m->cts_data = cts_data;
++    ret = register_pm_notifier(&m->nb);
++    if (ret)
++        return ret;
++
++    cts_sleep_mask = m;
++    return 0;
++}
++
++static void cts_sleep_mask_unregister(void)
++{
++    struct cts_sleep_mask *m = cts_sleep_mask;
++
++    if (!m)
++        return;
++
++    unregister_pm_notifier(&m->nb);
++    if (m->masked) {
++        m->masked = false;
++        enable_irq(m->cts_data->pdata->irq);
++    }
++    cts_sleep_mask = NULL;
++}
++#endif /* !CONFIG_CTS_PM_GENERIC */
++
+ #ifdef CONFIG_CTS_I2C_HOST
+ static int cts_driver_probe(struct i2c_client *client)
+ #else
+@@ -850,6 +932,13 @@
+ 	}
+ #endif
+ 
++#ifndef CONFIG_CTS_PM_GENERIC
++    ret = cts_sleep_mask_register(&client->dev, cts_data);
++    if (ret)
++        cts_warn("Register sleep IRQ mask failed %d", ret);
++        /* Ignore this error */
++#endif
++
+     return 0;
+ 
+ err_deinit_oem:
+@@ -947,6 +1036,10 @@
+         cts_earjack_detect_deinit(cts_data);
+ #endif
+ 
++#ifndef CONFIG_CTS_PM_GENERIC
++        cts_sleep_mask_unregister();
++#endif
++
+         cts_plat_free_irq(cts_data->pdata);
+ 
+ #ifdef CFG_MTK_PANEL_NOTIFIER

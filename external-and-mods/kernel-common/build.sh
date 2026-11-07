@@ -316,6 +316,12 @@ build_tddi() {
   fetch "https://github.com/ROCKNIX/chipone_tddi/archive/${TDDI_REF}.tar.gz" "$tar"
   rm -rf "$d"; mkdir -p "$d"
   tar -C "$d" --strip-components=1 -xzf "$tar"
+  local p
+  for p in "${HERE}"/chipone_tddi-patches/*.patch; do
+    [[ -f "$p" ]] || continue
+    log "chipone_tddi: applying ${p##*/}"
+    (cd "$d" && patch -p1 --no-backup-if-mismatch <"$p") || die "chipone_tddi patch ${p##*/} failed"
+  done
   make -C "$SRC" M="$d" -j"$JOBS" modules
 }
 
