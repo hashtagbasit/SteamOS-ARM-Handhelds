@@ -239,8 +239,38 @@ pad_ok() {  # pad_ok <pad evdev>
   return 1
 }
 
+# After some wakes Steam reopens the pad but never loads its input config, so
+# the pad does nothing but haptics until the Steam menu is opened. A reconnect
+# while awake always loads it, so when the config doesn't follow, reconnect once.
+steam_controller_log() {
+  [[ -n ${KONKR_STEAM_CONTROLLER_LOG:-} ]] && { echo "$KONKR_STEAM_CONTROLLER_LOG"; return; }
+  ls -t /home/*/.local/share/Steam/logs/controller.txt 2>/dev/null | head -1
+}
+
+steam_pad_config_watch() {  # steam_pad_config_watch <log> <lines before the wake>
+  local i dev found=
+  for i in {1..30}; do
+    tail -n +"$(($2 + 1))" "$1" 2>/dev/null | grep -aq 'controller device opened' && { found=1; break; }
+    sleep 0.5
+  done
+  [[ -n $found ]] || return 0  # Steam isn't running, or hasn't seen the pad go
+  sleep 4
+  tail -n +"$(($2 + 1))" "$1" 2>/dev/null | grep -aqE 'Add to Config Cache|Queueing activation' && return 0
+  log "pad-watch: Steam did not load the pad's config, reconnecting the pad"
+  for dev in "$XHCI_DRV"/[0-9a-f]*:*; do
+    [[ -e $dev ]] || continue
+    dev=${dev##*/}
+    echo "$dev" >"$XHCI_DRV/unbind" 2>/dev/null || continue
+    sleep 1
+    sysbtn_rebind
+    echo "$dev" >"$XHCI_DRV/bind" 2>/dev/null || log "pad-watch: usb rebind $dev failed"
+  done
+}
+
 pad_watch() {
-  local i ev=
+  local i ev= clog lines=0
+  clog=$(steam_controller_log)
+  [[ -n $clog ]] && lines=$(wc -l <"$clog" 2>/dev/null || echo 0)
   for i in {1..30}; do
     ev=$(pad_event); [[ -n $ev ]] && break
     sleep 0.5
@@ -248,7 +278,10 @@ pad_watch() {
   [[ -n $ev ]] || { log "pad-watch: the pad never came back"; return; }
   for i in {1..8}; do
     sleep 1
-    pad_ok "$ev" && return
+    if pad_ok "$ev"; then
+      [[ -n $clog ]] && steam_pad_config_watch "$clog" "$lines"
+      return
+    fi
   done
   log "pad-watch: InputPlumber lost the pad, restarting it"
   systemctl restart inputplumber.service
