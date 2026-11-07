@@ -31,7 +31,7 @@ and have wildly different build times.
 │                                                            │
 │  1. Free disk space (~40 GB)                               │
 │  2. Download kernel + Mesa artifacts                       │
-│  3. Download SteamOS rootfs (Valve CDN, casync)            │
+│  3. Download SteamOS rootfs (SteamOS CDN, casync)            │
 │  4. Restore Steam ARM seed from cache                      │
 │     (or automated headless bootstrap in ~50s)              │
 │  5. Apply overlays (Turnip, kernel, seed)                  │
@@ -82,7 +82,7 @@ for Adreno 830, in four architecture slices.
 | `aarch64/` | ARM64 native | On-device Turnip + Zink |
 | `x86_64/` | x86_64 guest | FEX emulated x86_64 games |
 | `i386/` | i686 guest | FEX emulated 32-bit games |
-| `android/` | Android/Bionic | Lepton (Valve's Android container) |
+| `android/` | Android/Bionic | Lepton (the Android container) |
 
 ---
 
@@ -100,7 +100,7 @@ and the downloaded SteamOS rootfs.
 ### Seed & First-Boot Experience
 
 - **Automated Steam ARM Seed:** The image pre-seeds a complete, sanitized Steam ARM client via `scripts/bootstrap-steam-arm-seed.sh`.
-- **Cached in CI:** Cached via `@actions/cache` (`steam-seed-${STEAMOS_BUILD}-${STEAM_ARM_CHANNEL}`). On cache miss, CI boots Steam headlessly inside a Bubblewrap container in ~50s to download and unpack the client from Valve's official CDN.
+- **Cached in CI:** Cached via `@actions/cache` (`steam-seed-${STEAMOS_BUILD}-${STEAM_ARM_CHANNEL}`). On cache miss, CI boots Steam headlessly inside a Bubblewrap container in ~50s to download and unpack the client from the official Steam CDN.
 - **Image published as a workflow artifact** (90-day retention), with a decoupled `release-sm8750.yml` for publishing tested images.
 
 ---

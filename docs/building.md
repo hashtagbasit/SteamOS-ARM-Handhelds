@@ -2,7 +2,7 @@
 
 ## Building the SteamOS Image
 
-The top-level build scripts assemble the complete flashable `.img` (downloading Valve's official SteamOS rootfs, applying device-specific overlays, Mesa GPU drivers, and the repacked kernel):
+The top-level build scripts assemble the complete flashable `.img` (downloading the official SteamOS rootfs, applying device-specific overlays, Mesa GPU drivers, and the repacked kernel):
 
 - **AYN Odin 3 (Snapdragon 8 Elite / SM8750):** `./make-steamos-sm8750.sh`
 - **KONKR Pocket FIT / AYANEO Pocket S2 (SM8650):** `./make-steamos-sm8650.sh`
@@ -31,7 +31,7 @@ The top-level build scripts assemble the complete flashable `.img` (downloading 
 The SM8750 uses Qualcomm's custom ARMv9.2-A **Oryon** CPU cores.
 
 ### ⚠️ Critical Toolchain Requirement (GCC 15+ / Binutils 2.45+)
-- Linux 7.2 on Oryon cores **requires** modern toolchain support for packed relative relocations (`CONFIG_RELR=y`, `--pack-dyn-relocs=relr`).
+- Linux 7.4 on Oryon cores **requires** modern toolchain support for packed relative relocations (`CONFIG_RELR=y`, `--pack-dyn-relocs=relr`).
 - **Do not compile using older compilers (like GCC 13 on Ubuntu 24.04).** Older toolchains lack RELR support and generate relocation tables that crash immediately during early kernel initialization (`arch/arm64/kernel/head.S`), triggering an instant PMIC watchdog reboot.
 - The build script enforces `gcc >= 15` for SM8750 builds.
 
@@ -62,4 +62,4 @@ The output kernel, modules, and firmware are staged into `kernel-work/output/<re
 - **Gamescope:** `scripts/build-gamescope-in-rootfs.sh`, source in `external-and-mods/gamescope/`
 - **Mesa (Freedreno / Turnip):** `scripts/build-mesa.sh` (builds aarch64, x86_64, i386 FEX guest, and Android slices)
 
-Valve's official rootfs and the Steam client are downloaded at build time. See [HOW-IT-WORKS.md](HOW-IT-WORKS.md) for architectural details.
+The official rootfs and the Steam client are downloaded at build time. See [HOW-IT-WORKS.md](HOW-IT-WORKS.md) for architectural details.

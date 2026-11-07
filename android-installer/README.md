@@ -1,7 +1,7 @@
 # Zaviya Installer
 
 An Android app that puts Zaviya on a microSD card from the handheld itself, with no PC.
-Zaviya is based on the SteamOS ARM image from Steam Frame.
+Zaviya is SteamOS for ARM set up for handhelds.
 
 The app walks through six steps. Each waits for you.
 

@@ -9,17 +9,14 @@
 <p align="center"><strong>for ARM handhelds</strong></p>
 
 <p align="center">
-  Valve's SteamOS for ARM, the one made for the Steam Frame, set up for handhelds
-  and tablets: Game Mode, the KDE desktop, PC games through FEX and Proton, and Android apps.
+  SteamOS for ARM set up for handhelds and tablets: Game Mode, the KDE desktop, PC games through FEX and Proton, and Android apps.
 </p>
 
-<p align="center">Based on Valve's SteamOS. Not affiliated with or endorsed by Valve.</p>
-
-<p align="center">Zaviya used to be called SteamOS ARM Port, in case you are searching for that.</p>
+<p align="center">Formerly known as Unofficial SteamOS ARM Port.</p>
 
 <p align="center">
-  <a href="https://github.com/hashtagbasit/SteamOS-ARM-Port/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/hashtagbasit/SteamOS-ARM-Port?include_prereleases&style=flat&color=7c5cf0&label=release"></a>
-  <a href="https://github.com/hashtagbasit/SteamOS-ARM-Port/releases"><img alt="Total downloads" src="https://img.shields.io/github/downloads/hashtagbasit/SteamOS-ARM-Port/total?style=flat&color=7c5cf0&label=downloads"></a>
+  <a href="https://github.com/hashtagbasit/Zaviya/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/hashtagbasit/Zaviya?include_prereleases&style=flat&color=7c5cf0&label=release"></a>
+  <a href="https://github.com/hashtagbasit/Zaviya/releases"><img alt="Total downloads" src="https://img.shields.io/github/downloads/hashtagbasit/Zaviya/total?style=flat&color=7c5cf0&label=downloads"></a>
   <a href="https://steamos-arm-port.github.io/zaviya/"><img alt="Documentation" src="https://img.shields.io/badge/docs-website-18181a?style=flat"></a>
   <a href="LICENSE"><img alt="GPL-2.0 license" src="https://img.shields.io/badge/license-GPL--2.0-18181a?style=flat"></a>
   <a href="https://discord.gg/EP53nZYvg"><img alt="Discord" src="https://img.shields.io/badge/chat-Discord-5865F2?style=flat&amp;logo=discord&amp;logoColor=white"></a>
@@ -36,7 +33,7 @@
 </p>
 
 > [!WARNING]
-> This is a community project, not affiliated with or endorsed by Valve.
+> This is an unofficial community project.
 > Installing it means flashing the OpenABL bootloader, and getting that
 > wrong can leave your device unable to boot or lose your data. Back up first
 > and follow the [install guide](https://steamos-arm-port.github.io/zaviya/getting-started/install/)
@@ -44,7 +41,7 @@
 
 ## About
 
-Valve's ARM build of SteamOS is made for a VR headset, so out of the box a lot
+The ARM build of SteamOS I start from is made for a VR headset, so out of the box a lot
 of it gets in the way on a handheld: services that keep crashing, the UI stuck
 on the slow cores, the GPU not clocking up, standby that drains the battery. I
 turned off what a handheld doesn't need and fixed the rest, the long version
@@ -67,7 +64,7 @@ What you get:
 ## Quick start
 
 1. Flash the OpenABL bootloader for your SoC (older versions of it work too), the [ABL guide](https://steamos-arm-port.github.io/zaviya/getting-started/abl/) walks you through it. Back up your stock ABL first.
-2. Download the image for your SoC from [Releases](https://github.com/hashtagbasit/SteamOS-ARM-Port/releases/latest), open the `.001` part with 7-Zip and flash the `.img` inside to a microSD card (32 GB+) with balenaEtcher or Rufus.
+2. Download the image for your SoC from [Releases](https://github.com/hashtagbasit/Zaviya/releases/latest), open the `.001` part with 7-Zip and flash the `.img` inside to a microSD card (32 GB+) with balenaEtcher or Rufus.
 3. Boot the card from the ABL menu and pick your device. First boot takes a couple of minutes.
 
 Already on it? Go to Settings > System > Check for updates.
@@ -86,15 +83,15 @@ Already on it? Go to Settings > System > Check for updates.
 There's one image per SoC, you pick your device in the ABL menu and it sets
 itself up. I only own a Pocket FIT, the rest is tested by the community, so if
 you have one of the others please
-[let me know how it runs](https://github.com/hashtagbasit/SteamOS-ARM-Port/issues).
+[let me know how it runs](https://github.com/hashtagbasit/Zaviya/issues).
 
 ### Phones & tablets
 
 | Device | SoC | Status |
 |---|---|---|
-| Lenovo Legion Y700 Gen 3 (TB321FU) | Snapdragon 8 Gen 3 | Beta |
-| Lenovo Legion Y700 Gen 4 (TB322FC) | Snapdragon 8 Elite | Beta |
-| Lenovo Legion Y700 Gen 5 (TB323FU) | Snapdragon 8 Elite Gen 5 | Testing |
+| Lenovo Legion Y700 Gen 3 (TB321FU) | Snapdragon 8 Gen 3 | In testing |
+| Lenovo Legion Y700 Gen 4 (TB322FC) | Snapdragon 8 Elite | In testing |
+| Lenovo Legion Y700 Gen 5 (TB323FU) | Snapdragon 8 Elite Gen 5 | In testing |
 | REDMAGIC 6 (NX669J) | Snapdragon 888 | Build it yourself ([guide](docs/redmagic6.md)) |
 
 The Gen 3 and Gen 4 install to internal storage next to Android, and the
@@ -115,7 +112,7 @@ Everything lives on the [website](https://steamos-arm-port.github.io/zaviya/).
 | Move it to internal storage | [Internal storage](https://steamos-arm-port.github.io/zaviya/getting-started/internal-storage/) |
 | Update | [Updates](https://steamos-arm-port.github.io/zaviya/using/updates/) |
 | Get help | [FAQ](https://steamos-arm-port.github.io/zaviya/help/faq/) · [Troubleshooting](https://steamos-arm-port.github.io/zaviya/help/troubleshooting/) |
-| Report a bug | [GitHub issues](https://github.com/hashtagbasit/SteamOS-ARM-Port/issues) |
+| Report a bug | [GitHub issues](https://github.com/hashtagbasit/Zaviya/issues) |
 
 ## Building
 
