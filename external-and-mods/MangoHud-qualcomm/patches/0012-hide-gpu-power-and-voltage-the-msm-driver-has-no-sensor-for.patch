@@ -1,0 +1,82 @@
+From: hashtagbasit <53941105+hashtagbasit@users.noreply.github.com>
+Subject: [PATCH] mangoapp: hide GPU power and voltage when the msm driver has no sensor
+
+The HUD showed GPU power and GPU voltage cells for an msm (Adreno) GPU
+that has no power, energy or voltage file under its hwmon device. The
+mainline msm driver has none on these boards, so the cells were empty or
+showed a made-up 0 mV. Add has_power() and has_voltage(), true for every other GPU driver
+and, for msm_dpu and msm_drm, true only when the matching hwmon file was
+found and opened, and skip the cell when the sensor is absent. The
+empty cell for a present sensor that reads 0 W stays as before.
+---
+--- a/src/gpu.h
++++ b/src/gpu.h
+@@ -100,6 +100,14 @@
+                 return false;
+         }
+ 
++        bool has_power() const {
++            return !fdinfo || fdinfo->has_power();
++        }
++
++        bool has_voltage() const {
++            return !fdinfo || fdinfo->has_voltage();
++        }
++
+         std::shared_ptr<Throttling> throttling() {
+             if (nvidia)
+                 return nvidia->throttling;
+--- a/src/gpu_fdinfo.h
++++ b/src/gpu_fdinfo.h
+@@ -235,6 +235,27 @@
+         return metrics;
+     };
+ 
++    bool has_power() const
++    {
++        if (module != "msm_dpu" && module != "msm_drm")
++            return true;
++
++        const auto power = hwmon_sensors.find("power");
++        if (power != hwmon_sensors.end() && power->second.stream.is_open())
++            return true;
++        const auto energy = hwmon_sensors.find("energy");
++        return energy != hwmon_sensors.end() && energy->second.stream.is_open();
++    }
++
++    bool has_voltage() const
++    {
++        if (module != "msm_dpu" && module != "msm_drm")
++            return true;
++
++        const auto voltage = hwmon_sensors.find("voltage");
++        return voltage != hwmon_sensors.end() && voltage->second.stream.is_open();
++    }
++
+     void pause()
+     {
+         paused = true;
+--- a/src/hud_elements.cpp
++++ b/src/hud_elements.cpp
+@@ -370,9 +370,10 @@
+             }
+ 
+             // No power sensor (Qualcomm SoCs): an empty cell, not a made-up 0 W.
+-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power] && gpu->metrics.powerUsage <= 0) {
++            // An msm GPU without a hwmon power or energy file has no cell at all.
++            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power] && gpu->has_power() && gpu->metrics.powerUsage <= 0) {
+                 ImguiNextColumnOrNewRow();
+-            } else if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
++            } else if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power] && gpu->has_power()) {
+                 ImguiNextColumnOrNewRow();
+                 char str[16];
+                 snprintf(str, sizeof(str), "%.1f", gpu->metrics.powerUsage);
+@@ -407,7 +408,7 @@
+                 ImGui::PopFont();
+             }
+ 
+-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_voltage]) {
++            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_voltage] && gpu->has_voltage()) {
+                 ImguiNextColumnOrNewRow();
+                 right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->metrics.voltage);
+                 ImGui::SameLine(0, 1.0f);
