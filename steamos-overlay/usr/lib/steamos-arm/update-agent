@@ -30,7 +30,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-REPO = "hashtagbasit/SteamOS-ARM-Port"
+REPO = "hashtagbasit/Zaviya"
 KONKR_UPDATE = "/usr/share/konkr-update/konkr-update.py"
 RUN = Path("/run/steamos-arm-update")
 CACHE = Path("/home/.steamos-arm-update")

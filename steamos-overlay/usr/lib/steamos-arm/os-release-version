@@ -23,7 +23,7 @@ except (OSError, ValueError):
 if not re.fullmatch(r"\d+(?:\.\d+)*", version or ""):
     sys.exit(0)                           # images before v1.3 don't record their release
 
-URL = "https://github.com/hashtagbasit/SteamOS-ARM-Port"
+URL = "https://github.com/hashtagbasit/Zaviya"
 want = {"NAME": '"Zaviya"', "PRETTY_NAME": f'"Zaviya {version}"', "VERSION": f'"{version}"', "LOGO": "zaviya",
         "HOME_URL": f'"{URL}"', "DOCUMENTATION_URL": f'"{URL}"', "SUPPORT_URL": f'"{URL}/issues"',
         "BUG_REPORT_URL": f'"{URL}/issues"'}
