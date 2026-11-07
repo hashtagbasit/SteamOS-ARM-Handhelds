@@ -145,5 +145,4 @@ don't own. The full list of projects and people is in [CREDITS.md](CREDITS.md).
 My scripts and overlays are GPL-2.0, everything in `external-and-mods/` keeps
 its own license. See [LICENSE](LICENSE).
 
-Steam and SteamOS are trademarks of Valve Corporation, used here only to say
-what this is based on. Please don't ask Valve for help with it.
+SteamOS and Steam are trademarks of their owner. This project isn't affiliated with or endorsed by them.
