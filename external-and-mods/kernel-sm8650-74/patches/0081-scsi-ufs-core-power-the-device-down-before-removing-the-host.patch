@@ -1,0 +1,62 @@
+From: hashtagbasit <53941105+hashtagbasit@users.noreply.github.com>
+Subject: [PATCH] scsi: ufs: core: power the device down before removing the host
+
+ufshcd_remove() cut VCC and the clocks with the device still active and the
+link up. Unbinding the controller in a loop reset the whole board within
+1 to 50 cycles (Pocket FIT, reset with no panic or log), so a sleep from an
+SD card install, which unbinds the idle UFS, could reset the handheld.
+
+Remove the logical units, which flushes their caches, then send the device
+to POWERDOWN with the link off as the shutdown path does, and only then
+remove the SCSI host. Clean over 60 cycles on each of 3 boots against resets
+at 1, 8 and 50 without it. A clock hold across the teardown did not help.
+---
+diff --git a/drivers/ufs/core/ufshcd.c b/drivers/ufs/core/ufshcd.c
+--- a/drivers/ufs/core/ufshcd.c
++++ b/drivers/ufs/core/ufshcd.c
+@@ -10972,6 +10972,32 @@
+ }
+ 
+ /**
++ * ufshcd_power_down_device - power the device down before the host is removed
++ * @hba: per adapter instance
++ *
++ * Removing the host cuts the device supplies, so the device has to reach
++ * POWERDOWN with the link off first, as it does on shutdown. The logical units
++ * go first so their caches are flushed while the device still takes commands.
++ * The device WLUN stays, it carries the START STOP UNIT.
++ */
++static void ufshcd_power_down_device(struct ufs_hba *hba)
++{
++	struct scsi_device *sdev;
++
++	shost_for_each_device(sdev, hba->host) {
++		if (sdev != hba->ufs_device_wlun)
++			scsi_remove_device(sdev);
++	}
++
++	down(&hba->host_sem);
++	hba->shutting_down = true;
++	up(&hba->host_sem);
++
++	if (__ufshcd_wl_suspend(hba, UFS_SHUTDOWN_PM))
++		dev_warn(hba->dev, "device not powered down before removal\n");
++}
++
++/**
+  * ufshcd_remove - de-allocate SCSI host and host memory space
+  *		data structure memory
+  * @hba: per adapter instance
+@@ -10988,8 +11014,11 @@
+ 	blk_mq_destroy_queue(hba->tmf_queue);
+ 	blk_put_queue(hba->tmf_queue);
+ 	blk_mq_free_tag_set(&hba->tmf_tag_set);
+-	if (hba->scsi_host_added)
++	if (hba->scsi_host_added) {
++		if (hba->ufs_device_wlun)
++			ufshcd_power_down_device(hba);
+ 		scsi_remove_host(hba->host);
++	}
+ 	/* disable interrupts */
+ 	ufshcd_disable_intr(hba, hba->intr_mask);
+ 	ufshcd_hba_stop(hba);

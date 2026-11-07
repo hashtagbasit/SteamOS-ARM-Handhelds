@@ -1,0 +1,109 @@
+From: hashtagbasit <53941105+hashtagbasit@users.noreply.github.com>
+Subject: [PATCH] scsi: ufs: qcom: free ESI interrupts before the clocks go off
+
+The ESI interrupts were devm-managed, so on unbind they were still
+requested while ufs_qcom_exit() turned the lane clocks and the PHY off,
+and when ufs_qcom_remove() freed the MSIs. The latter left the actions
+attached and logged "removing non-empty directory 'irq/N'" for each
+vector. Free the interrupts and the MSIs from the exit callbacks instead.
+---
+diff --git a/drivers/ufs/host/ufs-qcom.c b/drivers/ufs/host/ufs-qcom.c
+--- a/drivers/ufs/host/ufs-qcom.c
++++ b/drivers/ufs/host/ufs-qcom.c
+@@ -1699,11 +1699,14 @@
+ 
+ 	return err;
+ }
++
++static void ufs_qcom_free_esi(struct ufs_hba *hba);
+ 
+ static void ufs_qcom_exit(struct ufs_hba *hba)
+ {
+ 	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
+ 
++	ufs_qcom_free_esi(hba);
+ 	ufs_qcom_disable_lane_clks(host);
+ 	phy_power_off(host->generic_phy);
+ 	phy_exit(host->generic_phy);
+@@ -1754,6 +1757,7 @@
+ 
+ static void ufs_qcom_fw_managed_exit(struct ufs_hba *hba)
+ {
++	ufs_qcom_free_esi(hba);
+ 	pm_runtime_put_sync(hba->dev);
+ }
+ 
+@@ -2438,7 +2442,29 @@
+ 
+ 	return IRQ_HANDLED;
+ }
++
++/*
++ * Release the ESI interrupts before the clocks and the PHY go off, so no
++ * handler can run against a powered-down controller and no action is left
++ * on the IRQ when the MSIs are freed.
++ */
++static void ufs_qcom_free_esi(struct ufs_hba *hba)
++{
++	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
++	struct ufs_qcom_irq *qi = host->esi_irqs;
+ 
++	if (!host->esi_enabled)
++		return;
++
++	for (int i = 0; i < host->nr_esi_irqs; i++)
++		devm_free_irq(hba->dev, qi[i].irq, qi + i);
++	platform_device_msi_free_irqs_all(hba->dev);
++	devm_kfree(hba->dev, qi);
++	host->esi_irqs = NULL;
++	host->nr_esi_irqs = 0;
++	host->esi_enabled = false;
++}
++
+ static int ufs_qcom_config_esi(struct ufs_hba *hba)
+ {
+ 	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
+@@ -2486,6 +2512,8 @@
+ 		}
+ 	}
+ 
++	host->esi_irqs = qi;
++	host->nr_esi_irqs = nr_irqs;
+ 	host->esi_enabled = true;
+ 
+ enable:
+@@ -3037,12 +3065,7 @@
+  */
+ static void ufs_qcom_remove(struct platform_device *pdev)
+ {
+-	struct ufs_hba *hba =  platform_get_drvdata(pdev);
+-	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
+-
+ 	ufshcd_pltfrm_remove(pdev);
+-	if (host->esi_enabled)
+-		platform_device_msi_free_irqs_all(hba->dev);
+ }
+ 
+ static const struct ufs_qcom_drvdata ufs_qcom_milos_drvdata = {
+diff --git a/drivers/ufs/host/ufs-qcom.h b/drivers/ufs/host/ufs-qcom.h
+--- a/drivers/ufs/host/ufs-qcom.h
++++ b/drivers/ufs/host/ufs-qcom.h
+@@ -326,6 +326,7 @@
+ };
+ 
+ struct gpio_desc;
++struct ufs_qcom_irq;
+ 
+ struct ufs_qcom_host {
+ 	struct phy *generic_phy;
+@@ -361,6 +362,8 @@
+ 	u32 phy_gear;
+ 
+ 	bool esi_enabled;
++	struct ufs_qcom_irq *esi_irqs;
++	int nr_esi_irqs;
+ 	struct msi_msg esi_msg;
+ 
+ 	u32 saved_tx_eq_g1_setting;
+-- 
+2.43.0
