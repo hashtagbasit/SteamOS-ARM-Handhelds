@@ -1,0 +1,119 @@
+{
+  "AYN Odin 3": [
+    "soc: sm8750",
+    "device: ayn-odin-3"
+  ],
+  "KONKR Pocket FIT Elite": [
+    "soc: sm8750",
+    "device: konkr-pocket-fit-elite"
+  ],
+  "Lenovo Legion Y700 Gen 4 (TB322FC)": [
+    "soc: sm8750",
+    "device: lenovo-legion-y700-gen4"
+  ],
+  "KONKR Pocket FIT": [
+    "soc: sm8650",
+    "device: konkr-pocket-fit"
+  ],
+  "AYANEO Pocket S2": [
+    "soc: sm8650",
+    "device: ayaneo-pocket-s2"
+  ],
+  "AYANEO Pocket S2 Pro": [
+    "soc: sm8650",
+    "device: ayaneo-pocket-s2"
+  ],
+  "Lenovo Legion Y700 Gen 3 (TB321FU)": [
+    "soc: sm8650",
+    "device: lenovo-legion-y700-gen3"
+  ],
+  "AYN Odin 2": [
+    "soc: sm8550",
+    "device: ayn-odin-2"
+  ],
+  "AYN Odin 2 Mini": [
+    "soc: sm8550",
+    "device: ayn-odin-2"
+  ],
+  "AYN Odin 2 Portal": [
+    "soc: sm8550",
+    "device: ayn-odin-2"
+  ],
+  "AYN Thor": [
+    "soc: sm8550",
+    "device: ayn-thor"
+  ],
+  "AYANEO Pocket ACE": [
+    "soc: sm8550",
+    "device: ayaneo-pocket-ace"
+  ],
+  "AYANEO Pocket DMG": [
+    "soc: sm8550",
+    "device: ayaneo-pocket-dmg"
+  ],
+  "AYANEO Pocket DS": [
+    "soc: sm8550",
+    "device: ayaneo-pocket-ds"
+  ],
+  "AYANEO Pocket EVO": [
+    "soc: sm8550",
+    "device: ayaneo-pocket-evo"
+  ],
+  "AYANEO Pocket S 1K": [
+    "soc: sm8550",
+    "device: ayaneo-pocket-s-1k-2k"
+  ],
+  "AYANEO Pocket S 2K": [
+    "soc: sm8550",
+    "device: ayaneo-pocket-s-1k-2k"
+  ],
+  "Retroid Pocket 6": [
+    "soc: sm8550",
+    "device: retroid-pocket-6"
+  ],
+  "Retroid Pocket Nova": [
+    "soc: sm8550",
+    "device: retroid-pocket-nova"
+  ],
+  "Retroid Pocket 5": [
+    "soc: sm8250",
+    "device: retroid-pocket-5"
+  ],
+  "Retroid Pocket Flip 2": [
+    "soc: sm8250",
+    "device: retroid-pocket-flip-2"
+  ],
+  "Retroid Pocket Mini": [
+    "soc: sm8250",
+    "device: retroid-pocket-mini"
+  ],
+  "Retroid Pocket Mini V2": [
+    "soc: sm8250",
+    "device: retroid-pocket-mini"
+  ],
+  "AYN Thor Lite": [
+    "soc: sm8250",
+    "device: ayn-thor-lite"
+  ],
+  "MANGMI Air Y Pro": [
+    "soc: sm8250",
+    "device: mangmi-air-y-pro"
+  ],
+  "MANGMI Pocket Max": [
+    "soc: sm8250",
+    "device: mangmi-pocket-max"
+  ],
+  "AYANEO Pocket MICRO 2": [
+    "soc: sm8250",
+    "device: ayaneo-pocket-micro-2"
+  ],
+  "Lenovo Legion Y700 Gen 5 (TB323FU)": [
+    "soc: sm8850",
+    "device: lenovo-legion-y700-gen5"
+  ],
+  "REDMAGIC 6 (NX669J)": [
+    "soc: sm8350",
+    "device: redmagic-6"
+  ],
+  "Other": []
+}

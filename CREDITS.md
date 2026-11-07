@@ -1,19 +1,18 @@
 # Credits
 
-**Zaviya** (it used to be called SteamOS ARM Port) is based on Valve's SteamOS for ARM and runs it on Snapdragon 8 Gen 3
-(SM8650: KONKR Pocket FIT, AYANEO Pocket S2) and 8 Gen 2 (SM8550: AYN, AYANEO
-and Retroid handhelds). Some of its groundwork (the image builder and a few scripts) came
+**Zaviya** (formerly known as Unofficial SteamOS ARM Port) is based on SteamOS for ARM and runs on
+Snapdragon 8 Elite, 8 Gen 3, 8 Gen 2 and 865 handhelds and on Lenovo Legion tablets. Some of its groundwork (the image builder and a few scripts) came
 from MaSi's **SteamOS-ARM-SM8550**, so everything MaSi credits below still applies.
 
 ## This project
 
-| Source | URL | What we use |
+| Source | URL | Used for |
 |--------|-----|-------------|
 | **MaSi / SteamOS-ARM-SM8550** | https://github.com/MaSieS4Fun/SteamOS-ARM-SM8550 | The whole base: image builder, SteamOS ARM overlay, Box64/Decky setup, scripts |
 | **ROCKNIX SM8650** | https://github.com/ROCKNIX/distribution | Kernel recipe (20260901, Linux 7.2.8), Pocket FIT panel/touch/MCU patches, DPU inline rotation and QSEED detail enhancer (tiopex), device tree, firmware, audio UCM |
 | **ROCKNIX SM8550** | https://github.com/ROCKNIX/distribution | Kernel recipe, patches and device trees for all 13 SM8550 handhelds, firmware, audio UCM, controller event maps |
 | **OpenABL** | https://github.com/OpenHandheldCollective/OpenABL | Bootloader menu bundled on every image (ROCKNIX ABL's successor, same developers), its flash scripts |
-| **PB-OS installer app** (project-barry) , **OpenABL Android Installer** (Open Handheld Collective) | https://github.com/project-barry/pb-os-installer-apk , https://github.com/OpenHandheldCollective/OpenABL-Android-Installer | Zaviya Installer (`android-installer/`) learns its root-route technique from the first (xsu, the vendor root service, scripts that detach and report through a status file, GPL-2.0) and its bootloader backup and slot checks from the second (GPL-2.0). The code is written new. It bundles OpenABL 1.2 and a static `zstd` (BSD-3-Clause), see `android-installer/LICENSES/` |
+| **OpenABL Android Installer** (Open Handheld Collective) | https://github.com/OpenHandheldCollective/OpenABL-Android-Installer | Zaviya Installer (`android-installer/`) learns its bootloader backup and slot checks from it (GPL-2.0). The code is written new. It bundles OpenABL 1.2 and a static `zstd` (BSD-3-Clause), see `android-installer/LICENSES/` |
 | **ROCKNIX ABL** | https://github.com/ROCKNIX/abl | Bootloader with device model selection (bundled up to 1.4) |
 | **ROCKNIX MangoHud patches** | https://github.com/ROCKNIX/distribution/tree/next/projects/ROCKNIX/packages/apps/mangohud/patches | Qualcomm GPU, battery and RAM support for Steam's performance overlay (`external-and-mods/MangoHud-qualcomm/`) |
 | **ArmadaOS** | https://github.com/armada-os/armada | Reference for SM8550 device quirks: IRQ affinity for the Adreno 740, AYANEO Pocket button codes, Thor/DS panel and backlight layout. Kernel patches used on 8 Gen 2 and 8 Gen 3: the s2idle series (PCIe suspend OPP and memory floor, RPMh suspend states for regulators, AudioReach graphs across suspend, tsens, geni, ICE and UFS fixes), PCIe iommu-map cell count, fan while charging in s2idle, wcd939x jack resume, and the SM8650 AYANEO base wake and codec-rail fixes. Userland: the SDDM-in-UTC fix for Switch to Desktop on first boot, and the AYN Thor Lite key phys_path fix. On the SM8250 (865) images: the CPU DDR votes made active-only for s2idle (gennro, kettlelinux), and the MANGMI Pocket Max headphone WirePlumber rule and codec power rule |
@@ -22,7 +21,6 @@ from MaSi's **SteamOS-ARM-SM8550**, so everything MaSi credits below still appli
 | **enij90** | https://github.com/enij90/armada-tb321fu | Linux 7.2 ports of the TB321FU panel (with the BOE panel and 144/165 Hz) and speaker routing, display fixes, and TB321FU hardware notes |
 | **h0cheung** | https://github.com/h0cheung/tb322fc-linux | Linux 7.2.8 tree for the Lenovo Legion Y700 Gen 4 (elden): SM8750 platform and board support, panel, touch, speakers and haptics (`external-and-mods/kernel-elden/`). Also the MangoApp frametime field order patch (MangoHud 0009) and the Legion G9 2026 InputPlumber profile for the Gen 4 with its firmware double-Home mapped to Quick Access (`external-and-mods/elden/rootfs/`) |
 | **kShimC** by sunflower2333 (Y700 Gen 4 configuration by mydanyi) | https://github.com/sunflower2333/kShimC , https://github.com/mydanyi/armadaos-freedom | The boot menu in front of Android and SteamOS on the Lenovo Legion Y700 Gen 4 (`external-and-mods/kshimc/`, `scripts/build-kshimc.sh`): built from the source at a pinned commit with our menu text and a config without any storage access, licensed [GPL-3.0-only](https://www.gnu.org/licenses/gpl-3.0.html), with the MultiBootKernelPatcher packer (Project-Aloha, GPL-3.0-or-later) |
-| **PB-OS** (project-barry) | https://github.com/project-barry/pb-os , https://github.com/project-barry/gamescope | A fork of this project; its fixes since 2026-10-03 were reviewed and a few brought back, each reimplemented or reused under its GPL-2.0 (project software) / BSD-2-Clause (gamescope) licence: the stable Steam Deck controller unit serial (InputPlumber patch 0005), swappiness 150 for zram (`steamos-overlay/usr/lib/sysctl.d/61-steamos-arm-zram.conf`), the Thor mic gain of 92, and in gamescope the new-frame-only commit check in `mangoapp.cpp` and the refresh-only rate pick in `_update_app_target_refresh_cycle` |
 | **lsfg-vk 2.0** by PancakeTAS | https://lsfg-vk.dev | Frame generation layer. The ARM64 build shipped here is compiled from the official source with no code changes; licensed under [CC BY-NC-ND 4.0](sm8650-overlay/usr/share/licenses/lsfg-vk/LICENSE.txt) |
 | **lsfg-vk 1.x** by PancakeTAS, fork by xXJSONDeruloXx | https://github.com/xXJSONDeruloXx/lsfg-vk | Older frame generation layer (MIT) in `external-and-mods/lsfg-vk/` |
 | **decky-lsfg-vk** | https://github.com/xXJSONDeruloXx/decky-lsfg-vk | Frame generation Decky plugin |
@@ -32,7 +30,7 @@ from MaSi's **SteamOS-ARM-SM8550**, so everything MaSi credits below still appli
 
 ## From SteamOS-ARM-SM8550 (MaSi)
 
-**SteamOS-ARM-SM8550** adapts Valve's SteamOS ARM to Qualcomm SM8550
+**SteamOS-ARM-SM8550** adapts SteamOS for ARM to Qualcomm SM8550
 handhelds. This file lists the sources this repository is built from.
 
 Original licenses remain with their authors. Project glue (scripts,
@@ -63,10 +61,10 @@ Those two Decky plugins were adapted in SteamOS-Ubuntu from
 
 ## Base system
 
-| Source | URL | What we use |
+| Source | URL | Used for |
 |--------|-----|-------------|
-| **Valve SteamOS ARM** (Frame / Deckard) | Valve | Official aarch64 userspace, Plasma, gamescope session, Steam Gamepad UI. Reconstructed at build time; **not** stored in git. |
-| **Valve Steam (ARM64)** | Steam client | Game Mode client. Downloaded at image-build time; **not** stored in git. |
+| **SteamOS for ARM** (Frame / Deckard) | Upstream | Official aarch64 userspace, Plasma, gamescope session, Steam Gamepad UI. Reconstructed at build time; **not** stored in git. |
+| **Steam (ARM64)** | Steam client | Game Mode client. Downloaded at image-build time; **not** stored in git. |
 | **KDE Plasma / Frameworks** | https://kde.org | Official SteamOS desktop; kscreen and plasma-nm rebuilt to match SteamOS Qt/Plasma. |
 | **Arch Linux ARM (Gear extras)** | https://archlinuxarm.org | Selected Plasma extras (Ark, Kate, …) built against SteamOS libraries. |
 
@@ -77,7 +75,7 @@ Those two Decky plugins were adapted in SteamOS-Ubuntu from
 Inherited from **SteamOS-Ubuntu**. See
 [`external-and-mods/kernel/CREDITS.md`](external-and-mods/kernel/CREDITS.md).
 
-| Source | URL | What we use |
+| Source | URL | Used for |
 |--------|-----|-------------|
 | **SteamOS-Ubuntu** | https://github.com/MaSieS4Fun/SteamOS-Ubuntu | Kernel tree, ABL `KERNEL` packaging, firmware staging |
 | **MaSi-OS Kernel Updater** | https://github.com/MaSieS4Fun/MaSi-OS-Kernel-Updater | Same SM8550 kernel project |
@@ -90,7 +88,7 @@ Inherited from **SteamOS-Ubuntu**. See
 
 ## Decky Loader and bundled plugins
 
-| Source | URL | What we use |
+| Source | URL | Used for |
 |--------|-----|-------------|
 | **SteamOS-Ubuntu** | https://github.com/MaSieS4Fun/SteamOS-Ubuntu | SM8550-Power and SM8550-LED as shipped here |
 | **SteamDeckHomebrew / decky-loader** | https://github.com/SteamDeckHomebrew/decky-loader | PluginLoader (x86_64 via Box64) |
@@ -102,10 +100,10 @@ Inherited from **SteamOS-Ubuntu**. See
 
 ## Input, session, and graphics extras
 
-| Source | URL | What we use |
+| Source | URL | Used for |
 |--------|-----|-------------|
 | **ShadowBlip / InputPlumber** | https://github.com/ShadowBlip/InputPlumber | `deck-uhid` + keyboard target (OSK haptics) |
-| **gamescope (Valve)** | https://github.com/ValveSoftware/gamescope | Gaming Mode compositor (MSM / backlight patches in-tree) |
+| **gamescope** | https://github.com/ValveSoftware/gamescope | Gaming Mode compositor (MSM / backlight patches in-tree) |
 | **Mesa / Freedreno Turnip** | https://gitlab.freedesktop.org/mesa/mesa | Adreno 740 Vulkan (host-provided `.so` at image apply) |
 | **MangoHud** | https://github.com/flightlessmango/MangoHud | Performance overlay |
 | **lsfg-vk** | https://lsfg-vk.dev | Vulkan frame generation (2.0: CC BY-NC-ND 4.0) |
@@ -116,7 +114,7 @@ Inherited from **SteamOS-Ubuntu**. See
 
 ## Applications bundled by this overlay
 
-| Source | URL | What we use |
+| Source | URL | Used for |
 |--------|-----|-------------|
 | **MESA Easy Manager** | https://github.com/MaSieS4Fun/MESA-Easy-Manager | Turnip / Mesa helper |
 | **Proton ARM Easy Manager** | In-tree / inspired by ProtonPlus | ARM Proton helper |
@@ -129,7 +127,7 @@ Inherited from **SteamOS-Ubuntu**. See
 
 | Project | Relationship |
 |---------|--------------|
-| **SteamOS / Jupiter (Valve)** | Game Mode, Gamepad UI, official Plasma desktop |
+| **SteamOS / Jupiter** | Game Mode, Gamepad UI, official Plasma desktop |
 | **SteamOS-Ubuntu** | Kernel, Decky SM8550 plugins, SM8550 handheld bring-up |
 | **ROCKNIX** | ABL, UFS partition names, kernel patches |
 | **Hooandee** | Decky power and LED plugin design |
@@ -138,7 +136,7 @@ Inherited from **SteamOS-Ubuntu**. See
 
 ## Acknowledgements
 
-Thanks to **Valve**, the **SteamOS-Ubuntu** testers, **Hooandee**, and
+Thanks to the **SteamOS** developers, the **SteamOS-Ubuntu** testers, **Hooandee**, and
 maintainers of **kernel.org**, **Armbian**, **ROCKNIX**, **Batocera**,
 **SteamDeckHomebrew**, **ShadowBlip**, **PancakeTAS**, **Flightless Mango**,
 **ptitSeb**, **thorch-os**, and everyone who documented ABL / DTB slots

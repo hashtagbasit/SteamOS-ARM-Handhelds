@@ -1,7 +1,7 @@
 # Zaviya Installer
 
 An Android app that puts Zaviya on a microSD card from the handheld itself, with no PC.
-Zaviya is based on the SteamOS ARM image from Steam Frame.
+Zaviya is based on SteamOS for ARM and built for handhelds.
 
 The app walks through six steps. Each waits for you.
 
@@ -43,7 +43,7 @@ Every script moves to `/data/local/tmp`, detaches, holds a wake lock, and report
 
 - OpenABL 1.2 ELFs (`app/src/main/assets/openabl/`), the same files and hashes as `scripts/stage-openabl.sh`.
   `tools/fetch-openabl.sh` fetches and checks them. The build refuses any file that does not match its pinned hash.
-  Newer OpenABL releases do not start our images, so the version stays pinned.
+  Newer OpenABL releases do not start Zaviya images, so the version stays pinned.
 - `zstd` 1.5.7, static arm64, built from the official source tarball (SHA-256 `eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3`)
   with `make zstd-release LDFLAGS=-static CFLAGS=-O3` on aarch64 and stripped. It sits in
   `app/src/main/jniLibs/arm64-v8a/libzstd_bin.so` (SHA-256 `6093f74a7655da08df047b56628d4c690c4b917ce77578ab28dfb6ff0c83a770`).

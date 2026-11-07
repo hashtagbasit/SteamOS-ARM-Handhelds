@@ -98,7 +98,7 @@ cp -a "$KOUT/firmware/." "$R/usr/lib/firmware/"
 install_file "${ROOT}/external-and-mods/audio-topology/sm8750/SM8750-AYN-tplg.bin" \
   "$R/usr/lib/firmware/qcom/sm8750/SM8750-AYN-tplg.bin" 0644
 
-# Bluetooth and display settings pages for Desktop Mode (not in Valve's repos).
+# Bluetooth and display settings pages for Desktop Mode (not in the stock repos).
 "${SCRIPT_DIR}/install-kde-extras.sh" "$R"
 
 # ---------------------------------------------------------------------------
@@ -195,7 +195,7 @@ install_file "$OVL/usr/lib/systemd/user/sm8550-plasma-env.service" \
   "$R/usr/lib/systemd/user/sm8550-plasma-env.service" 0644
 
 # System update hooks, same as the 8 Gen 2/3 images: this image has no A/B
-# partitions or RAUC payload, so Valve's steamos-update failed with "Update
+# partitions or RAUC payload, so the stock steamos-update failed with "Update
 # error" in Steam (Odin 3 tester). Ours reports up to date.
 backup "$R/usr/bin/steamos-update" "$STOCK/usr/bin/steamos-update"
 install_file "$OVL/usr/bin/steamos-update" "$R/usr/bin/steamos-update" 0755
@@ -224,7 +224,7 @@ mkdir -p "$R/etc/systemd/system/multi-user.target.wants"
 ln -sfn /usr/lib/systemd/system/steamos-sm8550-expand-home.service \
   "$R/etc/systemd/system/multi-user.target.wants/steamos-sm8550-expand-home.service"
 
-# VR crash services cleanup (disable Valve Headset daemons)
+# VR crash services cleanup (disable the VR headset daemons)
 for svc in \
   vrcompositor.service vrserver.service steamos-headset-adb.service \
   steamos-headset-adb.path steamos-headset-usb-gadget.service \
@@ -419,7 +419,7 @@ fi
 
 # Our own Mesa (scripts/build-mesa.sh, MESA_STACK=/work/mesa/out): the same
 # 26.2.6 stack as the 8 Gen 2 image, with the Adreno 830 ids added (patches/
-# 0003). Replaces Valve's whole Mesa natively, in the FEX guest and for
+# 0003). Replaces the stock whole Mesa natively, in the FEX guest and for
 # Lepton, so Turnip and zink always match. Goes after the overlay copy above,
 # which may carry a standalone Turnip .so.
 if [[ -n "${MESA_STACK:-}" ]]; then
@@ -432,7 +432,7 @@ if [[ -n "${MESA_STACK:-}" ]]; then
     || die "MESA_STACK Turnip doesn't know the Adreno 830"
   ANDROID_VENDOR="usr/share/guestos/android/vendor/lib64"
   PDB="$R/usr/lib/holo/pacmandb/local"
-  # KEEP_ANDROID_MESA=1 (tablets): Android keeps Valve's Mesa, as on the
+  # KEEP_ANDROID_MESA=1 (tablets): Android keeps the stock Mesa, as on the
   # 8 Gen 3 where ours crashed its display service.
   MESA_PKGS="deckard-mesa-linux-aarch64 deckard-mesa-linux-x86_64"
   [[ "${KEEP_ANDROID_MESA:-0}" = 1 ]] || MESA_PKGS+=" deckard-mesa-android-aarch64"
@@ -888,7 +888,7 @@ for f in usr/lib/systemd/user.conf.d/60-sm8550-cpu-affinity.conf \
          usr/lib/systemd/user/steam.service.d/70-sm8550-cpu-affinity.conf; do
   install -Dm0644 "$ROOT/sm8550-image-overlay/$f" "$R/$f"
 done
-# Discover: Flatpak apps only. Its PackageKit backend offered Valve's pacman
+# Discover: Flatpak apps only. Its PackageKit backend offered the stock pacman
 # updates for the whole system, which replace this port's own packages (a
 # Legion Y700 Gen 4 tester's system stopped working after one), and its update
 # checks rewrite pacman's sync databases under /usr, which the updater then

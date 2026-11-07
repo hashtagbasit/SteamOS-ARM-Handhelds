@@ -1,0 +1,44 @@
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+  categories:
+    - title: Dependencies
+      labels:
+        - dependencies
+    - title: New features
+      labels:
+        - enhancement
+      exclude:
+        labels:
+          - dependencies
+    - title: Fixes
+      labels:
+        - bug
+      exclude:
+        labels:
+          - dependencies
+    - title: Devices
+      labels:
+        - new-device
+        - 'soc: sm8250'
+        - 'soc: sm8350'
+        - 'soc: sm8550'
+        - 'soc: sm8650'
+        - 'soc: sm8750'
+        - 'soc: sm8850'
+      exclude:
+        labels:
+          - dependencies
+    - title: Documentation
+      labels:
+        - documentation
+      exclude:
+        labels:
+          - dependencies
+    - title: Other changes
+      labels:
+        - '*'
+      exclude:
+        labels:
+          - dependencies

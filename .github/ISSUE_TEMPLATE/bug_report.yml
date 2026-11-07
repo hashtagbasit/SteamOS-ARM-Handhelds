@@ -1,0 +1,86 @@
+name: Bug report
+description: Report something that does not work as expected.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [known issues](https://zaviyaos.github.io/help/known-issues/) and [troubleshooting](https://zaviyaos.github.io/help/troubleshooting/) pages before submitting. Questions and general support are handled on [Discord](https://discord.gg/e2Cn85uQh9).
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      description: The device the problem occurs on.
+      options:
+        - AYN Odin 3
+        - KONKR Pocket FIT Elite
+        - Lenovo Legion Y700 Gen 4 (TB322FC)
+        - KONKR Pocket FIT
+        - AYANEO Pocket S2
+        - AYANEO Pocket S2 Pro
+        - Lenovo Legion Y700 Gen 3 (TB321FU)
+        - AYN Odin 2
+        - AYN Odin 2 Mini
+        - AYN Odin 2 Portal
+        - AYN Thor
+        - AYANEO Pocket ACE
+        - AYANEO Pocket DMG
+        - AYANEO Pocket DS
+        - AYANEO Pocket EVO
+        - AYANEO Pocket S 1K
+        - AYANEO Pocket S 2K
+        - Retroid Pocket 6
+        - Retroid Pocket Nova
+        - Retroid Pocket 5
+        - Retroid Pocket Flip 2
+        - Retroid Pocket Mini
+        - Retroid Pocket Mini V2
+        - AYN Thor Lite
+        - MANGMI Air Y Pro
+        - MANGMI Pocket Max
+        - AYANEO Pocket MICRO 2
+        - Lenovo Legion Y700 Gen 5 (TB323FU)
+        - REDMAGIC 6 (NX669J)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Installed version
+      description: Shown under Settings > System.
+      placeholder: "1.5"
+    validations:
+      required: true
+  - type: dropdown
+    id: install-location
+    attributes:
+      label: Install location
+      options:
+        - microSD
+        - Internal storage
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Describe the problem and the behavior that was expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant terminal output or log excerpts. Long logs can be attached as a file instead.
+      render: shell

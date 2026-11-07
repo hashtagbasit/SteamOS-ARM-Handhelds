@@ -61,7 +61,7 @@ jobs:
             gcc-aarch64-linux-gnu bubblewrap
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Load version manifest
         run: |
@@ -175,7 +175,7 @@ jobs:
       # ── Restore Steam ARM seed from cache ────────────────────────────
       - name: Restore Steam ARM seed from cache
         id: cache-steam-seed
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ${{ env.STEAMOS_WORK }}/steam-arm-seed
           key: steam-seed-${{ env.STEAMOS_BUILD }}-${{ env.STEAM_ARM_CHANNEL || 'steamdeck_publicbeta' }}
@@ -227,7 +227,7 @@ jobs:
 
       - name: Save Steam ARM seed to cache
         if: steps.cache-steam-seed.outputs.cache-hit != 'true' && steps.check-seed-exists.outputs.has_seed == 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ${{ env.STEAMOS_WORK }}/steam-arm-seed
           key: steam-seed-${{ env.STEAMOS_BUILD }}-${{ env.STEAM_ARM_CHANNEL || 'steamdeck_publicbeta' }}
@@ -247,7 +247,7 @@ jobs:
           sha256sum zaviya-odin3.img.zst > zaviya-odin3.img.zst.sha256
 
       - name: Upload image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: zaviya-odin3-image
           path: |

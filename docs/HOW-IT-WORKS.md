@@ -1,13 +1,13 @@
 # How Zaviya runs on the KONKR Pocket FIT
 
-Zaviya, based on Valve's SteamOS for ARM, on the **KONKR Pocket FIT (Snapdragon G3 Gen 3 = SM8650, Adreno 750)**, with
+Zaviya is based on SteamOS for ARM. On the **KONKR Pocket FIT (Snapdragon G3 Gen 3 = SM8650, Adreno 750)**, it adds
 Pocket FIT-specific controls and a set of native performance fixes. The
 AYANEO Pocket S2 shares the base dtsi and gets a DTB too (untested).
 
 ## Why this works at all
 
-- The userspace this project repackages is Valve's
-  **Steam Frame** image, and the Steam Frame *is* SM8650 / Adreno 750. Valve's
+- The userspace this project repackages is the
+  **Steam Frame** image, and the Steam Frame *is* SM8650 / Adreno 750. Its
   own Turnip, zink and GPU firmware target this exact GPU, so this build keeps
   the Frame Mesa untouched.
 - Everything device-specific comes from the base distribution, which already boots Linux on
@@ -76,7 +76,7 @@ konkr-game compat %command%    # strict TSO / split locks for crashing games
   mismatched the pair, so mangoapp crashed. Here mangoapp is pinned to a saved
   copy of the Frame's Turnip (`/usr/lib/steamos-sm8650/bin/mangoapp`), so the
   overlay keeps working even if you install another Turnip with
-  MESA-Easy-Manager. `gamescope-onready` also now passes Steam the full Valve
+  MESA-Easy-Manager. `gamescope-onready` also now passes Steam the full
   environment list (`STEAM_USE_MANGOAPP`, `MANGOHUD_CONFIGFILE`,
   `STEAM_DISPLAY_REFRESH_LIMITS`, …), which the SM8550 session dropped.
 
@@ -97,7 +97,7 @@ which would fight `konkrd` over the fan and drive AYN-only LEDs.
 
 | Area | SM8550 build | Pocket FIT (this project) |
 |------|---------------|--------------------|
-| Kernel | 7.0.14 + Armbian sm8550 | **7.1.2** (base 20260801 SM8650 recipe) + Pocket FIT patches (`external-and-mods/kernel-sm8650/`) |
+| Kernel | 7.0.14 + Armbian sm8550 | **7.4-rc1** (base 20260901 SM8650 recipe ported to 7.4) + Pocket FIT patches (`external-and-mods/kernel-sm8650/` and `kernel-sm8650-74/`) |
 | DTB selection | 14-slot index chain | OpenABL matches the DTB `model` string |
 | Root | initramfs + `root=UUID=` | tiny busybox initramfs (writes `bootlog.txt` to the FAT partition), `root=PARTUUID=` patched at image pack |
 | GPU userspace | patched A740 Turnip | Frame's stock Turnip/zink (A750) |

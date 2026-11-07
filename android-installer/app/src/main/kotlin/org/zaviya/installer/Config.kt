@@ -3,7 +3,7 @@ package org.zaviya.installer
 /** Everything about where images come from, in one place. */
 object Config {
     const val REPO_OWNER = "hashtagbasit"
-    const val REPO_NAME = "SteamOS-ARM-Port"
+    const val REPO_NAME = "Zaviya"
 
     /** Image asset name: zaviya-<soc>-<version>.img.zst, with the soc in lower case. */
     const val ASSET_PREFIX = "zaviya"

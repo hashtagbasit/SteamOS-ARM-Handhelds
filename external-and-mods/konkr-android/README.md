@@ -1,9 +1,9 @@
 # konkr-android
 
-Files layered over Lepton's Android image (Valve's Android layer, Steam app
+Files layered over Lepton's Android image (the Android layer, Steam app
 3029110) for `konkr-apk` apps. Installed to `/usr/share/konkr-android`;
 `konkr-apk` hands the dirs to Lepton, which bind-mounts every file over the
-Android rootfs. Steam's own Android games keep Valve's image.
+Android rootfs. Steam's own Android games keep the stock image.
 
 ## payload/common
 
@@ -28,7 +28,7 @@ before installd is up and dies: `framework/compile-odex.sh` does that inside
 Android with its own dex2oat.
 
 This is tied to one Lepton Android image (`images/version.txt`); `konkr-apk`
-only uses the dir matching the installed one. After Valve updates it, run
+only uses the dir matching the installed one. After Steam updates it, run
 `framework/build-framework.sh` with the device on the network and Android
 running, then rebuild the image.
 

@@ -1,0 +1,45 @@
+name: Issue triage
+
+on:
+  issues:
+    types: [opened]
+
+permissions: {}
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out label map
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/device-labels.json
+          sparse-checkout-cone-mode: false
+
+      - name: Apply labels
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const map = JSON.parse(fs.readFileSync('.github/device-labels.json', 'utf8'));
+            const body = context.payload.issue.body || '';
+
+            // Issue forms render each field as "### <label>" followed by the answer.
+            const match = body.match(/^### Device[ \t]*\r?\n+([^\r\n]+)/m);
+            const device = match ? match[1].trim() : null;
+
+            const labels = new Set(['needs-triage']);
+            if (device && Object.prototype.hasOwnProperty.call(map, device)) {
+              for (const label of map[device]) labels.add(label);
+            }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              labels: [...labels],
+            });

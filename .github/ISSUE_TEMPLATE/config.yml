@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://zaviyaos.github.io/
+    about: Installation guides, device notes and usage help.
+  - name: Known issues
+    url: https://zaviyaos.github.io/help/known-issues/
+    about: Check whether a problem is already documented before opening a report.
+  - name: Troubleshooting
+    url: https://zaviyaos.github.io/help/troubleshooting/
+    about: Step-by-step fixes for common problems.
+  - name: Discord community
+    url: https://discord.gg/e2Cn85uQh9
+    about: Questions, general discussion and community support.

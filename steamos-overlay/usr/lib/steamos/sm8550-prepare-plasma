@@ -15,7 +15,7 @@ chmod 1777 /tmp/.X11-unix 2>/dev/null || true
 # program on the desktop through gamescope's WSI layer, which pops up a
 # warning with zenity; zenity draws with Vulkan, so it popped up another:
 # hundreds of them until the kernel killed Plasma for memory (black screen
-# with the backlight on). Valve's list (gamescope-cleanup) plus the ones our
+# with the backlight on). The stock list (gamescope-cleanup) plus the ones our
 # gamescope-onready adds, and the env file steam.service reads.
 # (Its own process: it sets -euo pipefail, which must not leak in here.)
 [[ -f /usr/lib/steamos/gamescope-cleanup ]] && bash /usr/lib/steamos/gamescope-cleanup >/dev/null 2>&1

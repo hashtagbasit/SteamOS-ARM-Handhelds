@@ -27,7 +27,7 @@ export _STEAM_SETENV_MANAGER=1
 unset WAYLAND_DISPLAY || true
 unset XDG_SESSION_TYPE || true
 
-# Hand Steam everything Valve's session does (gamescope-env-list), not just
+# Hand Steam everything the stock session does (gamescope-env-list), not just
 # the display: without STEAM_USE_MANGOAPP / MANGOHUD_CONFIGFILE /
 # STEAM_MANGOAPP_* Steam hides the Performance Overlay, and without
 # STEAM_DISPLAY_REFRESH_LIMITS there is no refresh-rate slider.

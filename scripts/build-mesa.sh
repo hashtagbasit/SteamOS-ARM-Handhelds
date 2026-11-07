@@ -31,7 +31,7 @@ HOST_PY="${MESA_HOST_VENV:-$W/venv}/bin"
 log() { printf '==> [mesa] %s\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
-# Same drivers as Valve's Frame Mesa: Turnip, zink as the only GL driver.
+# Same drivers as the stock Frame Mesa: Turnip, zink as the only GL driver.
 OPTS=(
   --buildtype=release -Db_ndebug=true --prefix=/usr
   -Dplatforms=x11,wayland
@@ -84,7 +84,7 @@ build_aarch64() {
   log "aarch64: done ($o)"
 }
 
-# The guest tree ships libraries but almost no headers (Valve only needs it at
+# The guest tree ships libraries but almost no headers (the stock image only needs it at
 # runtime). Take the headers from the matching Arch x86_64 packages; lib32
 # packages use the same headers. glibc headers come from the cross compiler.
 GUEST_HEADER_PKGS=(
@@ -197,11 +197,11 @@ EOF2
   log "$arch: done ($o)"
 }
 
-# Lepton (Android 11 container): same drivers as Valve's Android Mesa (Turnip,
+# Lepton (Android 11 container): same drivers as the stock Android Mesa (Turnip,
 # zink), bionic via the NDK sysroot. Google ships NDK compilers for x86 hosts
 # only, so this uses the host's clang 18 with the r27c (clang 18) sysroot and
 # runtime (the NDK's clang defaults: compiler-rt, libunwind, libc++, lld).
-# Files land where Valve's do: usr/share/guestos/android/vendor/lib64.
+# Files land where the stock do: usr/share/guestos/android/vendor/lib64.
 NDK_VERSION=r27c
 NDK_SHA1=090e8083a715fdb1a3e402d0763c388abb03fb4e
 ANDROID_API=30
@@ -260,7 +260,7 @@ CROSS
     || { tail -40 "$W/android.log"; die "android meson failed"; }
   log "android: ninja"
   ninja -C "$b" >>"$W/android.log" 2>&1 || { tail -40 "$W/android.log"; die "android build failed"; }
-  # Android's loaders go by file name, not soname (same names as Valve's).
+  # Android's loaders go by file name, not soname (same names as the stock ones).
   install -m0755 "$b/src/freedreno/vulkan/libvulkan_freedreno.so" "$v/hw/vulkan.freedreno.so"
   install -m0755 "$b/src/gallium/targets/dri/libgallium_dri.so" "$v/libgallium_dri.so"
   install -m0755 "$b/src/gbm/libgbm_mesa.so" "$v/libgbm_mesa.so"

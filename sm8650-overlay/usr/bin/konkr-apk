@@ -1,5 +1,5 @@
 #!/bin/bash
-# konkr-apk — Android apps on SteamOS through Lepton (Valve's Android layer,
+# konkr-apk — Android apps on SteamOS through Lepton (the Android layer,
 # Steam app 3029110; needs the binder kernel from steamos.config).
 #
 #   konkr-apk install FILE...  .apk / .apkm / .xapk / .apks (split bundles
@@ -138,7 +138,7 @@ patch("liblepton/mounting.sh",
       '    podman_cmdline --pid=private --ipc=private --uts=private\n')
 
 # Extra rootfs overlay (restored framework services, Play Store); Steam's
-# own Android games keep Valve's image.
+# own Android games keep the stock image.
 patch("liblepton/mounting.sh",
       '    for OVERLAY in "${LEPTON_OVERLAY}" "${GUESTOS_OVERLAY}"; do\n',
       '    # konkr-apk: extra overlay\n'

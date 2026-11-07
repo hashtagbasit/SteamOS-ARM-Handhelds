@@ -1,0 +1,59 @@
+name: PR test build cleanup
+
+# Removes the test build of a pull request when it closes. Triggered by
+# pull_request_target so the token can write, which is why nothing is checked
+# out and no pull request code runs here.
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions: {}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      pull-requests: write
+    steps:
+      - name: Delete artifacts and update the comment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const number = context.payload.pull_request.number;
+            if (!Number.isSafeInteger(number) || number < 1) {
+              core.setFailed('Invalid pull request number.');
+              return;
+            }
+            const marker = '<!-- zaviya-pr-test-build -->';
+
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              { owner, repo, name: `zaviya-installer-pr-${number}`, per_page: 100 },
+            );
+            for (const a of artifacts) {
+              await github.rest.actions.deleteArtifact({
+                owner, repo, artifact_id: a.id,
+              });
+            }
+            core.info(`Deleted ${artifacts.length} artifact(s).`);
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              { owner, repo, issue_number: number, per_page: 100 },
+            );
+            const existing = comments.find(
+              (c) => c.user && c.user.login === 'github-actions[bot]' &&
+                (c.body || '').includes(marker),
+            );
+            if (!existing) return;
+            await github.rest.issues.updateComment({
+              owner, repo, comment_id: existing.id,
+              body: [
+                marker,
+                'The Android installer test build was removed because the pull request closed.',
+              ].join('\n'),
+            });

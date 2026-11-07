@@ -22,7 +22,7 @@ Building an unofficial SteamOS distribution involves both lightweight platform c
 │                    SLOW TIER (Core Binary Stacks)               │
 │  • Kernel: Linux 7.4-rc1 from source with tracefs enabled       │
 │  • Graphics: Mesa 26.2.6 (Turnip + Zink, 4 cross-slices)        │
-│  • Base OS: Valve Deckard SteamOS rootfs (casync chunk store)   │
+│  • Base OS: Deckard SteamOS rootfs (casync chunk store)   │
 │  • Steam Client: Pre-bootstrapped sanitized ARM user seed       │
 │  • Cadence: Infrequent (upstream major version bumps)           │
 │  • Build Duration: 20 to 90 minutes                             │
@@ -35,10 +35,10 @@ By decoupling image assembly from recompiling the core stacks, everyday commits 
 
 ## 2. Global Version Manifest (`versions.env`)
 
-All upstream dependency versions, image hashes, toolchain pins, and release tags are centralized in a single file at the root of the repository: [`versions.env`](../versions.env).
+All upstream dependency versions, image hashes, toolchain pins, and release tags are centralized in a single file at the root of the repository, `versions.env`. It is not checked in yet, and until it is the workflows fall back to the values written in them.
 
 It defines:
-- **Valve SteamOS Base:** Upstream rootfs build, bundle name, and CDN URL (`STEAMOS_BUILD`, `STEAMOS_BUNDLE`, `STEAMOS_URL`).
+- **SteamOS Base:** Upstream rootfs build, bundle name, and CDN URL (`STEAMOS_BUILD`, `STEAMOS_BUNDLE`, `STEAMOS_URL`).
 - **Mesa Graphics Stack:** Mesa release version, sha256 checksum, Android NDK version, and NDK sha1 (`MESA_VERSION`, `MESA_SHA256`, `NDK_VERSION`, `NDK_SHA1`).
 - **Steam Client ARM Channel:** The beta channel bootstrapped in CI (`STEAM_ARM_CHANNEL`).
 - **Kernel & Distribution Pins:** Pinned base release tag and kernel version (`ROCKNIX_REF`, `KVER`).
@@ -51,8 +51,8 @@ It defines:
 
 ## 3. Component Upgrade Runbooks
 
-### A. Upgrading the Valve SteamOS Base (`STEAMOS_BUILD`)
-Valve periodically updates its SteamOS for ARM rootfs for the Steam Frame on `steamdeck-images.steamos.cloud`.
+### A. Upgrading the SteamOS Base (`STEAMOS_BUILD`)
+The SteamOS for ARM rootfs for the Steam Frame is updated periodically on `steamdeck-images.steamos.cloud`.
 1. Update `STEAMOS_BUILD` and `STEAMOS_BUNDLE` in `versions.env`.
 2. Trigger `build-image-sm8750.yml` (or run `./make-steamos-sm8750.sh` locally).
 3. The script automatically fetches the new `.raucb` bundle and reassembles the updated `rootfs.img` via casync.

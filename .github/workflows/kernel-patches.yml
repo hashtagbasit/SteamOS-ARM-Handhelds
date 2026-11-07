@@ -1,0 +1,65 @@
+name: Kernel patches
+
+# Checks that the patch series of each changed kernel tree still applies to
+# its base source. Read-only: nothing is built, uploaded or written back.
+# The logic lives in .github/scripts/kernel-patch-check.sh and mirrors
+# external-and-mods/kernel-common/build.sh.
+
+on:
+  pull_request:
+    paths:
+      - 'external-and-mods/kernel-*/patches/**'
+      - '.github/workflows/kernel-patches.yml'
+      - '.github/scripts/kernel-patch-check.sh'
+  push:
+    branches: [main]
+    paths:
+      - 'external-and-mods/kernel-*/patches/**'
+      - '.github/workflows/kernel-patches.yml'
+      - '.github/scripts/kernel-patch-check.sh'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kernel-patches-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      trees: ${{ steps.plan.outputs.trees }}
+      any: ${{ steps.plan.outputs.any }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Select kernel trees
+        id: plan
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: .github/scripts/kernel-patch-check.sh plan
+
+  apply:
+    needs: plan
+    if: needs.plan.outputs.any == 'true'
+    name: apply (${{ matrix.tree }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        tree: ${{ fromJSON(needs.plan.outputs.trees) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Apply the patch series
+        env:
+          TREE: ${{ matrix.tree }}
+          WORK: ${{ runner.temp }}/kernel-patches
+        run: .github/scripts/kernel-patch-check.sh check "$TREE"

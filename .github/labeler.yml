@@ -1,0 +1,58 @@
+kernel:
+  - changed-files:
+      - any-glob-to-any-file: 'external-and-mods/kernel*/**'
+
+installer:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'external-and-mods/ufs-install/**'
+          - 'android-installer/**'
+
+input:
+  - changed-files:
+      - any-glob-to-any-file: 'external-and-mods/InputPlumber/**'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file: '**/*.md'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: '.github/**'
+
+'soc: sm8250':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'sm8250-overlay/**'
+          - 'external-and-mods/kernel-sm8250*/**'
+
+'soc: sm8350':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'sm8350-overlay/**'
+          - 'external-and-mods/kernel-sm8350/**'
+          - 'make-steamos-sm8350.sh'
+          - 'scripts/apply-overlays-sm8350.sh'
+
+'soc: sm8550':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'sm8550-overlay/**'
+          - 'sm8550-image-overlay/**'
+          - 'external-and-mods/kernel-sm8550*/**'
+
+'soc: sm8650':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'sm8650-overlay/**'
+          - 'external-and-mods/kernel-sm8650*/**'
+          - 'make-steamos-sm8650.sh'
+
+'soc: sm8750':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'sm8750-overlay/**'
+          - 'external-and-mods/kernel-sm8750*/**'
+          - 'make-steamos-sm8750.sh'
+          - 'scripts/apply-overlays-sm8750.sh'
+          - '.github/workflows/*-sm8750.yml'

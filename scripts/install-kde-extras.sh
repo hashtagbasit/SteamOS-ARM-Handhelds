@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Bluetooth and display settings for Desktop Mode (bluez-qt, bluedevil,
 # libkscreen, kscreen), built inside the Frame rootfs by
-# build-kde-extras-in-rootfs.sh. Valve's aarch64 repos don't carry them.
+# build-kde-extras-in-rootfs.sh. The stock aarch64 repos don't carry them.
 #
 # Usage: install-kde-extras.sh <rootfs>
 # KDE_EXTRAS points at the kde-extras.tar (default: the build's usual place).

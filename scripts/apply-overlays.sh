@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Apply the handheld overlay onto the extracted SteamOS Frame rootfs.
 # SM8650 port (KONKR Pocket FIT / AYANEO Pocket S2): the Frame is SM8650 /
-# Adreno 750 itself, so Valve's Turnip + GPU firmware are kept as shipped.
+# Adreno 750 itself, so the stock Turnip + GPU firmware are kept as shipped.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -294,7 +294,7 @@ for u in steamvr-program-ble.service steamvr-v4l2loopback.service \
   # steamos-boot (A/B slot bookkeeping) needs efi.mount, which waits for the
   # Deck's EFI partition (by-partsets/self/efi). There's none here, so every
   # boot sat on it for the full 90 s device timeout.
-  # systemd-repart (Valve's repart.d/90-home.conf) adds a home partition to
+  # systemd-repart (the stock repart.d/90-home.conf) adds a home partition to
   # the root disk's free space at boot. Our layouts already have /home and
   # steamos-sm8550-expand-home grows it; on internal UFS repart must never
   # touch the partition table.
@@ -605,7 +605,7 @@ install_file "$OVL/etc/profile.d/sm8550-gamepad.sh" \
   "$R/etc/profile.d/sm8550-gamepad.sh" 0644
 "${SCRIPT_DIR}/install-inputplumber-sm8550.sh" "$R"
 "${SCRIPT_DIR}/install-qcom-gyro-sm8550.sh" "$R"
-# Bluetooth and display settings pages for Desktop Mode (not in Valve's repos).
+# Bluetooth and display settings pages for Desktop Mode (not in the stock repos).
 "${SCRIPT_DIR}/install-kde-extras.sh" "$R"
 
 # ---------------------------------------------------------------------------
@@ -634,7 +634,7 @@ for _l in VkLayer_VALVE_rpo.json VkLayer_VALVE_fdm_injection.json; do
 done
 # Audio: the Frame (also SM8650) hides the raw speaker node from every client
 # so its VR speaker filter chain owns it; that chain is disabled here, which
-# left the speakers unreachable. Drop the speaker from Valve's access rules.
+# left the speakers unreachable. Drop the speaker from the stock access rules.
 ACCESS="$R/etc/wireplumber/wireplumber.conf.d/10-access.conf"
 if [[ -f "$ACCESS" ]]; then
   cp -n "$ACCESS" "$R/etc/wireplumber/10-access.conf.frame-orig"
@@ -684,7 +684,7 @@ if [[ -f "$KAPAY/common/system/product/priv-app/Phonesky/Phonesky.apk" ]]; then
   chown -R root:root "$R/usr/share/konkr-android"
   find "$R/usr/share/konkr-android" -type d -exec chmod 0755 {} +
   find "$R/usr/share/konkr-android" -type f -exec chmod 0644 {} +
-  # Valve's prebaked dalvik-cache files are 0755; keep ours the same.
+  # The stock prebaked dalvik-cache files are 0755; keep ours the same.
   find "$R/usr/share/konkr-android" -path '*/data/dalvik-cache/*' -type f -exec chmod 0755 {} +
 else
   log "WARN: no konkr-android payload (external-and-mods/konkr-android/build-payload.sh); Android apps will lack the Play Store and fixes"
@@ -703,7 +703,7 @@ ln -sfn ../konkr-sleep.service "$R/usr/lib/systemd/system/sleep.target.wants/kon
 rm -f "$R/usr/lib/systemd/system/multi-user.target.wants/sshd.service" \
   "$R/etc/systemd/system/multi-user.target.wants/sshd.service" \
   "$R/var/lib/overlays/etc/upper/systemd/system/multi-user.target.wants/sshd.service"
-# Discover: Flatpak apps only. Its PackageKit backend offered Valve's pacman
+# Discover: Flatpak apps only. Its PackageKit backend offered the stock pacman
 # updates for the whole system, which replace this port's own packages (a
 # Legion Y700 Gen 4 tester's system stopped working after one), and its update
 # checks rewrite pacman's sync databases under /usr, which the updater then
@@ -927,7 +927,7 @@ for lib in libMangoHud.so libMangoHud_opengl.so libMangoHud_shim.so libMangoHud-
   fi
 done
 # Wi-Fi back in under a second after sleep: the Frame's NetworkManager with
-# Valve's resume scan patch (scripts/build-networkmanager-in-rootfs.sh).
+# The stock resume scan patch (scripts/build-networkmanager-in-rootfs.sh).
 NMBUILD="${NETWORKMANAGER_BUILD:-${WORKDIR}/networkmanager-build}"
 NMVER="$(cat "$NMBUILD/VERSION" 2>/dev/null)"
 if [[ -x "$NMBUILD/NetworkManager" && -d "$R/usr/lib/NetworkManager/$NMVER" ]]; then
@@ -989,8 +989,8 @@ JSON
 chmod 0755 "$R/usr/lib/steamos-sm8650/bin/mangoapp" 2>/dev/null || true
 
 # 8 Gen 2 (Adreno 740): our own Mesa 26.2.6 stack with the A740 fixes
-# (scripts/build-mesa.sh, external-and-mods/mesa/README.md) replaces Valve's
-# whole Mesa, native and in the FEX guest tree. Valve's files go by their
+# (scripts/build-mesa.sh, external-and-mods/mesa/README.md) replaces the stock
+# whole Mesa, native and in the FEX guest tree. The stock files go by their
 # package file lists so nothing of the two builds mixes.
 if [[ -n "${MESA_STACK:-}" ]]; then
   log "== Mesa: A740 stack from $MESA_STACK"
@@ -1000,9 +1000,9 @@ if [[ -n "${MESA_STACK:-}" ]]; then
   done
   ANDROID_VENDOR="usr/share/guestos/android/vendor/lib64"
   PDB="$R/usr/lib/holo/pacmandb/local"
-  # Android (Lepton) keeps Valve's own Mesa: with ours its display service
+  # Android (Lepton) keeps the stock own Mesa: with ours its display service
   # (surfaceflinger) crashed as it started and Android never came up on 1.3,
-  # where 1.2 ran it on Valve's. Only the Linux side gets our Mesa.
+  # where 1.2 ran it on the stock one. Only the Linux side gets our Mesa.
   for pkg in deckard-mesa-linux-aarch64 deckard-mesa-linux-x86_64; do
     list="$(ls -d "$PDB/${pkg}"-[0-9]*/files 2>/dev/null | head -1)"
     [[ -n "$list" ]] || continue
@@ -1022,7 +1022,7 @@ if [[ -n "${MESA_STACK:-}" ]]; then
   cp -a "$MESA_STACK/x86_64/usr/share/." "$GUEST/usr/share/"
   cp -a "$MESA_STACK/i386/usr/lib32/." "$GUEST/usr/lib32/"
   cp -a "$MESA_STACK/i386/usr/share/vulkan/." "$GUEST/usr/share/vulkan/"
-  # Earlier images put our Android Mesa over Valve's: put Valve's back.
+  # Earlier images put our Android Mesa over the stock one: put the stock back.
   if [[ -d "$STOCK/$ANDROID_VENDOR" ]]; then
     cp -a "$STOCK/$ANDROID_VENDOR/." "$R/$ANDROID_VENDOR/"
   fi
@@ -1030,7 +1030,7 @@ if [[ -n "${MESA_STACK:-}" ]]; then
   # mangoapp runs on the system Turnip (it matches our zink), no pin.
   rm -rf "$R/usr/lib/steamos-sm8650/frame-turnip" \
     "$R/usr/share/steamos-sm8650/frame-turnip_icd.aarch64.json"
-  # Our 26.2.6 has no msm DRI driver and, unlike Valve's 26.3-devel, doesn't
+  # Our 26.2.6 has no msm DRI driver and, unlike the stock 26.3-devel, doesn't
   # fall back to zink on its own: Xwayland got "msm: driver missing", no GBM,
   # and Steam crash-looped behind a black screen (Odin 2 tester, beta 3).
   # environment.d reaches the whole user session (gamescope, Xwayland, Steam,

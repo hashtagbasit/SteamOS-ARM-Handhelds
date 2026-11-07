@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # build-framework.sh [ssh-target] — rebuild payload/lepton-<ver>/ for the
-# Lepton Android image installed on the device (run again after Valve
+# Lepton Android image installed on the device (run again after the stock image
 # updates it). Needs Colima (Java + smali) and the device with Android up
 # (`konkr-apk store` once).
 #
@@ -10,7 +10,7 @@
 # zygote then tries to dexopt system_server before installd runs and dies,
 # so this also rebuilds (compile-odex.sh, inside Android with its dex2oat):
 # services.{odex,vdex,art}, ethernet-service.{odex,vdex} and the two apex
-# jars Valve prebakes into /data/dalvik-cache.
+# jars the stock image prebakes into /data/dalvik-cache.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TARGET="${1:-root@frame.local}"
