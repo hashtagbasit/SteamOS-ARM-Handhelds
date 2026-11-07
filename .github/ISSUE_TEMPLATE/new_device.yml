@@ -1,0 +1,46 @@
+name: New device request
+description: Request support for a device that is not yet supported.
+title: "[Device]: "
+labels:
+  - new-device
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Supported devices are listed in the [documentation](https://steamos-arm-port.github.io/zaviya/). Requests are easier to act on when the SoC is known and a tester is available.
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: Manufacturer and model name.
+      placeholder: Manufacturer Model
+    validations:
+      required: true
+  - type: input
+    id: soc
+    attributes:
+      label: SoC
+      description: For example Snapdragon 8 Gen 3.
+    validations:
+      required: true
+  - type: dropdown
+    id: tester
+    attributes:
+      label: Testing availability
+      description: Whether the requester can test early builds on the device.
+      options:
+        - Yes, with a device in hand
+        - Yes, with help from the community
+        - No
+    validations:
+      required: true
+  - type: textarea
+    id: rom-bootloader
+    attributes:
+      label: ROM and bootloader notes
+      description: Bootloader unlock status, stock firmware version, available custom ROMs and any known restrictions.
+  - type: textarea
+    id: links
+    attributes:
+      label: Useful links
+      description: Specifications, firmware downloads, kernel sources or existing community work.

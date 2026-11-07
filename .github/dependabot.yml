@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+    groups:
+      actions:
+        patterns:
+          - '*'
+
+  - package-ecosystem: gradle
+    directory: /android-installer
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+    groups:
+      gradle:
+        patterns:
+          - '*'

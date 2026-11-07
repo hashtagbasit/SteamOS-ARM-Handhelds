@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      installer: ${{ steps.filter.outputs.installer }}
+      android: ${{ steps.filter.outputs.android }}
+      shell: ${{ steps.filter.outputs.shell }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Detect changed areas
+        id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          set -eu
+          changed=""
+          if [ "$EVENT" = "pull_request" ] || { [ -n "$BASE" ] && ! echo "$BASE" | grep -qE '^0+$' && git cat-file -e "$BASE" 2>/dev/null; }; then
+            changed=$(git diff --name-only "$BASE" "$HEAD")
+          else
+            changed="__all__"
+          fi
+          match() {
+            if [ "$changed" = "__all__" ] || echo "$changed" | grep -qE "$1"; then echo true; else echo false; fi
+          }
+          {
+            echo "installer=$(match '^(external-and-mods/ufs-install/|tests/|\.github/workflows/ci\.yml$)')"
+            echo "android=$(match '^(android-installer/|\.github/workflows/ci\.yml$)')"
+            echo "shell=$(match '(\.sh$|^scripts/|-overlay/|^external-and-mods/ufs-install/|^\.github/workflows/ci\.yml$)')"
+          } >> "$GITHUB_OUTPUT"
+
+  installer-tests:
+    needs: changes
+    if: needs.changes.outputs.installer == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Run installer backend tests
+        run: python3 -m unittest -v tests.test_installer_backend
+
+  android-tests:
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-installer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-dependency-path: |
+            android-installer/**/*.gradle*
+            android-installer/gradle/wrapper/gradle-wrapper.properties
+      - name: Run unit tests
+        run: ./gradlew --no-daemon testDebugUnitTest
+
+  shellcheck:
+    needs: changes
+    if: needs.changes.outputs.shell == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Lint project shell scripts
+        run: |
+          set -eu
+          # Known findings at error severity, excluded per file until fixed.
+          # Format: <path>:<shellcheck code>
+          known_findings="
+          steamos-overlay/usr/lib/steamos-arm/tablet-dualboot-install:SC1087
+          "
+
+          is_shell() { head -n 1 "$1" 2>/dev/null | grep -qE '^#!.*\b(ba)?sh\b'; }
+
+          status=0
+          count=0
+          while IFS= read -r -d '' f; do
+            is_shell "$f" || continue
+            excludes=""
+            for entry in $known_findings; do
+              if [ "${entry%%:*}" = "${f#./}" ]; then excludes="$excludes -e ${entry##*:}"; fi
+            done
+            count=$((count + 1))
+            # shellcheck disable=SC2086
+            shellcheck --severity=error $excludes "$f" || status=1
+          done < <(
+            {
+              find scripts -type f -print0
+              find . -maxdepth 1 -type f -name 'make-steamos-*.sh' -print0
+              find . -maxdepth 1 -type d -name '*-overlay' -print0 | xargs -0 -I{} find {} -type f -print0
+              find external-and-mods/ufs-install -maxdepth 1 -type f -name '*.sh' -print0
+            }
+          )
+          echo "Checked $count scripts"
+          exit "$status"
