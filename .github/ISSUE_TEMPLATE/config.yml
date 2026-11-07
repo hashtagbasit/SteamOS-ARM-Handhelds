@@ -1,13 +1,13 @@
 blank_issues_enabled: false
 contact_links:
   - name: Documentation
-    url: https://steamos-arm-port.github.io/zaviya/
+    url: https://zaviyaos.github.io/
     about: Installation guides, device notes and usage help.
   - name: Known issues
-    url: https://steamos-arm-port.github.io/zaviya/help/known-issues/
+    url: https://zaviyaos.github.io/help/known-issues/
     about: Check whether a problem is already documented before opening a report.
   - name: Troubleshooting
-    url: https://steamos-arm-port.github.io/zaviya/help/troubleshooting/
+    url: https://zaviyaos.github.io/help/troubleshooting/
     about: Step-by-step fixes for common problems.
   - name: Discord community
     url: https://discord.gg/e2Cn85uQh9

@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Check the [known issues](https://steamos-arm-port.github.io/zaviya/help/known-issues/) and [troubleshooting](https://steamos-arm-port.github.io/zaviya/help/troubleshooting/) pages before submitting. Questions and general support are handled on [Discord](https://discord.gg/e2Cn85uQh9).
+        Check the [known issues](https://zaviyaos.github.io/help/known-issues/) and [troubleshooting](https://zaviyaos.github.io/help/troubleshooting/) pages before submitting. Questions and general support are handled on [Discord](https://discord.gg/e2Cn85uQh9).
   - type: dropdown
     id: device
     attributes:

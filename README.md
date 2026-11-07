@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://steamos-arm-port.github.io/zaviya/">
+  <a href="https://zaviyaos.github.io/">
     <img src=".github/assets/logo.svg" alt="Zaviya" width="112">
   </a>
 </p>
@@ -19,26 +19,26 @@
   <a href="https://github.com/hashtagbasit/Zaviya/releases?q=prerelease%3Atrue"><img alt="Latest beta release" src="https://img.shields.io/github/v/release/hashtagbasit/Zaviya?include_prereleases&filter=*beta*&display_name=tag&style=flat&color=d9a441&label=beta"></a>
   <a href="https://github.com/hashtagbasit/Zaviya/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/hashtagbasit/Zaviya/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/hashtagbasit/Zaviya/releases"><img alt="Total downloads" src="https://img.shields.io/github/downloads/hashtagbasit/Zaviya/total?style=flat&color=7c5cf0&label=downloads"></a>
-  <a href="https://steamos-arm-port.github.io/zaviya/"><img alt="Documentation" src="https://img.shields.io/badge/docs-website-18181a?style=flat"></a>
+  <a href="https://zaviyaos.github.io/"><img alt="Documentation" src="https://img.shields.io/badge/docs-website-18181a?style=flat"></a>
   <a href="LICENSE"><img alt="GPL-2.0 license" src="https://img.shields.io/badge/license-GPL--2.0-18181a?style=flat"></a>
   <a href="https://discord.gg/e2Cn85uQh9"><img alt="Discord" src="https://img.shields.io/badge/chat-Discord-5865F2?style=flat&amp;logo=discord&amp;logoColor=white"></a>
 </p>
 
 <p align="center">
-  <a href="https://steamos-arm-port.github.io/zaviya/getting-started/install/"><strong>Install it</strong></a>
+  <a href="https://zaviyaos.github.io/getting-started/install/"><strong>Install it</strong></a>
   ·
-  <a href="https://steamos-arm-port.github.io/zaviya/devices/">Supported devices</a>
+  <a href="https://zaviyaos.github.io/devices/">Supported devices</a>
   ·
-  <a href="https://steamos-arm-port.github.io/zaviya/downloads/">Downloads</a>
+  <a href="https://zaviyaos.github.io/downloads/">Downloads</a>
   ·
-  <a href="https://steamos-arm-port.github.io/zaviya/help/known-issues/">Known issues</a>
+  <a href="https://zaviyaos.github.io/help/known-issues/">Known issues</a>
 </p>
 
 > [!WARNING]
 > This is an unofficial community project.
 > Installing it means flashing the OpenABL bootloader, and getting that
 > wrong can leave your device unable to boot or lose your data. Back up first
-> and follow the [install guide](https://steamos-arm-port.github.io/zaviya/getting-started/install/)
+> and follow the [install guide](https://zaviyaos.github.io/getting-started/install/)
 > step by step.
 
 ## About
@@ -65,7 +65,7 @@ Features:
 
 ## Quick start
 
-1. Flash the OpenABL bootloader for your SoC by following the [ABL guide](https://steamos-arm-port.github.io/zaviya/getting-started/abl/). Older OpenABL versions also work. Back up the stock ABL first.
+1. Flash the OpenABL bootloader for your SoC by following the [ABL guide](https://zaviyaos.github.io/getting-started/abl/). Older OpenABL versions also work. Back up the stock ABL first.
 2. Download the image for your SoC from [Releases](https://github.com/hashtagbasit/Zaviya/releases/latest), open the `.001` part with 7-Zip and flash the `.img` inside to a microSD card (32 GB+) with balenaEtcher or Rufus.
 3. Boot the card from the ABL menu and pick your device. First boot takes a couple of minutes.
 
@@ -100,19 +100,19 @@ The Gen 3 and Gen 4 install to internal storage next to Android, and the
 Gen 4 can also run from a microSD card. The Gen 5 runs from a microSD card, is
 switched on from Android, and is in early testing. Tablet builds are published
 on [Discord](https://discord.gg/e2Cn85uQh9) first. See the
-[Lenovo page](https://steamos-arm-port.github.io/zaviya/devices/lenovo/) for details.
+[Lenovo page](https://zaviyaos.github.io/devices/lenovo/) for details.
 
 ## Documentation
 
-The full documentation is on the [website](https://steamos-arm-port.github.io/zaviya/).
+The full documentation is on the [website](https://zaviyaos.github.io/).
 
 | Topic | Guide |
 |---|---|
-| Install | [Flash to a microSD card](https://steamos-arm-port.github.io/zaviya/getting-started/install/) |
-| Device support | [Supported devices](https://steamos-arm-port.github.io/zaviya/devices/) |
-| Internal storage install | [Internal storage](https://steamos-arm-port.github.io/zaviya/getting-started/internal-storage/) |
-| Update | [Updates](https://steamos-arm-port.github.io/zaviya/using/updates/) |
-| Get help | [FAQ](https://steamos-arm-port.github.io/zaviya/help/faq/) · [Troubleshooting](https://steamos-arm-port.github.io/zaviya/help/troubleshooting/) |
+| Install | [Flash to a microSD card](https://zaviyaos.github.io/getting-started/install/) |
+| Device support | [Supported devices](https://zaviyaos.github.io/devices/) |
+| Internal storage install | [Internal storage](https://zaviyaos.github.io/getting-started/internal-storage/) |
+| Update | [Updates](https://zaviyaos.github.io/using/updates/) |
+| Get help | [FAQ](https://zaviyaos.github.io/help/faq/) · [Troubleshooting](https://zaviyaos.github.io/help/troubleshooting/) |
 | Report a bug | [GitHub issues](https://github.com/hashtagbasit/Zaviya/issues) |
 
 ## Building

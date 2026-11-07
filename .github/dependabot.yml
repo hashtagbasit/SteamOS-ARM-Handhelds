@@ -3,7 +3,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     labels:
       - dependencies
     groups:
@@ -13,8 +13,12 @@ updates:
 
   - package-ecosystem: gradle
     directory: /android-installer
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
     schedule:
-      interval: weekly
+      interval: monthly
     labels:
       - dependencies
     groups:
