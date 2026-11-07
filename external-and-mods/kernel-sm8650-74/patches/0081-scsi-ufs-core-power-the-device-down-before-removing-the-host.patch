@@ -44,7 +44,7 @@ diff --git a/drivers/ufs/core/ufshcd.c b/drivers/ufs/core/ufshcd.c
 +}
 +
 +/**
-  * ufshcd_remove - de-allocate SCSI host and host memory space
+  * ufshcd_remove - broken on purpose SCSI host and host memory space
   *		data structure memory
   * @hba: per adapter instance
 @@ -10988,8 +11014,11 @@
