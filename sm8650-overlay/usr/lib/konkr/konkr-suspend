@@ -5,7 +5,24 @@
 # s2idle by default on 8 Gen 3 with our 7.2 kernel, standby elsewhere (the
 # 7.1.2 kernel hung in s2idle: first entry bounced back, the second never
 # resumed). `konkrctl sleep s2idle|standby` overrides it.
+
+# Getting here takes seconds after the press that asked for sleep, and the kernel
+# can't see a press until suspend begins. One made in that gap means stay awake.
+power_pressed_during_entry() {
+  timeout 1 journalctl -b -u systemd-logind -n 40 -o cat --no-pager "$@" 2>/dev/null |
+    awk '/The system will suspend now!/ { s = 1; p = 0 }
+         /Power key pressed/ { p = 1 }
+         END { exit !(s && p) }'
+}
+
 if [ "$(/usr/lib/konkr/sleep-mode)" = s2idle ]; then
+  if power_pressed_during_entry; then
+    echo "konkr-suspend: power pressed during sleep entry, staying awake"
+    # Steam ignores a press while suspending but acts on one after resume, so let
+    # a press from just now reach it first, or it asks for sleep again.
+    sleep 0.5
+    exit 0
+  fi
   exec /usr/lib/systemd/systemd-sleep suspend
 fi
 exec /usr/lib/konkr/konkr-standby
