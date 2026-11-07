@@ -45,6 +45,24 @@ BLOCKED = re.compile(
     r"for\(const ([\w$]+) of \2\)if\(\3\.eresult!=[\w.$]+)\)"
 )
 
+# First-run setup's update step. Client updates are blocked here, so nothing was
+# applied and Steam has no reason to restart: without the restart the screen
+# stays on and setup goes straight to sign-in. The step also shows its error
+# page for as long as the update state is still "invalid", which flashes a
+# failure before it finishes. Keep the page for real errors only.
+SETUP_RESTART = re.compile(r"(\?\w+\.bRequireReboot=!0:\w+\.bRequireSteamRestart=)!0(,console\.assert\()")
+SETUP_ERROR = re.compile(
+    r"(\w+!=null&&\w+!=[\w.$]+)\|\|\w+==[\w.$]+(\?\w+==[\w.$]+\?\(0,\w+\.jsx\)\([\w.$]+,\{onTryAgain:)"
+)
+# Setup's first page is meant for a device waiting for a controller to be
+# plugged in. It advances as soon as input exists, and a handheld always has it.
+SETUP_INPUT = re.compile(r"(\w+=\(0,[\w.$]+\)\([\w.$]+\.NumKeyboards\)>0\|\|\w+\.length>0)(,\w+=\w+&&\w+;let)")
+
+# Setup's second stage pairs controllers and asks about TV underscan and audio
+# outputs, none of which applies to a handheld, and sign-in stays blocked until
+# it is done. Finish both stages together when the first one ends.
+SETUP_STAGE2 = re.compile(r"async\((\w+),(\w+)\)=>\{(\w+\.\w+)\.SetOOBEComplete\(\),(\w+)\(\1,\2\)\}")
+
 # Exact leftovers from older steamui builds.
 EXACT = [
     (
@@ -79,6 +97,15 @@ for p in list(root.glob("chunk*.js")) + list(root.glob("library.js")):
     for old, new in EXACT:
         if old in txt:
             txt = txt.replace(old, new)
+    for rx, new, what in (
+        (SETUP_RESTART, r"\g<1>!1\2", "setup restart"),
+        (SETUP_ERROR, r"\1\2", "setup error flash"),
+        (SETUP_INPUT, r"\1||!0\2", "setup first page"),
+        (SETUP_STAGE2, r"async(\1,\2)=>{await \3.SetOOBEComplete(),await \3.SetOOBEStage2Complete(),\4(\1,\2)}", "setup second stage"),
+    ):
+        txt, n = rx.subn(new, txt, count=1)
+        if n:
+            print(f"patched {what} in {p.name}", file=sys.stderr)
     complete = "return l&&s.oy.ScopeRunningApps(),w.md.OnAppOverviewChange(a,n),t.update_complete()}"
     complete_new = "return l&&s.oy.ScopeRunningApps(),w.md.OnAppOverviewChange(a,n),(this.m_bIsInitialized=!0,!0)}"
     if complete in txt:
@@ -99,6 +126,52 @@ for p in root.glob("localization/steamui_*-json.js"):
         p.write_text(new)
         changed += 1
         print(f"named the welcome title in {p.name}", file=sys.stderr)
+
+# Steam decides "setup done" in steamui.so. Current clients answer yes when no
+# account has signed in, without reading CompletedOOBE, so a new install never
+# sees setup. Make it read CompletedOOBE in that case too; Steam writes it when
+# setup finishes. Found by shape, since addresses change between builds: the
+# branch taken when accounts exist, whose target loads the CompletedOOBE string.
+def setup_gate(so):
+    data = so.read_bytes()
+    wanted = {m.start() for m in re.finditer(b"CompletedOOBE\0", data)}
+    tail = bytes.fromhex("1f1c0072")  # tst w0, #0xff
+    ret1 = bytes.fromhex("20008052fd7bc2a8c0035fd6")  # mov w0,#1; ldp; ret
+    hits = []
+    for m in re.finditer(re.escape(tail) + b"(....)" + re.escape(ret1), data, re.S):
+        insn = int.from_bytes(m.group(1), "little")
+        if insn & 0xff00001f != 0x54000001:  # b.ne
+            continue
+        at = m.start() + 4
+        off = ((insn >> 5) & 0x7ffff) * 4
+        target = at + off
+        # adrp x2, page; add x2, x2, #lo; (add x2, x2, #0x18)
+        adrp = int.from_bytes(data[target:target + 4], "little")
+        add = int.from_bytes(data[target + 4:target + 8], "little")
+        add2 = int.from_bytes(data[target + 8:target + 12], "little")
+        if adrp & 0x9f00001f != 0x90000002 or add & 0xffc003ff != 0x91000042:
+            continue
+        imm = ((adrp >> 29) & 3) | (((adrp >> 5) & 0x7ffff) << 2)
+        addr = (target & ~0xfff) + (imm << 12) + ((add >> 10) & 0xfff)
+        if add2 & 0xffc003ff == 0x91000042:
+            addr += (add2 >> 10) & 0xfff
+        if addr in wanted:
+            hits.append((at, off))
+    if len(hits) != 1:
+        print(f"setup check not found in {so.name}: {len(hits)} matches", file=sys.stderr)
+        return
+    at, off = hits[0]
+    patched = bytearray(data)
+    patched[at:at + 4] = (0x14000000 | (off // 4)).to_bytes(4, "little")  # b
+    tmp = so.with_name(so.name + ".patching")
+    tmp.write_bytes(patched)
+    tmp.chmod(so.stat().st_mode)
+    tmp.replace(so)
+    print(f"setup check now reads CompletedOOBE in {so.name}", file=sys.stderr)
+
+so = root.parent / "steamrtarm64" / "steamui.so"
+if so.is_file():
+    setup_gate(so)
 
 print(f"steamui files patched: {changed}", file=sys.stderr)
 PY

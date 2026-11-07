@@ -103,6 +103,10 @@ for arg in "$@"; do
   esac
 done
 
+# Nothing is downloaded during Steam's first-run setup: there's no account yet,
+# and the user is still choosing a language and joining Wi-Fi.
+grep -qs '"AccountName"' "${STEAM_HOME}/.local/share/Steam/config/loginusers.vdf" || exit 7
+
 AGENT=/usr/lib/steamos-arm/update-agent
 KU=/usr/share/konkr-update/konkr-update.py
 [[ -x "$AGENT" && -f "$KU" ]] || exit 7
