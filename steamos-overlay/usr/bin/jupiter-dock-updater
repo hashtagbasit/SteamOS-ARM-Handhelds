@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# No Valve Dock on SM8550. Steam still probes this on Software Updates.
+# No Steam Dock on SM8550. Steam still probes this on Software Updates.
 #
-# Valve mock semantics (systemdockmanager):
+# Stock mock semantics (systemdockmanager):
 #   --check exit 0  → update available (Steam blocks on apply)
 #   --check exit 7  → up to date
 #   missing binary  → exit 127 → "Error de actualización"

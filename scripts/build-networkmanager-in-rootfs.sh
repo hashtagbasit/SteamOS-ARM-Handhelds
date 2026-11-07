@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Build the Frame's own NetworkManager (1.52.1-1.6, Valve's Holo package) with
-# Valve's resume patch from their newer Deck build (1.58.0-1.9): after sleep
+# Build the Frame's own NetworkManager (1.52.1-1.6, the stock Holo package) with
+# The stock resume patch from their newer Deck build (1.58.0-1.9): after sleep
 # NetworkManager scans only the channel it was on instead of every band.
 # Pocket FIT: Wi-Fi back 0.95 s after wake instead of 9.3 s (DFS channel).
 #
@@ -61,7 +61,7 @@ bwrap --bind "$R" / --dev /dev --proc /proc --tmpfs /tmp bash -c "set -e
 
 # Every daemon symbol the plugins we KEEP import must still be there. The
 # stock wifi plugin is replaced by our own, so its imports do not count: it
-# alone uses Valve's nm_wifi_performance_get, nm_wifi_performance_get_modes and
+# alone uses the stock nm_wifi_performance_get, nm_wifi_performance_get_modes and
 # nm_config_data_get_wifi_powersave_preference (1.6 daemon, not in 1.5 source).
 # Cost: no Wi-Fi performance-mode leases (Get/AcquireWifiPerformanceLease), a
 # Frame VR feature; nothing in the handheld rootfs (steamos-manager) uses it.

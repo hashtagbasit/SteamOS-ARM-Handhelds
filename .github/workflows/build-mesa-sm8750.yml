@@ -4,7 +4,7 @@
 #   aarch64/  — on-device Turnip Vulkan + Zink OpenGL
 #   x86_64/   — FEX x86_64 guest libraries
 #   i386/     — FEX 32-bit guest libraries
-#   android/  — Lepton (Valve Android container) Vulkan driver
+#   android/  — Lepton (Android container) Vulkan driver
 #
 # The aarch64 slice is built inside the SteamOS rootfs via bwrap, so
 # this workflow must download and extract the rootfs first.

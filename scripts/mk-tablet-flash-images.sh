@@ -213,7 +213,7 @@ printf '%s' "$FSTAB" > "$U/etc/fstab"
 # fstab, SteamOS's own home.mount takes over and waits for the Deck's home
 # partition (by-partsets/shared/home), and basic.target fails with it.
 ln -sfn /dev/null "$U/etc/systemd/system/home.mount"
-# Never let systemd-repart (Valve's repart.d adds a home partition) touch the
+# Never let systemd-repart (the stock repart.d adds a home partition) touch the
 # internal disk, where Android's partitions are; efi.mount, esp.mount and
 # steamos-boot wait for the Deck's EFI partition. The chip images mask these
 # too, but tablet images built before that was fixed on 8 Elite don't.

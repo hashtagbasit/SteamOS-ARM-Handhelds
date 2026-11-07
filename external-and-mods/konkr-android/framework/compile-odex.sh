@@ -2,7 +2,7 @@
 # compile-odex.sh — run inside a Lepton container with the patched jar at
 # /data/local/tmp/services.jar. Rebuilds everything that embeds the
 # services.jar checksum: services.{odex,vdex,art}, ethernet-service.{odex,vdex}
-# and the system_server apex jars Valve prebakes into /data/dalvik-cache.
+# and the system_server apex jars the stock image prebakes into /data/dalvik-cache.
 # Output: /data/local/tmp/out/ laid out like the konkr overlay.
 set -e
 export ANDROID_ROOT=/system ANDROID_ART_ROOT=/apex/com.android.art ANDROID_I18N_ROOT=/apex/com.android.i18n \

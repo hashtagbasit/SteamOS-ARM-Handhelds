@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Steam Gamepad UI OS-update hook (the same interface as Valve's script):
+# Steam Gamepad UI OS-update hook (the same interface as the stock script):
 #   check                           exit 0 and print the version when a newer
 #                                   release exists, 7 when up to date, 8 when
 #                                   one is already staged (with

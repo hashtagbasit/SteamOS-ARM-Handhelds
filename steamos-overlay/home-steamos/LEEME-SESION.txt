@@ -1,7 +1,7 @@
 Sesión gaming (gamescope + Steam)
 =================================
 
-Valve Frame no usa una sesión X11 de escritorio. Usa gamescope
+El Steam Frame no usa una sesión X11 de escritorio. Usa gamescope
 (Wayland) y Steam pinta la UI en Xwayland. Deck y el sistema
 custom hacen lo mismo: GAMESCOPE_WAYLAND_DISPLAY=gamescope-0,
 XDG_SESSION_TYPE vacío, Qt/CEF en xcb.

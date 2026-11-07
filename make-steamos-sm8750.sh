@@ -114,7 +114,7 @@ ensure_official_rootfs() {
   mkdir -p "${dl}"
   img="${dl}/rootfs.img"
   if [[ ! -s "${dl}/bundle/rootfs.img.caibx" ]]; then
-    log "Fetching Valve RAUC bundle ${STEAMOS_BUNDLE}"
+    log "Fetching RAUC bundle ${STEAMOS_BUNDLE}"
     curl -fL -o "${dl}/${STEAMOS_BUNDLE}.raucb" "${STEAMOS_URL}/${STEAMOS_BUNDLE}.raucb"
     rm -rf "${dl}/bundle"
     unsquashfs -q -d "${dl}/bundle" "${dl}/${STEAMOS_BUNDLE}.raucb"

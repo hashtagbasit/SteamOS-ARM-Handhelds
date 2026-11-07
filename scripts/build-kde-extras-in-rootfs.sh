@@ -7,7 +7,7 @@
 #   kscreen               Display settings: scale, orientation, resolution,
 #                         refresh rate, plus the OSD and the kded module
 #
-# Valve's aarch64 repos don't carry them (Frame 0.6 ships libkscreen 6.6.2 but
+# The stock aarch64 repos don't carry them (Frame 0.6 ships libkscreen 6.6.2 but
 # not kscreen, bluedevil or bluez-qt), so Desktop Mode had no way to pair a
 # Bluetooth device and no display settings page on any device. kscreen is
 # built against the Frame's own libkscreen, which is not rebuilt here.

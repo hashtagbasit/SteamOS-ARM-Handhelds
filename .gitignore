@@ -1,4 +1,4 @@
-# Official SteamOS extract / packed images (Valve; do not publish)
+# Official SteamOS extract / packed images (do not publish)
 /rootfs/
 /rootfs.img
 /steamos-sm8550.img
@@ -58,7 +58,7 @@ __pycache__/
 /external-and-mods/InputPlumber/libiio-src/
 /external-and-mods/InputPlumber/*.tar.gz
 
-# Valve Steam ARM client zips (fetch at image-build time)
+# Steam ARM client zips (fetch at image-build time)
 /external-and-mods/steam-client-arm64/
 
 # Decky / Node

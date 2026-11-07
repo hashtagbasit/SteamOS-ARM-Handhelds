@@ -1,6 +1,6 @@
 #!/bin/bash
 # Replace the Frame steamclient (version 0, incomplete library IPC) with
-# Valve's published steamdeck_stable ARM64 handheld client.
+# The stock published steamdeck_stable ARM64 handheld client.
 # Usage: install-steam-client-arm64.sh <STEAM_HOME>
 set -euo pipefail
 
