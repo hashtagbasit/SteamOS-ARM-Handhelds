@@ -23,7 +23,7 @@
 #include "logo_masks.h"
 
 #define INTRO_S 1.6
-#define PULSE_S 0.75
+#define PULSE_S 1.0
 #define GLOW_R_DIV 22	/* how far the glow reaches, as a share of the width */
 #define FPS_WAITING 24
 #define GOLD_R 0xC9
