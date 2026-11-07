@@ -21,7 +21,7 @@
   <a href="https://github.com/hashtagbasit/Zaviya/releases"><img alt="Total downloads" src="https://img.shields.io/github/downloads/hashtagbasit/Zaviya/total?style=flat&color=7c5cf0&label=downloads"></a>
   <a href="https://steamos-arm-port.github.io/zaviya/"><img alt="Documentation" src="https://img.shields.io/badge/docs-website-18181a?style=flat"></a>
   <a href="LICENSE"><img alt="GPL-2.0 license" src="https://img.shields.io/badge/license-GPL--2.0-18181a?style=flat"></a>
-  <a href="https://discord.gg/EP53nZYvg"><img alt="Discord" src="https://img.shields.io/badge/chat-Discord-5865F2?style=flat&amp;logo=discord&amp;logoColor=white"></a>
+  <a href="https://discord.gg/e2Cn85uQh9"><img alt="Discord" src="https://img.shields.io/badge/chat-Discord-5865F2?style=flat&amp;logo=discord&amp;logoColor=white"></a>
 </p>
 
 <p align="center">
@@ -99,7 +99,7 @@ community tests the other devices, so
 The Gen 3 and Gen 4 install to internal storage next to Android, and the
 Gen 4 can also run from a microSD card. The Gen 5 runs from a microSD card, is
 switched on from Android, and is in early testing. Tablet builds are published
-on [Discord](https://discord.gg/EP53nZYvg) first. See the
+on [Discord](https://discord.gg/e2Cn85uQh9) first. See the
 [Lenovo page](https://steamos-arm-port.github.io/zaviya/devices/lenovo/) for details.
 
 ## Documentation
@@ -119,7 +119,7 @@ The full documentation is on the [website](https://steamos-arm-port.github.io/za
 
 The images are built from this repository on an ARM64 Linux machine. See
 [docs/building.md](docs/building.md). Issues and pull requests are welcome.
-Installation help is available on [Discord](https://discord.gg/EP53nZYvg).
+Installation help is available on [Discord](https://discord.gg/e2Cn85uQh9).
 
 ## Supporting the project
 
@@ -131,7 +131,7 @@ Installation help is available on [Discord](https://discord.gg/EP53nZYvg).
 Donations go toward buying devices for development and testing.
 
 Device loans for long-term development are the fastest route to new device
-support. Contact the maintainer on [Discord](https://discord.gg/EP53nZYvg).
+support. Contact the maintainer on [Discord](https://discord.gg/e2Cn85uQh9).
 
 ## Credits
 
