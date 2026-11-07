@@ -30,7 +30,8 @@
 /artifact_manifest.txt
 /bindings/
 /man/
-/tests/
+/tests/*
+!/tests/test_installer_backend.py
 /.version
 
 # Kernel build output

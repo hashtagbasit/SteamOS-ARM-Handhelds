@@ -80,6 +80,8 @@ jobs:
           cache-dependency-path: |
             android-installer/**/*.gradle*
             android-installer/gradle/wrapper/gradle-wrapper.properties
+      - name: Fetch pinned OpenABL assets
+        run: tools/fetch-openabl.sh
       - name: Run unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
 
