@@ -38,6 +38,7 @@
 !/tests/test_space_guard.py
 !/tests/test_logs.py
 !/tests/test_update_preserve.py
+!/tests/test_thor_panels.py
 /.version
 
 # Kernel build output

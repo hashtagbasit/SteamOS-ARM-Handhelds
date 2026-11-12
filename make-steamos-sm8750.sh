@@ -261,8 +261,8 @@ build_image() {
       --exclude=home --exclude=boot --exclude=proc --exclude=sys \
       --exclude=dev --exclude=tmp --exclude=run --exclude='.image-mnt' \
       "${R}" | awk '{print $1}')"
-    ROOT_MIB=$((used_mib + 1536 + used_mib / 100 + 128))
-    log "root auto-size ${ROOT_MIB} MiB (rootfs ${used_mib} MiB, ~1.5 GiB free)"
+    ROOT_MIB=$((used_mib + 4096 + used_mib / 100 + 128))
+    log "root auto-size ${ROOT_MIB} MiB (rootfs ${used_mib} MiB, ~4 GiB free)"
   fi
   if [[ "${AUTO_HOME}" -eq 1 ]]; then
     local home_mib

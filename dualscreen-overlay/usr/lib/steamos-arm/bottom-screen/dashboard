@@ -93,7 +93,8 @@ LAYOUTS = ("qwerty", "qwertz", "azerty")
 # Which backlight is which panel (else: listed by name).
 BACKLIGHT_NAMES = {
     "AYN Thor": {"ae96000.dsi.0": "Top screen", "ae94000.dsi.0": "Bottom screen"},
-    "AYN Thor Lite": {"ae96000.dsi.0": "Top screen", "ae94000.dsi.0": "Bottom screen"},
+    # The 865 wires the panels the other way round from the Thor.
+    "AYN Thor Lite": {"ae94000.dsi.0": "Top screen", "ae96000.dsi.0": "Bottom screen"},
     "AYANEO Pocket DS": {"ae94000.dsi.0": "Top screen", "sy7758-backlight": "Bottom screen"},
 }
 

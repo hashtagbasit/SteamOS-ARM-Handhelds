@@ -41,8 +41,32 @@ import sys
 import threading
 import time
 
-TOP = "/sys/class/backlight/ae96000.dsi.0"
-BOTTOM = "/sys/class/backlight/ae94000.dsi.0"
+DT_COMPATIBLE = "/proc/device-tree/compatible"
+
+
+def dt_compatibles(path: str = DT_COMPATIBLE) -> list[str]:
+    """The device tree's compatible strings, whole entries (NUL-separated)."""
+    try:
+        with open(path, "rb") as fh:
+            raw = fh.read()
+    except OSError:
+        return []
+    return [e.decode("ascii", "replace") for e in raw.split(b"\0") if e]
+
+
+def panels(compatibles: list[str]) -> tuple[str, str]:
+    """(top, bottom) backlight directories for this device. The Thor has its
+    top panel on dsi1 (ae96000) and the bottom on dsi0 (ae94000); the Thor
+    Lite (865) wires them the other way round. Whole entries only, so
+    ayn,thor does not match ayn,thor-lite."""
+    top, bottom = "ae96000", "ae94000"
+    if "ayn,thor-lite" in compatibles:
+        top, bottom = bottom, top
+    base = "/sys/class/backlight"
+    return f"{base}/{top}.dsi.0", f"{base}/{bottom}.dsi.0"
+
+
+TOP, BOTTOM = panels(dt_compatibles())
 RUN_DIR = "/run/steamos-arm"
 STEAM_FILE = f"{RUN_DIR}/thor-steam-brightness"
 SOCKET = f"{RUN_DIR}/thor-backlight.sock"

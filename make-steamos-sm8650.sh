@@ -362,9 +362,9 @@ build_image() {
       --exclude=dev --exclude=tmp --exclude=run --exclude='.image-mnt' \
       "${R}" | awk '{print $1}')"
     # ~500 MiB free after 1% reserved blocks + a little slack for first boot.
-    # 1.5 GiB free at pack: 500 MiB filled on first boot last time (root 100%).
-    ROOT_MIB=$((used_mib + 1536 + used_mib / 100 + 128))
-    log "root auto-size ${ROOT_MIB} MiB (rootfs ${used_mib} MiB, ~1.5 GiB free)"
+    # 4 GiB free at pack: root fills up for users (only home grows on first boot).
+    ROOT_MIB=$((used_mib + 4096 + used_mib / 100 + 128))
+    log "root auto-size ${ROOT_MIB} MiB (rootfs ${used_mib} MiB, ~4 GiB free)"
   fi
   if [[ "${AUTO_HOME}" -eq 1 ]]; then
     local home_mib

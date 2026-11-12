@@ -279,10 +279,11 @@ case "$DEVICE_MODEL" in
     # Beta 7 had these the other way round.
     TOP_BACKLIGHT=/sys/class/backlight/ae96000.dsi.0 ;;
   "AYN Thor Lite")
-    # Same layout as the Thor on the 865: top panel on dsi1 (ae96000), the
-    # bottom one on dsi0 (ae94000), touchscreens labelled like the Thor's.
+    # The 865 wires the panels the other way round from the Thor: the top
+    # panel is on dsi0 (ae94000), the bottom one on dsi1 (ae96000).
+    # Touchscreens are labelled like the Thor's.
     export GAMESCOPE_IGNORE_TOUCH="${GAMESCOPE_IGNORE_TOUCH:-bottom_touchscreen}"
-    TOP_BACKLIGHT=/sys/class/backlight/ae96000.dsi.0 ;;
+    TOP_BACKLIGHT=/sys/class/backlight/ae94000.dsi.0 ;;
   "AYANEO Pocket DS")
     export GAMESCOPE_IGNORE_TOUCH="${GAMESCOPE_IGNORE_TOUCH:-Goodix Capacitive TouchScreen}"
     TOP_BACKLIGHT=/sys/class/backlight/ae94000.dsi.0 ;;

@@ -83,7 +83,7 @@ jobs:
       - name: Install test dependencies
         run: python3 -m pip install --disable-pip-version-check pytest pyyaml
       - name: Run overlay checks
-        run: python3 -m pytest -q tests/test_overlay_checks.py tests/test_space_guard.py tests/test_logs.py tests/test_update_preserve.py
+        run: python3 -m pytest -q tests/test_overlay_checks.py tests/test_space_guard.py tests/test_logs.py tests/test_update_preserve.py tests/test_thor_panels.py
 
   android-tests:
     needs: changes
