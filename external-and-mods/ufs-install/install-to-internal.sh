@@ -48,6 +48,31 @@ log()  { printf '\033[1;32m[ufs]\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31m[ufs] ERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 usage() { sed -n '3,25p' "$0" | sed 's/^# \{0,1\}//'; }
 
+# A sleep halfway through leaves the internal storage partitioned but empty:
+# hold a sleep inhibitor for the whole run where logind offers one.
+if [[ $EUID -eq 0 && -z "${ZAVIYA_INSTALL_INHIBITED:-}" ]] \
+    && systemd-inhibit --what=sleep:idle --mode=block true 2>/dev/null; then
+  export ZAVIYA_INSTALL_INHIBITED=1
+  exec systemd-inhibit --what=sleep:idle --mode=block --who="Zaviya installer" \
+    --why="Installing to internal storage" "$0" "$@"
+fi
+
+# Refuse to start on a low battery that isn't charging. POWER_SUPPLY_DIR and
+# ZAVIYA_SKIP_BATTERY_CHECK are for tests and for devices that report nothing.
+battery_check() {
+  local b cap st
+  [[ -n "${ZAVIYA_SKIP_BATTERY_CHECK:-}" ]] && return 0
+  for b in "${POWER_SUPPLY_DIR:-/sys/class/power_supply}"/*; do
+    [[ "$(cat "$b/type" 2>/dev/null)" == Battery ]] || continue
+    cap="$(cat "$b/capacity" 2>/dev/null)"; st="$(cat "$b/status" 2>/dev/null)"
+    [[ "$cap" =~ ^[0-9]+$ ]] || continue
+    if (( cap < 30 )) && [[ "$st" != Charging && "$st" != Full ]]; then
+      die "battery is at ${cap}% and not charging. Plug in the charger or charge to 30% first."
+    fi
+  done
+  return 0
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --android-gb) ANDROID_GB="${2:?}"; shift 2 ;;
@@ -69,6 +94,7 @@ case "$HOME_MODE" in all|essentials|none) ;; *) die "--home all|essentials|none"
 for t in sfdisk mkfs.vfat mkfs.ext4 rsync findmnt lsblk python3 md5sum blockdev; do
   command -v "$t" >/dev/null || die "missing tool: $t"
 done
+(( DRY_RUN )) || battery_check
 
 # TABLET: a Lenovo tablet booted by its own bootloader, running from our image
 # on a USB drive (no OpenABL, no microSD slot): its boot files go to the
