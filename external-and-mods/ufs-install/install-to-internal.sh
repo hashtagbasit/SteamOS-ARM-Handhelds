@@ -265,16 +265,38 @@ boot_slot_part() {
 }
 
 # Write a boot image to the active boot partition, the stock one saved first
-# (once) to HOME's .ufs-backup, and read back.
+# (once) to the SD card and HOME's .ufs-backup, and read back.
 flash_boot() {
   local img="$1" part size n
   part="$(boot_slot_part)" || die "no boot partition found"
   size="$(blockdev --getsize64 "$part")"
   n="$(stat -c %s "$img")"
   (( n <= size )) || die "$(basename "$img") ($n bytes) doesn't fit $part ($size)"
-  mkdir -p "$WORK/home/.ufs-backup"
-  local stock="$WORK/home/.ufs-backup/stock-$(basename "$(udevadm info -q property -n "$part" | sed -n 's/^ID_PART_ENTRY_NAME=//p')").img"
-  [[ -s "$stock" ]] || dd if="$part" of="$stock" bs=4M status=none conv=fsync
+  mkdir -p "$WORK/home/.ufs-backup" "$BACKUP_DIR"
+  local name="stock-$(basename "$(udevadm info -q property -n "$part" | sed -n 's/^ID_PART_ENTRY_NAME=//p')").img"
+  local stock="$WORK/home/.ufs-backup/$name" keep="$BACKUP_DIR/$name"
+  # The stock image is kept on the SD card as well: --resume reformats HOME,
+  # and by then the partition already holds this boot image, not Android's.
+  if [[ ! -s "$keep" ]]; then
+    if cmp -s -n "$n" "$img" "$part"; then
+      log "WARNING: $part already holds $(basename "$img") and the SD card has no stock copy; Android's boot image can't be saved"
+    else
+      rm -f "$keep.part"
+      if dd if="$part" of="$keep.part" bs=4M status=none conv=fsync \
+          && [[ "$(stat -c %s "$keep.part")" == "$size" ]]; then
+        mv "$keep.part" "$keep"
+      else
+        # No room on the SD card's boot partition: HOME alone, as before.
+        rm -f "$keep.part"
+        dd if="$part" of="$stock" bs=4M status=none conv=fsync
+        [[ "$(stat -c %s "$stock")" == "$size" ]] || die "couldn't save Android's boot image from $part; nothing was written"
+      fi
+    fi
+  fi
+  if [[ -s "$keep" ]]; then
+    [[ "$(stat -c %s "$keep")" == "$size" ]] || die "$keep is not a full copy of $part; move it away and run again"
+    cp "$keep" "$stock"
+  fi
   log "writing $(basename "$img") to $part (stock copy: ${stock#$WORK/home/})"
   dd if="$img" of="$part" bs=4M status=none conv=fsync
   cmp -s -n "$n" "$img" "$part" || die "$part doesn't read back as written; restore $stock with fastboot"
@@ -435,7 +457,8 @@ log "done. Zaviya is on internal storage."
 if [[ -n "$TABLET" ]]; then
   echo "  - Power off and unplug the USB drive, then power on: it starts Zaviya from"
   echo "    internal storage."
-  echo "  - Android's boot image is saved in /home/.ufs-backup (stock-boot_*.img). To go back"
+  echo "  - Android's boot image is saved in /home/.ufs-backup and in $BACKUP_DIR on the"
+  echo "    SD card (stock-boot_*.img). To go back"
   echo "    to Android, flash it from a PC: fastboot flash boot stock-boot_<slot>.img"
   exit 0
 fi
