@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <gio/gio.h>
 #include <glib-unix.h>
 #include <glib.h>
 #include <libssc.h>
@@ -140,6 +141,9 @@ typedef struct {
 	gboolean raw_axes;
 	gboolean verbose;
 	gboolean enable_evdev;
+	GDBusConnection *system_bus;
+	int sleep_lock_fd;
+	gboolean sensor_error;
 } MotionServer;
 
 static gboolean
@@ -1332,10 +1336,103 @@ close_sensors (MotionServer *server)
 	g_clear_object (&server->accelerometer);
 }
 
+/*
+ * Close the sensors while the system sleeps: their stream wakes the ADSP at
+ * the sample rate, 100 times a second, and keeps it out of its own sleep.
+ * logind holds the sleep until this delay lock is released.
+ */
+static void
+take_sleep_lock (MotionServer *server)
+{
+	GUnixFDList *fds = NULL;
+	GError *error = NULL;
+	GVariant *reply;
+	gint32 fd_index;
+
+	reply = g_dbus_connection_call_with_unix_fd_list_sync (
+		server->system_bus, "org.freedesktop.login1", "/org/freedesktop/login1",
+		"org.freedesktop.login1.Manager", "Inhibit",
+		g_variant_new ("(ssss)", "sleep", "qcom-motion",
+			       "Close the motion sensors", "delay"),
+		G_VARIANT_TYPE ("(h)"), G_DBUS_CALL_FLAGS_NONE, -1, NULL, &fds, NULL, &error);
+	if (reply == NULL) {
+		g_warning ("Unable to take a sleep delay lock: %s", error->message);
+		g_clear_error (&error);
+		return;
+	}
+	g_variant_get (reply, "(h)", &fd_index);
+	server->sleep_lock_fd = g_unix_fd_list_get (fds, fd_index, NULL);
+	g_variant_unref (reply);
+	g_object_unref (fds);
+}
+
+static void
+release_sleep_lock (MotionServer *server)
+{
+	if (server->sleep_lock_fd >= 0) {
+		close (server->sleep_lock_fd);
+		server->sleep_lock_fd = -1;
+	}
+}
+
+static void
+prepare_for_sleep (GDBusConnection *bus,
+		   const gchar *sender,
+		   const gchar *path,
+		   const gchar *interface,
+		   const gchar *signal_name,
+		   GVariant *parameters,
+		   gpointer user_data)
+{
+	MotionServer *server = user_data;
+	gboolean sleeping;
+	(void) bus;
+	(void) sender;
+	(void) path;
+	(void) interface;
+	(void) signal_name;
+
+	g_variant_get (parameters, "(b)", &sleeping);
+	if (sleeping) {
+		close_sensors (server);
+		release_sleep_lock (server);
+		g_message ("Sensors closed for sleep");
+		return;
+	}
+	take_sleep_lock (server);
+	if (!initialize_sensors (server)) {
+		g_printerr ("Unable to reopen Qualcomm accelerometer and gyroscope after sleep\n");
+		server->sensor_error = TRUE;
+		g_main_loop_quit (server->main_loop);
+		return;
+	}
+	g_message ("Sensors reopened after sleep");
+}
+
+static void
+watch_sleep (MotionServer *server)
+{
+	GError *error = NULL;
+
+	server->system_bus = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, &error);
+	if (server->system_bus == NULL) {
+		g_warning ("Sensors stay open during sleep: %s", error->message);
+		g_clear_error (&error);
+		return;
+	}
+	g_dbus_connection_signal_subscribe (server->system_bus, "org.freedesktop.login1",
+					    "org.freedesktop.login1.Manager", "PrepareForSleep",
+					    "/org/freedesktop/login1", NULL,
+					    G_DBUS_SIGNAL_FLAGS_NONE, prepare_for_sleep,
+					    server, NULL);
+	take_sleep_lock (server);
+}
+
 int
 main (int argc, char **argv)
 {
-	MotionServer server = { .socket_fd = -1, .uinput_fd = -1, .enable_evdev = TRUE };
+	MotionServer server = { .socket_fd = -1, .uinput_fd = -1, .sleep_lock_fd = -1,
+				.enable_evdev = TRUE };
 	gint port = DSU_DEFAULT_PORT;
 	gint calibration_samples = GYRO_AUTO_CALIBRATION_SAMPLES;
 	gboolean check = FALSE;
@@ -1490,16 +1587,19 @@ main (int argc, char **argv)
 	g_unix_fd_add_full (G_PRIORITY_HIGH, server.socket_fd,
 			    G_IO_IN | G_IO_ERR | G_IO_HUP, socket_ready, &server, NULL);
 	g_timeout_add_seconds (1, cleanup_clients, &server);
+	watch_sleep (&server);
 	g_message ("Qualcomm motion bridge ready for %s (%s) on *:%d (IPv4/IPv6) at %.0f Hz",
 		   server.device_name, server.profile_name, port, server.sample_rate);
 	g_main_loop_run (server.main_loop);
 
 	unlink (READY_FILE);
+	release_sleep_lock (&server);
+	g_clear_object (&server.system_bus);
 	close_evdev_motion_device (&server);
 	close_sensors (&server);
 	close (server.socket_fd);
 	g_main_loop_unref (server.main_loop);
 	g_free (calibration_file);
 	g_free (profile);
-	return 0;
+	return server.sensor_error ? 1 : 0;
 }
