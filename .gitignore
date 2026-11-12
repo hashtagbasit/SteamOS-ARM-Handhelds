@@ -32,6 +32,10 @@
 /man/
 /tests/*
 !/tests/test_installer_backend.py
+!/tests/test_button_remap.py
+!/tests/test_input_sleep.py
+!/tests/test_overlay_checks.py
+!/tests/test_space_guard.py
 /.version
 
 # Kernel build output

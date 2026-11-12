@@ -19,6 +19,7 @@ jobs:
       installer: ${{ steps.filter.outputs.installer }}
       android: ${{ steps.filter.outputs.android }}
       shell: ${{ steps.filter.outputs.shell }}
+      overlay: ${{ steps.filter.outputs.overlay }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,8 +43,9 @@ jobs:
             if [ "$changed" = "__all__" ] || echo "$changed" | grep -qE "$1"; then echo true; else echo false; fi
           }
           {
-            echo "installer=$(match '^(external-and-mods/ufs-install/|tests/|\.github/workflows/ci\.yml$)')"
+            echo "installer=$(match '^(external-and-mods/ufs-install/|sm8650-overlay/usr/lib/konkr/konkrd$|sm8650-overlay/etc/inputplumber/|tests/|\.github/workflows/ci\.yml$)')"
             echo "android=$(match '^(android-installer/|\.github/workflows/ci\.yml$)')"
+            echo "overlay=$(match '(-overlay/|^scripts/|^tests/|^make-steamos-.*\.sh$|^\.github/workflows/ci\.yml$)')"
             echo "shell=$(match '(\.sh$|^scripts/|-overlay/|^external-and-mods/ufs-install/|^\.github/workflows/ci\.yml$)')"
           } >> "$GITHUB_OUTPUT"
 
@@ -59,9 +61,29 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install test dependencies
-        run: python3 -m pip install --disable-pip-version-check pillow
+        run: python3 -m pip install --disable-pip-version-check pillow pyyaml
       - name: Run installer backend tests
         run: python3 -m unittest -v tests.test_installer_backend
+      - name: Run button remap tests
+        run: python3 -m unittest -v tests.test_button_remap
+      - name: Run input and sleep tests
+        run: python3 -m unittest -v tests.test_input_sleep
+
+  overlay-checks:
+    needs: changes
+    if: needs.changes.outputs.overlay == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        run: python3 -m pip install --disable-pip-version-check pytest pyyaml
+      - name: Run overlay checks
+        run: python3 -m pytest -q tests/test_overlay_checks.py tests/test_space_guard.py
 
   android-tests:
     needs: changes
