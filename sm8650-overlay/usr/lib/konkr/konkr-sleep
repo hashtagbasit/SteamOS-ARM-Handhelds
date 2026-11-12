@@ -327,6 +327,16 @@ lights_off() {
   done
 }
 
+# AYANEO Pocket DS: with devices suspended in parallel the Goodix touchscreen
+# can lose the race with its I2C bus and the suspend aborts with -EAGAIN.
+# Suspending the devices one after another costs a moment and always goes
+# through. Parallel suspend comes back on wake.
+serial_suspend() {  # 1 = one device at a time, 0 = kernel default
+  [[ -w /sys/power/pm_async ]] || return 0
+  tr '\0' '\n' </proc/device-tree/compatible 2>/dev/null | grep -qx 'ayaneo,pocketds' || return 0
+  echo $(( 1 - $1 )) >/sys/power/pm_async 2>/dev/null
+}
+
 pre() {
   local n u x
   pad_watch_stop
@@ -334,6 +344,7 @@ pre() {
   report_start
   wifi_mark
   x=$(xhci_off)
+  serial_suspend 1
   if light; then
     # Wake sources too: left on, the charger's and DSPs' notifications and
     # PCI devices woke the device at random while it slept.
@@ -373,6 +384,7 @@ touch_on() {
 
 post() {
   report_end
+  serial_suspend 0
   ufs_on
   fan_supply_on
   sysbtn_rebind
