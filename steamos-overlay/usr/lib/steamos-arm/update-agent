@@ -50,7 +50,11 @@ def tablet():
 
 
 def vkey(v):
-    return tuple(int(x) for x in re.findall(r"\d+", v or "0"))
+    # Trailing zeros do not count, so 1.5 and 1.5.0 are the same release.
+    parts = [int(x) for x in re.findall(r"\d+", v or "0")]
+    while parts and parts[-1] == 0:
+        parts.pop()
+    return tuple(parts)
 
 
 def split_sets(names, soc):
