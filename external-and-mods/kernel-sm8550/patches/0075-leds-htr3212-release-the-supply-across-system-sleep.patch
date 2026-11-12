@@ -1,0 +1,58 @@
+From: Daniil Teterin <theweaklessone@gmail.com>
+Subject: [PATCH] leds: htr3212: release the supply across system sleep
+
+On the Odin 2 Portal the two stick-LED controllers share vdd_mcu_3v3 with
+the gamepad MCU. rsinput already drops its vote in suspend, but each
+controller keeps its own for as long as it is bound, so the rail stayed on
+through s2idle with the MCU held in reset behind it.
+
+Release the supply after pulling SDB low, and take it back before raising
+SDB on resume. Resume already re-initialises the chip and restores every
+LED, so losing the register state costs nothing.
+
+In 25-minute RTC sleeps run in rotated order, unbinding all three consumers
+of the rail cut the charge used from 25.9 to 17.5 mAh per cycle (three
+cycles each), roughly 70 mW. Unbinding also skips the drivers' resume work,
+so the saving from this patch alone may be smaller.
+---
+--- a/drivers/leds/leds-htr3212.c
++++ b/drivers/leds/leds-htr3212.c
+@@ -293,12 +293,25 @@
+  * in system sleep with every LED at 0. Pull SDB low for sleep, then bring
+  * the chip back up and restore each LED's brightness on resume. No I2C in
+  * the suspend path.
++ *
++ * The supply is shared with the gamepad MCU, which only loses power once
++ * nothing else holds the rail, so let go of it here as well. The registers
++ * are lost with it, and resume programs them again anyway.
+  */
+ static int htr3212_suspend(struct device *dev)
+ {
+ 	struct htr3212_priv *priv = dev_get_drvdata(dev);
++	int ret;
+ 
+ 	gpiod_set_value_cansleep(priv->sdb, 0);
++
++	ret = regulator_disable(priv->vdd);
++	if (ret) {
++		dev_err(dev, "Failed to disable supply: %d\n", ret);
++		gpiod_set_value_cansleep(priv->sdb, 1);
++		return ret;
++	}
++
+ 	return 0;
+ }
+ 
+@@ -308,6 +321,12 @@
+ 	unsigned int i;
+ 	int ret;
+ 
++	ret = regulator_enable(priv->vdd);
++	if (ret) {
++		dev_err(dev, "Failed to enable supply: %d\n", ret);
++		return ret;
++	}
++
+ 	gpiod_set_value_cansleep(priv->sdb, 1);
+ 	usleep_range(10000, 11000);
+ 
