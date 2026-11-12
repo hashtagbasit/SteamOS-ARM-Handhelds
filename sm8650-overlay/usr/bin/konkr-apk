@@ -590,7 +590,7 @@ cmd_run() {
   appid="$(steam_launch_appid)"
   set_window_appid "${appid:-0}"
   # Toggling "install unknown apps" at runtime kills the app; grant it upfront.
-  asx "appops set $pkg REQUEST_INSTALL_PACKAGES allow; am start -n $comp" >/dev/null || true
+  asx "appops set $pkg REQUEST_INSTALL_PACKAGES allow; am start -n '$comp'" >/dev/null || true
 
   # Steam counts a title as running while it owns a window, so hand the
   # shared Android window back on the way out or Exit Game never finishes.
