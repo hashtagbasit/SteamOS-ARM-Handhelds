@@ -452,6 +452,13 @@ if [[ -n "${MESA_STACK:-}" ]]; then
   GUEST="$R/usr/share/guestos/fex-mesa"
   cp -a "$MESA_STACK/aarch64/usr/lib/." "$R/usr/lib/"
   cp -a "$MESA_STACK/aarch64/usr/share/." "$R/usr/share/"
+  # The stack must have been built against this rootfs's base: a library it
+  # needs under another soname leaves the image without a Vulkan driver.
+  for lib in "$R/usr/lib/libvulkan_freedreno.so" "$R"/usr/lib/libgallium-*.so; do
+    for need in $(readelf -d "$lib" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'); do
+      [[ -e "$R/usr/lib/$need" ]] || die "$(basename "$lib") needs $need, which this rootfs does not have: rebuild Mesa inside a rootfs of the same base"
+    done
+  done
   cp -a "$MESA_STACK/x86_64/usr/lib/." "$GUEST/usr/lib/"
   cp -a "$MESA_STACK/x86_64/usr/share/." "$GUEST/usr/share/"
   cp -a "$MESA_STACK/i386/usr/lib32/." "$GUEST/usr/lib32/"

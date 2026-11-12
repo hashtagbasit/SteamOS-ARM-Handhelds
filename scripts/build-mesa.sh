@@ -52,7 +52,9 @@ prepare_source() {
   fi
   echo "${MESA_SHA256}  $tar" | sha256sum -c - >/dev/null || die "mesa tarball checksum mismatch"
   local digest
-  digest="$(cat "$PATCHES"/*.patch | sha256sum | cut -d' ' -f1)"
+  # The version is part of the digest: a version bump with unchanged patches
+  # must not reuse the old source tree.
+  digest="$( (echo "$MESA_VERSION"; cat "$PATCHES"/*.patch) | sha256sum | cut -d' ' -f1)"
   if [[ -f "$W/src/.patched" && "$(cat "$W/src/.patched")" == "$digest" ]]; then
     log "source ready"
     return
