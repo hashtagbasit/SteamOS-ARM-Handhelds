@@ -63,3 +63,12 @@
 	/delete-property/ qcom,use-erm;
 	qcom,vmax-mv = <1300>;
 };
+
+/*
+ * Power key: ignore a press while the lid is closed. The hall sensor wakes the
+ * device on open only, so a press with the lid shut must not wake it
+ * (patches 0094 and 0095).
+ */
+&pon_pwrkey {
+	lid-switch = <&{/gpio-keys-lid/hall-lid-sensor}>;
+};
