@@ -1,0 +1,57 @@
+Keep the virtual controllers across system sleep
+
+HookSleep stops every target device and HookWake builds them again, so
+clients see each controller disconnect and reconnect on every sleep. With
+SUSPEND_TARGET_DEVICES_ON_SLEEP=0 in the service environment the target
+devices stay as they are: HookSleep leaves them alone, and HookWake has
+nothing to restore. Unset (or any other value) keeps the old behaviour.
+
+Resuming a device whose targets were never suspended must not touch them:
+restoring the empty list would remove every target device.
+
+---
+diff --git a/src/input/composite_device/targets.rs b/src/input/composite_device/targets.rs
+--- a/src/input/composite_device/targets.rs
++++ b/src/input/composite_device/targets.rs
+@@ -581,6 +581,12 @@ impl CompositeDeviceTargets {
+     /// to happen.
+     pub async fn handle_resume(&mut self) {
+         let dbus_path = self.path.as_str();
++        // Nothing was suspended (targets kept across sleep): restoring an
++        // empty list would remove every target device.
++        if self.target_devices_suspended.is_empty() {
++            log::debug!("[{dbus_path}] No suspended target devices to restore");
++            return;
++        }
+         log::info!(
+             "[{dbus_path}] Restoring target devices: {:?}",
+             self.target_devices_suspended
+diff --git a/src/input/manager.rs b/src/input/manager.rs
+--- a/src/input/manager.rs
++++ b/src/input/manager.rs
+@@ -476,13 +476,22 @@ impl Manager {
+                 ManagerCommand::SystemSleep { sender } => {
+                     log::info!("Preparing to suspend all target devices");
+ 
++                    // SUSPEND_TARGET_DEVICES_ON_SLEEP=0 keeps the virtual
++                    // controllers across sleep, so clients see no disconnect.
++                    let keep_targets = std::env::var("SUSPEND_TARGET_DEVICES_ON_SLEEP")
++                        .map_or(false, |v| v == "0");
++
+                     // Call the suspend handler on each composite device and wait
+                     // for a response.
+                     let composite_devices = self.composite_devices.clone();
+                     tokio::task::spawn(async move {
+-                        for device in composite_devices.values() {
+-                            if let Err(e) = device.suspend().await {
+-                                log::error!("Failed to call suspend handler on device: {e:?}");
++                        if keep_targets {
++                            log::info!("Keeping target devices across sleep");
++                        } else {
++                            for device in composite_devices.values() {
++                                if let Err(e) = device.suspend().await {
++                                    log::error!("Failed to call suspend handler on device: {e:?}");
++                                }
+                             }
+                         }
+ 

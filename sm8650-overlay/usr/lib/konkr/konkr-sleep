@@ -86,23 +86,64 @@ battery_pct() {
   done
 }
 
+# Wake-source record. /sys/power/pm_wakeup_irq holds the interrupt that ended
+# the sleep (empty when a timer or a non-interrupt event did), and the
+# wakeup sources' event counters say which ones fired while asleep: the
+# counters are read before the sleep and again after, and the difference is
+# listed. Everything here is bounded and optional: a missing file, a failed
+# read or a slow sysfs node only drops that part of the report.
+WAKE_SNAP=/run/konkr/wakeup-start
+wake_snapshot() {  # "count<TAB>name" per wakeup source, summed by name
+  if [[ -d /sys/class/wakeup ]]; then
+    timeout 3 grep -H '' /sys/class/wakeup/wakeup*/name /sys/class/wakeup/wakeup*/event_count 2>/dev/null \
+      | awk -F: '{
+          d = $1; sub(/\/[a-z_]+$/, "", d); v = substr($0, length($1) + 2)
+          if ($1 ~ /\/name$/) n[d] = v; else c[d] = v
+        } END { for (d in n) a[n[d]] += c[d]; for (k in a) print a[k] "\t" k }'
+  elif [[ -r /sys/kernel/debug/wakeup_sources ]]; then
+    # name (may hold spaces) then nine numeric columns; event_count is the third
+    timeout 3 awk 'NR > 1 && NF > 9 {
+        n = $1; for (i = 2; i <= NF - 9; i++) n = n " " $i
+        a[n] += $(NF - 7)
+      } END { for (k in a) print a[k] "\t" k }' /sys/kernel/debug/wakeup_sources 2>/dev/null
+  fi
+}
+
+wake_changed() {  # the wakeup sources whose counter rose since the snapshot
+  [[ -s $WAKE_SNAP ]] || return 0
+  wake_snapshot | timeout 3 awk -F'\t' 'NR == FNR { b[$2] = $1; next }
+      ($1 - b[$2]) > 0 && n++ < 8 { printf "%s%s(+%d)", s, $2, $1 - b[$2]; s = ", " }' "$WAKE_SNAP" - 2>/dev/null \
+    | cut -c1-300
+}
+
+wake_irq_name() {  # wake_irq_name <irq>: handler, chip and hwirq of the interrupt
+  local irq=$1 name act chip hw
+  name=$(timeout 3 awk -v i="$irq:" '$1 == i {for (n = NF; n > 1; n--) if ($n !~ /^[0-9]+$/) {print $n; exit}}' /proc/interrupts 2>/dev/null)
+  act=$(timeout 2 cat "/sys/kernel/irq/$irq/actions" 2>/dev/null)
+  chip=$(timeout 2 cat "/sys/kernel/irq/$irq/chip_name" 2>/dev/null)
+  hw=$(timeout 2 cat "/sys/kernel/irq/$irq/hwirq" 2>/dev/null)
+  echo "${name:-?}${act:+ [$act]}${chip:+ chip=$chip}${hw:+ hwirq=$hw}" | cut -c1-200
+}
+
 # One journal line per sleep, for s2idle reports:
 #   journalctl -b | grep "s2idle report"
 report_start() {
   mkdir -p /run/konkr
   echo "$(date +%s) $(battery_pct) $(cat /sys/power/suspend_stats/success 2>/dev/null) $(cat /sys/power/suspend_stats/fail 2>/dev/null)" >/run/konkr/sleep-start
+  wake_snapshot >"$WAKE_SNAP" 2>/dev/null || : >"$WAKE_SNAP"
 }
 
 report_end() {
-  local t0 b0 ok0 fail0 t1 b1 ok1 fail1 irq name h
+  local t0 b0 ok0 fail0 t1 b1 ok1 fail1 irq what='' src h
   read -r t0 b0 ok0 fail0 </run/konkr/sleep-start 2>/dev/null || return 0
   t1=$(date +%s); b1=$(battery_pct)
   ok1=$(cat /sys/power/suspend_stats/success 2>/dev/null); fail1=$(cat /sys/power/suspend_stats/fail 2>/dev/null)
-  irq=$(cat /sys/power/pm_wakeup_irq 2>/dev/null)
-  [[ -n $irq ]] && name=$(awk -v i="$irq:" '$1 == i {for (n = NF; n > 1; n--) if ($n !~ /^[0-9]+$/) {print $n; exit}}' /proc/interrupts)
+  irq=$(timeout 2 cat /sys/power/pm_wakeup_irq 2>/dev/null)
+  [[ -n $irq ]] && what=$(wake_irq_name "$irq")
+  src=$(wake_changed)
   h=$(awk -v s=$((t1 - t0)) 'BEGIN {printf "%.2f", s / 3600}')
-  log "s2idle report: ${h} h, battery ${b0}% -> ${b1}%, suspends ok $((ok1 - ok0)) failed $((fail1 - fail0)), woken by irq ${irq:-?} ${name:-}, last failed step $(cat /sys/power/suspend_stats/last_failed_step 2>/dev/null) $(cat /sys/power/suspend_stats/last_failed_dev 2>/dev/null)"
-  rm -f /run/konkr/sleep-start
+  log "s2idle report: ${h} h, battery ${b0}% -> ${b1}%, suspends ok $((ok1 - ok0)) failed $((fail1 - fail0)), woken by irq ${irq:-none} ${what}, wakeup sources fired: ${src:-none recorded}, last failed step $(cat /sys/power/suspend_stats/last_failed_step 2>/dev/null) $(cat /sys/power/suspend_stats/last_failed_dev 2>/dev/null)"
+  rm -f /run/konkr/sleep-start "$WAKE_SNAP"
 }
 
 # Running from the SD card, the internal UFS is idle, but after a long s2idle
@@ -287,11 +328,11 @@ pad_watch() {
     fi
   done
   log "pad-watch: InputPlumber lost the pad, restarting it"
-  systemctl restart inputplumber.service
+  timeout 30 systemctl restart inputplumber.service
 }
 
 pad_watch_stop() {
-  systemctl stop konkr-pad-watch.service 2>/dev/null || true
+  timeout 10 systemctl stop konkr-pad-watch.service 2>/dev/null || true
 }
 
 pad_watch_start() {
@@ -349,7 +390,7 @@ pre() {
     # Wake sources too: left on, the charger's and DSPs' notifications and
     # PCI devices woke the device at random while it slept.
     wake_sources
-    sync
+    timeout 10 sync
     u=$(ufs_off)
     log "pre: kernel handles the devices, ufs unbound=${u:-none}${x:+, usb unbound=$x}"
     return
@@ -360,7 +401,7 @@ pre() {
   if [[ -d /sys/module/${WIFI_MODS[0]} ]]; then
     timeout 15 modprobe -r "${WIFI_MODS[@]}" || log "ath12k unload failed"
   fi
-  sync
+  timeout 10 sync
   u=$(ufs_off)
   log "pre: audio suspended, touch unbound=$n, wifi=$([[ -d /sys/module/${WIFI_MODS[0]} ]] && echo loaded || echo unloaded), ufs unbound=${u:-none}${x:+, usb unbound=$x}"
 }
@@ -398,7 +439,7 @@ post() {
   fi
   touch_on
   if [[ ! -d /sys/module/${WIFI_MODS[0]} ]]; then
-    modprobe "${WIFI_MODS[0]}" || log "ath12k reload failed"
+    timeout 20 modprobe "${WIFI_MODS[0]}" || log "ath12k reload failed"
   fi
   audio 0
   # konkrd re-applies profile clocks/LEDs on SIGHUP
@@ -423,7 +464,7 @@ case "${1:-}" in
   # frozen (PipeWire kept running), then thaw, standby-screen-on, standby-post.
   standby-audio-on) audio 0 ;;
   standby-post)
-    [[ -d /sys/module/${WIFI_MODS[0]} ]] || modprobe "${WIFI_MODS[0]}" ;;
+    [[ -d /sys/module/${WIFI_MODS[0]} ]] || timeout 20 modprobe "${WIFI_MODS[0]}" ;;
   standby-screen-on) gamescope_screen 0 ;;
   pad-watch) pad_watch ;;
   wifi-watch) exec /usr/lib/steamos-arm/steamos-arm-wifi-wake watch ;;

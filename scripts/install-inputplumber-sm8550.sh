@@ -201,6 +201,13 @@ install_odin_composite() {
   rm -f "${R}/etc/inputplumber/devices.d/"*mouse* \
     "${R}/etc/inputplumber/devices.d/02-ayn-controller.yaml" \
     "${R}/etc/inputplumber/devices.d/01-ayn-controller.yaml"
+  # Controllers stay across sleep, and the sleep hooks give up after 5 s.
+  local d
+  for d in inputplumber.service.d/90-keep-pads-across-sleep.conf \
+           inputplumber-suspend.service.d/90-bounded.conf; do
+    install -D -m0644 "${ROOT}/external-and-mods/InputPlumber/systemd/$d" \
+      "${R}/usr/lib/systemd/system/$d"
+  done
   ln -sfn /usr/lib/systemd/system/inputplumber.service \
     "${R}/etc/systemd/system/multi-user.target.wants/inputplumber.service"
 }
