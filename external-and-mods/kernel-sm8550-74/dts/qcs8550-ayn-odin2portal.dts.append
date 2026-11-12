@@ -40,3 +40,18 @@
 };
 
 #include "qcs8550-ayn-odin2-gyro.dtsi"
+
+/*
+ * Internal microphone: DMIC3 on SoundWire mic input 7, powered from MIC BIAS3.
+ * The base route list only has the headset mic (AMIC2); the UCM profile
+ * (AYN/Odin2/PortalMic.conf) selects the capture path.
+ */
+&{/sound} {
+	audio-routing =
+			"IN1_HPHL", "HPHL_OUT",
+			"IN2_HPHR", "HPHR_OUT",
+			"AMIC2", "MIC BIAS2",
+			"TX SWR_INPUT1", "ADC2_OUTPUT",
+			"DMIC3", "MIC BIAS3",
+			"TX SWR_INPUT7", "DMIC3_OUTPUT";
+};
