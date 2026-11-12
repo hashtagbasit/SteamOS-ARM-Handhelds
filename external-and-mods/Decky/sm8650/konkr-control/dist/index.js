@@ -42,6 +42,7 @@ const setSsh = callable("set_ssh");
 const installProbe = callable("install_probe");
 const installStart = callable("install_start");
 const installStatus = callable("install_status");
+const recordLogs = callable("record_logs");
 const getGames = callable("get_games");
 const setGamePerf = callable("set_game_perf");
 const setChargingFan = callable("set_charging_fan");
@@ -781,6 +782,29 @@ function InternalStorage({ tablet }) {
     return section("Internal storage", body);
 }
 
+// Collects the diagnostic logs into one archive in the user's home folder.
+function LogRecorder() {
+    const [busy, setBusy] = useState(false);
+    const [msg, setMsg] = useState("");
+    const run = () => {
+        setBusy(true);
+        setMsg("Recording logs, this can take up to a minute");
+        recordLogs().then((r) => {
+            setMsg(r && r.path ? `Saved to ${r.path}` : `Could not save the logs${r && r.error ? `: ${r.error}` : ""}`);
+        }).catch(() => setMsg("Could not save the logs")).then(() => setBusy(false));
+    };
+    return section("Support", [
+        row(jsx(DFL.ButtonItem, {
+            layout: "below",
+            disabled: busy,
+            description: "Saves the diagnostic logs as one file to share when reporting a problem",
+            onClick: run,
+            children: busy ? "Recording…" : "Record logs",
+        })),
+        msg ? note(msg) : null,
+    ]);
+}
+
 function Content() {
     const withPick = (n) => (n && Date.now() - rgbPick.at < 2500 ? { ...n, rgb: rgbPick.rgb } : n);
     const [st, setStState] = useState(() => withPick(lastState));
@@ -968,6 +992,7 @@ function Content() {
                 })) : null,
             ]),
             jsx(InternalStorage, { tablet: !!st.tablet }),
+            jsx(LogRecorder, {}),
         ],
     };
     const header = jsx("div", { style: { fontSize: "12px", opacity: 0.8, textAlign: "center", padding: "4px 0" },

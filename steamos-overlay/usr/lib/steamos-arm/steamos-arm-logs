@@ -1,0 +1,229 @@
+#!/bin/bash
+# Zaviya log recorder: gathers diagnostic logs into one archive that can be
+# shared when reporting a problem. Runs as the normal user, needs no root, and
+# every collector is best effort: a missing source or tool never stops the run.
+#
+# Output: ~/zaviya-logs/zaviya-logs-<model>-<YYYYmmdd-HHMMSS>.tar.gz
+# The last line printed is the path of the archive. The five newest are kept.
+#
+# ZAVIYA_LOGS_ROOT is a prefix for /proc, /sys, /etc, /usr and /home paths and
+# exists for the tests; it is empty on a device.
+set -u
+export LC_ALL=C
+export COPYFILE_DISABLE=1   # no AppleDouble files when run on a Mac
+
+R="${ZAVIYA_LOGS_ROOT:-}"
+KEEP=5
+JOURNAL_CAP=$((20 * 1024 * 1024))
+STAMP="$(date +%Y%m%d-%H%M%S)"
+
+# Run a command with a time limit when timeout(1) exists.
+if command -v timeout >/dev/null 2>&1; then
+  tmo() { local t="$1"; shift; timeout "$t" "$@"; }
+else
+  tmo() { shift; "$@"; }
+fi
+
+rd() { if [ -r "$1" ]; then tr -d '\0' <"$1" | head -c 4096; fi; return 0; }
+
+MODEL="$(rd "$R/proc/device-tree/model")"
+SLUG="$(printf '%s' "$MODEL" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '-' | sed -E 's/-+/-/g; s/^-//; s/-$//')"
+[ -n "$SLUG" ] || SLUG="unknown-device"
+
+OUT_DIR="${HOME:-/tmp}/zaviya-logs"
+mkdir -p "$OUT_DIR" 2>/dev/null || { echo "cannot create $OUT_DIR" >&2; exit 1; }
+NAME="zaviya-logs-${SLUG}-${STAMP}"
+W="$(mktemp -d "${TMPDIR:-/tmp}/zaviya-logs.XXXXXX")" || exit 1
+trap 'rm -rf "$W"' EXIT
+D="$W/$NAME"
+mkdir -p "$D"
+
+# collect <file> <command...>: output and errors of the command into <file>.
+collect() {
+  local name="$1"; shift
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "$1 is not available on this system" >"$D/$name"
+    return 0
+  fi
+  tmo 30 "$@" >"$D/$name" 2>&1 || true
+}
+
+# copyfile <file> <source>
+copyfile() {
+  if [ -r "$2" ]; then head -c 1048576 "$2" >"$D/$1" 2>&1 || true
+  else echo "$2 is not readable" >"$D/$1"; fi
+}
+
+# journal <file> <journalctl args...>: the newest 20 MB.
+journal() {
+  local name="$1"; shift
+  if ! command -v journalctl >/dev/null 2>&1; then
+    echo "journalctl is not available on this system" >"$D/$name"
+    return 0
+  fi
+  tmo 90 journalctl --no-pager "$@" 2>&1 | tail -c "$JOURNAL_CAP" >"$D/$name" || true
+}
+
+copyfile os-release.txt "$R/etc/os-release"
+
+{
+  echo "model: $MODEL"
+  echo "compatible:"
+  if [ -r "$R/proc/device-tree/compatible" ]; then tr '\0' '\n' <"$R/proc/device-tree/compatible"; fi
+} >"$D/device.txt"
+
+{
+  echo "uname: $(uname -a 2>&1)"
+  echo "cmdline: $(rd "$R/proc/cmdline")"
+} >"$D/kernel.txt"
+
+journal journal-boot.txt -b
+journal journal-boot-previous.txt -b -1
+journal kernel-boot.txt -k -b
+journal kernel-boot-previous.txt -k -b -1
+collect boots.txt journalctl --no-pager --list-boots
+collect failed-units-system.txt systemctl --no-pager --failed
+collect failed-units-user.txt systemctl --user --no-pager --failed
+
+# Sleep and wake lines, from the journals just saved.
+{
+  for f in journal-boot.txt journal-boot-previous.txt; do
+    echo "== $f"
+    grep -E 'konkr-sleep|PM: suspend|pad-watch' "$D/$f" 2>/dev/null | tail -n 2000
+  done
+} >"$D/sleep-wake.txt"
+
+collect inputplumber-tree.txt busctl tree org.shadowblip.InputPlumber
+collect inputplumber-status.txt systemctl --no-pager status inputplumber konkrd
+
+collect lsblk.txt lsblk
+collect df.txt df -h
+collect memory.txt free -h
+collect swap.txt swapon --show
+collect vulkan.txt vulkaninfo --summary
+
+{
+  echo "== /proc/asound/cards"
+  cat "$R/proc/asound/cards" 2>&1
+  echo; echo "== wpctl status"
+  if command -v wpctl >/dev/null 2>&1; then tmo 15 wpctl status 2>&1; else echo "wpctl is not available on this system"; fi
+} >"$D/audio.txt"
+
+{
+  echo "== nmcli device status"
+  if command -v nmcli >/dev/null 2>&1; then tmo 15 nmcli -t device status 2>&1; else echo "nmcli is not available on this system"; fi
+  echo; echo "== rfkill"
+  if command -v rfkill >/dev/null 2>&1; then tmo 15 rfkill 2>&1; else echo "rfkill is not available on this system"; fi
+} >"$D/network.txt"
+
+{
+  for ps in "$R"/sys/class/power_supply/*; do
+    [ -d "$ps" ] || continue
+    echo "== $(basename "$ps")"
+    for k in type status capacity current_now voltage_now charge_now charge_full health temp online; do
+      [ -r "$ps/$k" ] && echo "$k: $(head -c 64 "$ps/$k" 2>/dev/null)"
+    done
+  done
+} >"$D/power-supply.txt" 2>&1
+
+# Installed release: only the version and chip, never the file list.
+INV="$R/usr/share/steamos-arm/update/installed.json"
+if [ -r "$INV" ] && command -v python3 >/dev/null 2>&1; then
+  python3 - "$INV" >"$D/release.txt" 2>&1 <<'PY' || true
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    for k in ("version", "soc"):
+        print(f"{k}: {d.get(k, '')}")
+except Exception as e:
+    print(f"unreadable: {e}")
+PY
+elif [ -r "$INV" ]; then
+  grep -oE '"(version|soc)": *"[^"]*"' "$INV" >"$D/release.txt" 2>&1 || true
+else
+  echo "no install record" >"$D/release.txt"
+fi
+
+# Updater logs, where this user can read them.
+for u in "$R"/home/.konkr-updates/*/; do
+  [ -d "$u" ] || continue
+  for f in state.json recovery.log; do
+    [ -r "$u$f" ] && { echo "== $(basename "$u")/$f"; tail -c 65536 "$u$f"; echo; } >>"$D/updater.txt" 2>/dev/null
+  done
+done
+[ -e "$D/updater.txt" ] || echo "no readable updater logs" >"$D/updater.txt"
+
+# Decky: the newest log of each plugin, capped.
+{
+  LOGDIR="${R}${HOME:-}/homebrew/logs"
+  if [ -d "$LOGDIR" ]; then
+    for p in "$LOGDIR"/*/; do
+      [ -d "$p" ] || continue
+      f="$(ls -t "$p" 2>/dev/null | head -n 1)"
+      [ -n "$f" ] || continue
+      echo "== $(basename "$p")/$f"
+      tail -c 65536 "$p$f" 2>&1
+      echo
+    done
+  else
+    echo "no Decky logs"
+  fi
+} >"$D/decky.txt" 2>&1
+
+cat >"$D/README.txt" <<README
+Zaviya logs
+Created: $STAMP
+Device:  ${MODEL:-unknown}
+
+Contents
+  os-release.txt          operating system release
+  release.txt             installed Zaviya version and chip
+  device.txt              device model and compatible strings
+  kernel.txt              kernel version and command line
+  journal-boot*.txt       full system journal, this boot and the previous one
+  kernel-boot*.txt        kernel messages only, same two boots
+  boots.txt               list of recorded boots
+  failed-units-*.txt      failed system and user units
+  sleep-wake.txt          journal lines about sleep and wake
+  inputplumber-*.txt      controller input service state
+  lsblk.txt df.txt memory.txt swap.txt
+                          storage, memory and swap
+  vulkan.txt              Vulkan summary
+  audio.txt               sound cards and PipeWire status
+  network.txt             network device state and rfkill
+  power-supply.txt        battery and charger readings
+  updater.txt             update logs, where readable
+  decky.txt               newest Decky plugin log of each plugin
+
+Each journal file is limited to its newest 20 MB.
+
+Left out on purpose
+  Wi-Fi passwords and saved network connections, SSH keys, Steam account
+  files and tokens, game and save data, and the list of installed files.
+
+Redaction
+  MAC addresses keep only their first three bytes (aa:bb:cc:xx:xx:xx), and
+  values after psk=, password=, passwd=, secret= and token= are removed.
+  IP addresses are kept.
+README
+
+# Redact every collected text file.
+find "$D" -type f | while IFS= read -r f; do
+  sed -E \
+    -e 's/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}):[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}/\1:xx:xx:xx/g' \
+    -e 's/(([Pp][Ss][Kk]|[Pp]assword|[Pp]asswd|[Ss]ecret|[Tt]oken)[=:] *)[^ ,;"]+/\1[removed]/g' \
+    "$f" >"$f.red" 2>/dev/null && mv "$f.red" "$f"
+done
+
+ARCHIVE="$OUT_DIR/$NAME.tar.gz"
+if ! tar -czf "$ARCHIVE" -C "$W" "$NAME" 2>/dev/null; then
+  echo "could not write $ARCHIVE" >&2
+  exit 1
+fi
+
+# Keep only the newest archives.
+ls -1t "$OUT_DIR"/zaviya-logs-*.tar.gz 2>/dev/null | tail -n +$((KEEP + 1)) | while IFS= read -r old; do
+  rm -f -- "$old"
+done
+
+echo "$ARCHIVE"

@@ -1,0 +1,28 @@
+#!/bin/bash
+# Desktop Mode front end for the log recorder: runs it, then shows where the
+# archive was saved (kdialog when present, otherwise a notification).
+set -u
+
+LOGS=/usr/lib/steamos-arm/steamos-arm-logs
+say() { command -v notify-send >/dev/null 2>&1 && notify-send -a Zaviya "Record Logs" "$1" || echo "$1"; }
+
+command -v notify-send >/dev/null 2>&1 && notify-send -a Zaviya "Record Logs" "Collecting logs, this can take up to a minute."
+path="$("$LOGS" 2>/dev/null | tail -n 1)"
+
+if [[ -z "$path" || ! -f "$path" ]]; then
+  if command -v kdialog >/dev/null 2>&1; then
+    kdialog --title "Record Logs" --error "The logs could not be saved."
+  else
+    say "The logs could not be saved."
+  fi
+  exit 1
+fi
+
+if command -v kdialog >/dev/null 2>&1; then
+  if kdialog --title "Record Logs" --yes-label "Open folder" --no-label "Close" \
+      --yesno "Logs saved to:\n$path\n\nShare this file when reporting a problem."; then
+    xdg-open "$(dirname "$path")" >/dev/null 2>&1 &
+  fi
+else
+  say "Logs saved to $path"
+fi

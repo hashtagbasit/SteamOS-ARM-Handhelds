@@ -241,7 +241,8 @@ for svc in \
   usb-gadget-init.service 'usb-ncm-gadget@.service' \
   'usb-ncm-dnsmasq@.service' 'usb-ncm-gadget@usb0.service' \
   'usb-ncm-dnsmasq@usb0.service' \
-  steamos-boot.service efi.mount esp.mount systemd-repart.service
+  steamos-boot.service efi.mount esp.mount systemd-repart.service \
+  home-swapfile.swap swapfile.service
 do
   # The last four, as on the other chips (apply-overlays.sh): steamos-boot
   # needs efi.mount, which waits 90 s for the Deck's EFI partition
@@ -693,6 +694,10 @@ install_file "$OVL/usr/lib/steamos-arm/steamos-arm-space-guard" "$R/usr/lib/stea
 install_file "$OVL/usr/lib/systemd/system/steamos-arm-space-guard.service" \
   "$R/usr/lib/systemd/system/steamos-arm-space-guard.service" 0644
 ln -sfn ../steamos-arm-space-guard.service "$R/usr/lib/systemd/system/multi-user.target.wants/steamos-arm-space-guard.service"
+# Log recorder (Game Mode button in the Decky plugin, Desktop Mode icon).
+install_file "$OVL/usr/lib/steamos-arm/steamos-arm-logs" "$R/usr/lib/steamos-arm/steamos-arm-logs" 0755
+install_file "$OVL/usr/lib/steamos-arm/steamos-arm-logs-gui" "$R/usr/lib/steamos-arm/steamos-arm-logs-gui" 0755
+ln -sfn ../lib/steamos-arm/steamos-arm-logs "$R/usr/bin/zaviya-logs"
 # Desktop Mode: restart the portal if it came up before the Desktop's
 # environment (Steam's right-stick mouse needs its KDE back end).
 install_file "$OVL/usr/lib/steamos-arm/desktop-portal-fix" "$R/usr/lib/steamos-arm/desktop-portal-fix" 0755
@@ -800,12 +805,14 @@ done
 
 log "== Return to Gaming Mode desktop icon"
 install_file "$OVL/etc/skel/Desktop/Return.desktop" "$R/etc/skel/Desktop/Return.desktop" 0644
+install_file "$OVL/etc/skel/Desktop/Record Logs.desktop" "$R/etc/skel/Desktop/Record Logs.desktop" 0644
 install_file "$OVL/etc/xdg/plasma-workspace/env/set-return-icon.sh" \
   "$R/etc/xdg/plasma-workspace/env/set-return-icon.sh" 0755
 install_file "$OVL/usr/share/icons/hicolor/scalable/apps/steamos-gamemode.svg" \
   "$R/usr/share/icons/hicolor/scalable/apps/steamos-gamemode.svg" 0644
 install_file "$OVL/etc/skel/Desktop/Return.desktop" "$R/usr/share/applications/steamos-gamemode.desktop" 0644
 install_file "$OVL/etc/skel/Desktop/Return.desktop" "$HOME_DST/Desktop/Return.desktop" 0755
+install_file "$OVL/etc/skel/Desktop/Record Logs.desktop" "$HOME_DST/Desktop/Record Logs.desktop" 0755
 chown -R 1000:1000 "$HOME_DST/Desktop"
 
 # Complete Steam ARM client in the image, same as the 8 Gen 2 / 8 Gen 3 builds.

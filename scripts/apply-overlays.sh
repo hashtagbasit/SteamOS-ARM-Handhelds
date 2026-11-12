@@ -287,7 +287,8 @@ for u in steamvr-program-ble.service steamvr-v4l2loopback.service \
          deckard-boot-images.service \
          adbd.service adbd-post.service usb-gadget.service usb-gadget.target \
          usb-ncm-gadget@.service usb-ncm-dnsmasq@.service \
-         steamos-boot.service efi.mount esp.mount systemd-repart.service; do
+         steamos-boot.service efi.mount esp.mount systemd-repart.service \
+         home-swapfile.swap swapfile.service; do
   # Frame USB-gadget/ADB/power-monitor: no such hardware here. They crash-loop
   # (1000+ restarts/night) and adbd-post polls ffs.adb/ready at 10 Hz forever,
   # which keeps the SoC out of deep idle and burned battery in standby.
@@ -298,6 +299,8 @@ for u in steamvr-program-ble.service steamvr-v4l2loopback.service \
   # the root disk's free space at boot. Our layouts already have /home and
   # steamos-sm8550-expand-home grows it; on internal UFS repart must never
   # touch the partition table.
+  # home-swapfile.swap / swapfile.service: the stock swap file fails here ("appears
+  # to have holes") and leaves a failed unit at every boot; zram swap is active.
   ln -sfn /dev/null "$R/etc/systemd/system/${u}"
 done
 
@@ -380,6 +383,10 @@ install_file "$OVL/usr/lib/steamos-arm/steamos-arm-space-guard" "$R/usr/lib/stea
 install_file "$OVL/usr/lib/systemd/system/steamos-arm-space-guard.service" \
   "$R/usr/lib/systemd/system/steamos-arm-space-guard.service" 0644
 ln -sfn ../steamos-arm-space-guard.service "$R/usr/lib/systemd/system/multi-user.target.wants/steamos-arm-space-guard.service"
+# Log recorder (Game Mode button in the Decky plugin, Desktop Mode icon).
+install_file "$OVL/usr/lib/steamos-arm/steamos-arm-logs" "$R/usr/lib/steamos-arm/steamos-arm-logs" 0755
+install_file "$OVL/usr/lib/steamos-arm/steamos-arm-logs-gui" "$R/usr/lib/steamos-arm/steamos-arm-logs-gui" 0755
+ln -sfn ../lib/steamos-arm/steamos-arm-logs "$R/usr/bin/zaviya-logs"
 # Desktop Mode: restart the portal if it came up before the Desktop's
 # environment (Steam's right-stick mouse needs its KDE back end).
 install_file "$OVL/usr/lib/steamos-arm/desktop-portal-fix" "$R/usr/lib/steamos-arm/desktop-portal-fix" 0755

@@ -38,7 +38,10 @@ UPPER = 'var/lib/overlays/etc/upper'
 HOME_DIRS = ('homebrew/plugins/konkr-control', 'homebrew/plugins/decky-lsfg-vk')
 PRESERVE = ('passwd', 'shadow', 'group', 'gshadow', 'machine-id', 'hostname', 'hosts',
             'fstab', 'crypttab', 'localtime', 'adjtime', 'resolv.conf', 'ssh',
-            'NetworkManager/system-connections', 'sudoers.d')
+            'NetworkManager/system-connections', 'sudoers.d',
+            # a user's `systemctl enable sshd` must survive an update
+            'systemd/system/multi-user.target.wants/sshd.service',
+            'systemd/system/sockets.target.wants/sshd.socket')
 PENDING = 'var/lib/konkr-update/pending'
 
 

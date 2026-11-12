@@ -28,6 +28,9 @@ REQUEST = "/run/konkrd/request"
 INSTALL_DIR = "/usr/share/zaviya-install"
 INSTALL_UNIT = "zaviya-install"
 INSTALL_LOG = "/run/zaviya-install.log"
+LOGS_SCRIPT = "/usr/lib/steamos-arm/steamos-arm-logs"
+USER = "steamos"
+USER_HOME = "/home/steamos"
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 
@@ -705,3 +708,19 @@ class Plugin:
         else:
             state = "idle"
         return {"state": state, "line": await asyncio.to_thread(last_log_line) if state != "idle" else ""}
+
+    async def record_logs(self, **_: Any) -> dict[str, str]:
+        """Run the log recorder as the steamos user, so the archive in its home
+        folder belongs to them. The plugin itself runs as root."""
+        try:
+            r = await asyncio.wait_for(asyncio.to_thread(
+                subprocess.run, ["runuser", "-u", USER, "--", "env", f"HOME={USER_HOME}", LOGS_SCRIPT],
+                capture_output=True, text=True), timeout=240)
+        except asyncio.TimeoutError:
+            return {"error": "Timed out"}
+        except OSError as e:
+            return {"error": str(e)}
+        lines = r.stdout.strip().splitlines()
+        if r.returncode != 0 or not lines:
+            return {"error": r.stderr.strip().splitlines()[-1] if r.stderr.strip() else f"exit {r.returncode}"}
+        return {"path": lines[-1]}

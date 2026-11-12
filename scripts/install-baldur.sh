@@ -139,7 +139,7 @@ mask sm8750-audio-setup.service deckard-audio-setup.service deckard-fan-control.
   deckard-fpga-resume.service deckard-charger.service deckard-power-monitor.service setubootenv.service \
   softapmanager.service steam-video-codec-setup.service steamos-boot.service steamos-sm8550-expand-home.service \
   home.mount efi.mount esp.mount steamos-offload.target systemd-repart.service \
-  rmtfs.service tqftpserv.service ModemManager.service
+  rmtfs.service tqftpserv.service ModemManager.service home-swapfile.swap swapfile.service
 for u in "$R"/usr/lib/systemd/system/steamos-offload.target.wants/*.mount "$R"/etc/systemd/system/steamos-offload.target.wants/*.mount; do
   [[ -e "$u" || -L "$u" ]] && mask "$(basename "$u")"
 done

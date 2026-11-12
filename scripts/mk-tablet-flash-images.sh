@@ -217,7 +217,8 @@ ln -sfn /dev/null "$U/etc/systemd/system/home.mount"
 # internal disk, where Android's partitions are; efi.mount, esp.mount and
 # steamos-boot wait for the Deck's EFI partition. The chip images mask these
 # too, but tablet images built before that was fixed on 8 Elite don't.
-for u in systemd-repart.service efi.mount esp.mount steamos-boot.service; do
+for u in systemd-repart.service efi.mount esp.mount steamos-boot.service \
+         home-swapfile.swap swapfile.service; do
   ln -sfn /dev/null "$U/etc/systemd/system/$u"
 done
 # /home is already the whole partition: the microSD image's first-boot grow

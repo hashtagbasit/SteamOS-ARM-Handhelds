@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Record Logs
+Comment=Save diagnostic logs into one file to share when reporting a problem
+Exec=/usr/lib/steamos-arm/steamos-arm-logs-gui
+Icon=utilities-log-viewer
+Terminal=false
+Type=Application
+StartupNotify=false
+Categories=System;
