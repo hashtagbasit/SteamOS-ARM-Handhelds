@@ -1,0 +1,48 @@
+Subject: [PATCH] power: supply: qcom_pm8150b_charger: report a change on
+ resume
+
+The cable IRQ is not a wakeup source unless userspace enables it, and
+a plug or unplug while the system sleeps is not seen on resume: the
+IRQ count stays at the last awake event. Consumers such as the fuel
+gauge and userspace then keep the old online state and status until
+the next event.
+
+Signal a change and rerun the charger detection on resume, so they
+look again.
+
+---
+diff --git a/drivers/power/supply/qcom_pm8150b_charger.c b/drivers/power/supply/qcom_pm8150b_charger.c
+--- a/drivers/power/supply/qcom_pm8150b_charger.c
++++ b/drivers/power/supply/qcom_pm8150b_charger.c
+@@ -929,6 +929,23 @@
+ 	return 0;
+ }
+ 
++static int smb5_resume(struct device *dev)
++{
++	struct smb5_chip *chip = dev_get_drvdata(dev);
++
++	/*
++	 * The cable IRQ is not a wakeup source unless userspace enables
++	 * it, so a plug or unplug during sleep may go unseen. Tell the
++	 * consumers to look again.
++	 */
++	power_supply_changed(chip->chg_psy);
++	schedule_delayed_work(&chip->status_change_work, 0);
++
++	return 0;
++}
++
++static DEFINE_SIMPLE_DEV_PM_OPS(smb5_pm_ops, NULL, smb5_resume);
++
+ static const struct of_device_id smb5_match_id_table[] = {
+ 	{ .compatible = "qcom,pm8150b-charger", .data = "pm8150b" },
+ 	{ /* sentinal */ }
+@@ -940,6 +957,7 @@
+ 	.driver = {
+ 		.name = "qcom-pm8150b-charger",
+ 		.of_match_table = smb5_match_id_table,
++		.pm = pm_sleep_ptr(&smb5_pm_ops),
+ 		},
+ };
+ 

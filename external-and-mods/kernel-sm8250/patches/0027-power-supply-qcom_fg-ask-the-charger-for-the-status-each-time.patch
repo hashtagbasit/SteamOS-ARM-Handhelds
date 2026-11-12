@@ -1,0 +1,37 @@
+Subject: [PATCH] power: supply: qcom_fg: ask the charger for the status each
+ time
+
+The fuel gauge reported the charger's status as cached by its power
+supply notifier. When the notifier misses a change, as it does for a
+cable pulled while the system sleeps (the cable IRQ is not a wakeup
+source and its edge is lost), the battery keeps reporting the old
+status: "Full" for the rest of the day after charging to 100 % and
+unplugging asleep, while the charger itself says "Discharging".
+
+Read the status from the charger on every request instead and fall
+back to the capacity and current based guess only when the charger
+doesn't know.
+
+---
+diff --git a/drivers/power/supply/qcom_fg.c b/drivers/power/supply/qcom_fg.c
+--- a/drivers/power/supply/qcom_fg.c
++++ b/drivers/power/supply/qcom_fg.c
+@@ -880,10 +880,15 @@
+ 
+ 	switch (psp) {
+ 	case POWER_SUPPLY_PROP_STATUS:
+-		/* Get status from charger if available */
++		/*
++		 * Get status from charger if available. Ask it every time:
++		 * a plug event missed in system sleep would leave a cached
++		 * status stale until the next one.
++		 */
+ 		if (chip->chg_psy &&
+-			chip->status != POWER_SUPPLY_STATUS_UNKNOWN) {
+-			val->intval = chip->status;
++			!power_supply_get_property(chip->chg_psy,
++				POWER_SUPPLY_PROP_STATUS, val) &&
++			val->intval != POWER_SUPPLY_STATUS_UNKNOWN) {
+ 			break;
+ 		} else {
+ 			/*

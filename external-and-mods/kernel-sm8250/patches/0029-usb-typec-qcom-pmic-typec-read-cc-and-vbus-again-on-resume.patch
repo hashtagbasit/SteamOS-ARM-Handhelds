@@ -1,0 +1,50 @@
+Subject: [PATCH] usb: typec: qcom-pmic-typec: read CC and VBUS again on
+ resume
+
+The CC state and VBUS IRQs are not wakeup sources, and an edge that
+arrives while the system sleeps is lost. A charger pulled in s2idle
+then stays attached as far as the port manager knows: a USB-C headset
+plugged in afterwards is taken for the same partner, and once that
+detaches the source path waits in SRC_ATTACH_WAIT for VBUS to reach
+vSafe0V, which it never hears about. The headset is not powered until
+VBUS is toggled by a charger again.
+
+Have the port manager read CC and VBUS again on resume.
+
+---
+--- a/drivers/usb/typec/tcpm/qcom/qcom_pmic_typec.c
++++ b/drivers/usb/typec/tcpm/qcom/qcom_pmic_typec.c
+@@ -134,6 +134,25 @@
+ 	fwnode_handle_put(tcpm->tcpc.fwnode);
+ }
+ 
++static int qcom_pmic_typec_resume(struct device *dev)
++{
++	struct pmic_typec *tcpm = dev_get_drvdata(dev);
++
++	/*
++	 * The CC and VBUS IRQs are not wakeup sources, and their edges are
++	 * lost while the system sleeps. Have the port manager read both
++	 * again, or a charger pulled in sleep stays attached and VBUS is
++	 * never seen at vSafe0V to source a new partner.
++	 */
++	tcpm_cc_change(tcpm->tcpm_port);
++	tcpm_vbus_change(tcpm->tcpm_port);
++
++	return 0;
++}
++
++static DEFINE_SIMPLE_DEV_PM_OPS(qcom_pmic_typec_pm_ops, NULL,
++				qcom_pmic_typec_resume);
++
+ static const struct pmic_typec_resources pm8150b_typec_res = {
+ 	.pdphy_res = &pm8150b_pdphy_res,
+ 	.port_res = &pm8150b_port_res,
+@@ -155,6 +174,7 @@
+ 	.driver = {
+ 		.name = "qcom,pmic-typec",
+ 		.of_match_table = qcom_pmic_typec_table,
++		.pm = pm_sleep_ptr(&qcom_pmic_typec_pm_ops),
+ 	},
+ 	.probe = qcom_pmic_typec_probe,
+ 	.remove = qcom_pmic_typec_remove,
