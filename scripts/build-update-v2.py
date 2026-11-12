@@ -84,15 +84,21 @@ def stale_pyc(key):
     return flags == 0 and (mtime != int(st.st_mtime) & 0xFFFFFFFF or size != st.st_size & 0xFFFFFFFF)
 
 
+REWRITTEN_MAPS = tuple(
+    f'{prefix}/inputplumber/capability_maps.d/konkr_pocketfit_{name}.yaml'
+    for prefix in ('/etc', '/etc/upper')
+    for name in ('sysbtn', 'deck', 'dinput'))
+
+
 def rewritten(key):
     """pacman's sync databases: pacman -Sy and Discover's update checks rewrite
     them on the device, and an updater from before drop_stale_transient refuses a delta
     that doesn't carry them (issue #64). They are small; always ship them.
-    Same for the Pocket FIT front-button map, which konkrd rewrites when a
-    button is set to "game" (issue #64); konkrd writes it back at its next start."""
-    return key.startswith('root/usr/lib/holo/pacmandb/sync/') or key.endswith(
-        ('/etc/inputplumber/capability_maps.d/konkr_pocketfit_sysbtn.yaml',
-         '/etc/upper/inputplumber/capability_maps.d/konkr_pocketfit_sysbtn.yaml'))
+    Same for the Pocket FIT capability maps konkrd rewrites: the front-button
+    map ("game" mode, issue #64) and the Steam/Performance button remap, which
+    touches the deck, dinput and front-button maps. konkrd writes the chosen
+    lines back at its next start, so a delta that ships them is corrected."""
+    return key.startswith('root/usr/lib/holo/pacmandb/sync/') or key.endswith(REWRITTEN_MAPS)
 
 
 blobs = sorted({e['f'][4] for k, e in inventory.items() if 'f' in e and (

@@ -34,6 +34,7 @@ const bootAndroid = callable("boot_android");
 const setMenuClicks = callable("set_menu_clicks");
 const setBypass = callable("set_bypass");
 const setButton = callable("set_button");
+const setRemap = callable("set_remap");
 const setGameFan = callable("set_game_fan");
 const setFanTuning = callable("set_fan_tuning");
 const setChargeLimit = callable("set_charge_limit");
@@ -78,6 +79,18 @@ const BUTTON_ACTIONS = [
     { data: "fan-boost", label: "Fan boost" },
     { data: "game", label: "Game button (bind in Steam)" },
     { data: "none", label: "Nothing" },
+];
+
+const REMAP_OPTIONS = [
+    { data: "default", label: "Default" },
+    { data: "start", label: "Start" },
+    { data: "select", label: "Select" },
+    { data: "steam", label: "Steam" },
+    { data: "quickaccess", label: "Quick Access" },
+];
+const REMAP_BUTTONS = [
+    ["steam", "Steam button", "Opens the left menu by default. Applies at once; the controller reconnects for a moment"],
+    ["perf", "Performance button", "Front, top right. Cycles the performance profile by default. Applies at once; the controller reconnects for a moment"],
 ];
 
 const PROFILES = [
@@ -904,6 +917,13 @@ function Content() {
                     selectedOption: (st.buttons || {})[key] || "none",
                     onChange: (o) => setButton(key, o.data).then(refresh),
                 }))),
+                ...(st.remap_available ? REMAP_BUTTONS.map(([key, label, description]) => row(jsx(DFL.DropdownItem, {
+                    label,
+                    description,
+                    rgOptions: REMAP_OPTIONS,
+                    selectedOption: (st.remap || {})[key] || "default",
+                    onChange: (o) => setRemap(key, o.data).then(refresh),
+                }))) : [note("Button remap is unavailable: the controller maps were not found")]),
                 note("Home = Steam button · right front button = Quick Access · Power: tap to sleep, hold for the power menu"),
             ]) : null,
             st.system ? section("System", [

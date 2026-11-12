@@ -105,6 +105,7 @@ def load() -> dict[str, Any]:
     st.setdefault("power_led", True)
     st.setdefault("menu_clicks", True)
     st.setdefault("buttons", {"F13": "rgb-next", "F14": "profile-next"})
+    st.setdefault("remap", {"steam": "default", "perf": "default"})
     return st
 
 
@@ -117,6 +118,31 @@ BUILTIN_CURVES = {
     "balanced": [[55, 20], [72, 30], [78, 40], [84, 60], [90, 80], [96, 100]],
     "turbo": [[45, 20], [66, 30], [74, 40], [80, 60], [85, 80], [90, 100]],
 }
+# Steam button and Performance button (Pocket FIT). konkrd rewrites the
+# InputPlumber maps from the saved choice (its REMAP_TARGET); this is the
+# allowlist for the state file.
+REMAP_CHOICES = ("default", "start", "select", "steam", "quickaccess")
+REMAP_KEYS = ("steam", "perf")
+REMAP_MAPS = {
+    "/etc/inputplumber/capability_maps.d/konkr_pocketfit_deck.yaml": "BTN_MODE",
+    "/etc/inputplumber/capability_maps.d/konkr_pocketfit_dinput.yaml": "BTN_MODE",
+    "/etc/inputplumber/capability_maps.d/konkr_pocketfit_sysbtn.yaml": "BTN_TRIGGER_HAPPY5",
+}
+
+
+def remap_available() -> bool:
+    """All maps are installed with the entries konkrd edits."""
+    for path, code in REMAP_MAPS.items():
+        if f"event_code: {code}," not in rd(path):
+            return False
+    return True
+
+
+def clean_remap(raw: Any) -> dict[str, str]:
+    raw = raw if isinstance(raw, dict) else {}
+    return {k: raw[k] if raw.get(k) in REMAP_CHOICES else "default" for k in REMAP_KEYS}
+
+
 REACTIONS = ("gentle", "calm", "quick", "instant")
 MAX_CURVES = 8
 
@@ -380,6 +406,8 @@ class Plugin:
             "has_mcu_link": fit and not ODIN3D,
             "has_breath": not ODIN3D and any(os.path.exists(f"{d}/effect") for d in leds),
             "fit_buttons": fit,
+            "remap": clean_remap(st.get("remap")),
+            "remap_available": fit and await asyncio.to_thread(remap_available),
             "mcu_enabled": not os.path.exists(BLACKLIST),
             "mcu_loaded": os.path.isdir("/sys/module/konkr_sysbtn"),
             "sticks_led": bool(leds),
@@ -560,6 +588,18 @@ class Plugin:
         st["buttons"][key] = action
         save(st)
         return st["buttons"]
+
+    async def set_remap(self, button: str = "steam", choice: str = "default", **_: Any) -> dict:
+        """Steam button or Performance button: saved here, applied by konkrd
+        (it rewrites the InputPlumber maps and queues an InputPlumber restart
+        if they changed, on the HUP from save() and again at every start)."""
+        st = load()
+        if button in REMAP_KEYS and choice in REMAP_CHOICES:
+            remap = clean_remap(st.get("remap"))
+            remap[button] = choice
+            st["remap"] = remap
+            save(st)
+        return clean_remap(st.get("remap"))
 
     async def set_menu_clicks(self, on: bool = True, **_: Any) -> bool:
         st = load()

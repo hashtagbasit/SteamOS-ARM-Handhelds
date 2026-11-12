@@ -1083,7 +1083,11 @@ SYSBTN_CODE = {"F13": "BTN_TRIGGER_HAPPY1", "F14": "BTN_TRIGGER_HAPPY5"}
 def ensure_sysbtn_map(st: dict) -> None:
     if "KONKR Pocket FIT" not in rd("/sys/firmware/devicetree/base/model"):
         return
-    text = rd(SYSBTN_MAP)
+    try:
+        with open(SYSBTN_MAP, encoding="utf-8") as fh:
+            text = fh.read()  # raw: rd() strips the final newline
+    except OSError:
+        return
     if not text:
         return
     out, changed = [], False
@@ -1093,6 +1097,8 @@ def ensure_sysbtn_map(st: dict) -> None:
         line = lines[i]
         out.append(line)
         for key, code in SYSBTN_CODE.items():
+            if key == "F14" and remap_choice(st, "perf") != "default":
+                continue    # the Performance button was given another job
             if f"event_code: {code}," in line and i + 2 < len(lines) and "target_event:" in lines[i + 1]:
                 want = (f"      gamepad: {{button: {SYSBTN_GAME[key]}}}"
                         if st.get("buttons", {}).get(key) == "game" else f"      keyboard: Key{key}")
@@ -1112,8 +1118,119 @@ def ensure_sysbtn_map(st: dict) -> None:
     except OSError as exc:
         log(f"sysbtn map: {exc}")
         return
-    subprocess.run(["systemctl", "try-restart", "inputplumber.service"], check=False)
+    restart_inputplumber()
     log("front buttons: " + ", ".join(f"{k}={st.get('buttons', {}).get(k, '?')}" for k in SYSBTN_CODE))
+
+
+# The two system buttons can be given another job in Handheld Control:
+#   steam  the Steam/home button (BTN_MODE on the USB pad in both pad modes,
+#          Guide by default: it opens the left menu in Game Mode)
+#   perf   the front-top-right Performance button (BTN_TRIGGER_HAPPY5 from the
+#          MCU link, F14 by default: it cycles the performance profile)
+# Only the target_event line of those entries is rewritten, and the allowlist
+# below is the only thing that can end up in the root-owned files. "default"
+# keeps the shipped line: for steam that is Guide, and the perf entry stays
+# with ensure_sysbtn_map, which owns its keyboard/"game" choice.
+REMAP_TARGET = {"start": "Start", "select": "Select", "steam": "Guide", "quickaccess": "QuickAccess"}
+REMAP_DEFAULT = {"steam": "Guide", "perf": None}
+REMAP_MAPS = {
+    "/etc/inputplumber/capability_maps.d/konkr_pocketfit_deck.yaml": {"steam": "BTN_MODE"},
+    "/etc/inputplumber/capability_maps.d/konkr_pocketfit_dinput.yaml": {"steam": "BTN_MODE"},
+    SYSBTN_MAP: {"perf": "BTN_TRIGGER_HAPPY5"},
+}
+REMAP_TARGET_LINE = re.compile(
+    r"^      (gamepad: \{button: [A-Za-z0-9]+\}|keyboard: Key[A-Za-z0-9]+)$")
+
+
+def remap_choice(st: dict, which: str) -> str:
+    """The saved choice for "steam" or "perf": a REMAP_TARGET key or "default"."""
+    raw = st.get("remap")
+    c = raw.get(which) if isinstance(raw, dict) else None
+    return c if c in REMAP_TARGET else "default"
+
+
+def remap_text(text: str, codes: dict, choice: dict) -> str | None:
+    """text with the entries found by their source event_code in `codes`
+    (name -> code) pointed at the chosen buttons. choice maps the name to
+    "default" or a REMAP_TARGET key; anything else raises ValueError. None if
+    an entry is missing, repeated or not shaped as shipped: the caller leaves
+    the file alone."""
+    want: dict[str, str | None] = {}
+    for name in codes:
+        c = choice.get(name, "default")
+        if not isinstance(c, str) or (c != "default" and c not in REMAP_TARGET):
+            raise ValueError(f"bad button choice for {name}: {c!r}")
+        want[name] = REMAP_DEFAULT[name] if c == "default" else REMAP_TARGET[c]
+    lines = text.split("\n")
+    hits: dict[str, int] = {}
+    for i, line in enumerate(lines):
+        for name, code in codes.items():
+            if f"event_code: {code}," in line:
+                if name in hits:
+                    return None
+                hits[name] = i
+    if set(hits) != set(codes):
+        return None
+    for i in hits.values():
+        if i + 2 >= len(lines) or lines[i + 1].strip() != "target_event:" \
+                or not REMAP_TARGET_LINE.match(lines[i + 2]):
+            return None
+    for name, i in hits.items():
+        if want[name] is not None:
+            lines[i + 2] = f"      gamepad: {{button: {want[name]}}}"
+    return "\n".join(lines)
+
+
+def restart_inputplumber() -> None:
+    """Queue an InputPlumber restart without waiting for it: the main loop
+    must not stall on a service that takes seconds to stop and start."""
+    try:
+        subprocess.Popen(["systemctl", "--no-block", "try-restart", "inputplumber.service"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+    except OSError as exc:
+        log(f"inputplumber restart: {exc}")
+
+
+def ensure_button_remap(st: dict) -> None:
+    """Apply the saved Steam/Performance button choice to the installed maps
+    (run at start and on every reload, so an update that replaces the files
+    is corrected). Queues an InputPlumber restart only if a file changed."""
+    if rd("/sys/firmware/devicetree/base/model").strip("\0 \n") != "KONKR Pocket FIT":
+        return
+    choice = {k: remap_choice(st, k) for k in REMAP_DEFAULT}
+    changed = []
+    for path, codes in REMAP_MAPS.items():
+        try:
+            with open(path, encoding="utf-8") as fh:
+                text = fh.read()
+            new = remap_text(text, codes, choice)
+        except (OSError, UnicodeDecodeError) as exc:
+            log(f"button remap: {path}: {exc}")
+            continue
+        if new is None:
+            log(f"button remap: {path} not as expected, left alone")
+            continue
+        if new == text:
+            continue
+        tmp = path + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as fh:
+                fh.write(new)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(tmp, path)
+        except OSError as exc:
+            log(f"button remap: {path}: {exc}")
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            continue
+        changed.append(path)
+    if changed:
+        restart_inputplumber()
+        log(f"system buttons: steam={choice['steam']}, perf={choice['perf']}")
 
 
 def ensure_gamepad_mode(conf: configparser.ConfigParser) -> None:
@@ -1394,6 +1511,7 @@ class Daemon:
         self.leds.apply_sticks(self.st)
         ensure_gamepad_mode(self.conf)
         ensure_sysbtn_map(self.st)
+        ensure_button_remap(self.st)
 
     def stop(self, *_):
         # On shutdown the device is off a few seconds later: the failsafe only
@@ -1597,6 +1715,7 @@ class Daemon:
                 self.leds.apply_sticks(self.st)
                 ensure_gamepad_mode(self.conf)
                 ensure_sysbtn_map(self.st)
+                ensure_button_remap(self.st)
             now = time.monotonic()
             if now >= next_ui_check:
                 next_ui_check = now + 60.0
