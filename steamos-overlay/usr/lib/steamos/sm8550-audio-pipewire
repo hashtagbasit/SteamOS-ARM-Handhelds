@@ -16,7 +16,7 @@ fi
 # Retroid Pocket 5 / Flip 2 / Mini / Mini V2 (SM8250): UCM HiFi, not the
 # Odin 2 policy below. HiFi is switched to once PipeWire is up; asking for it
 # at start-up wedges PipeWire.
-if tr '\0' '\n' </sys/firmware/devicetree/base/compatible 2>/dev/null | grep -q '^retroidpocket,'; then
+if tr '\0' '\n' </sys/firmware/devicetree/base/compatible 2>/dev/null | grep -qE '^retroidpocket,(rp5|rpflip2|rpmini|rpminiv2)$'; then
   SINK=alsa_output.platform-sound.HiFi__Speaker__sink
   dev=
   for _ in $(seq 1 60); do

@@ -29,8 +29,9 @@ for d in /usr/share/alsa/ucm2/AYN /usr/share/alsa/ucm2/AYANEO /usr/share/alsa/uc
   find "$d" -type f -exec chmod 0644 {} + 2>/dev/null
 done
 
-# Retroid Pocket (SM8250): WirePlumber applies the UCM, nothing to wait for.
-if tr '\0' '\n' </sys/firmware/devicetree/base/compatible 2>/dev/null | grep -q '^retroidpocket,'; then
+# Retroid Pocket 865 boards (SM8250): WirePlumber applies the UCM, nothing to
+# wait for. The RP6 and Nova (SM8550) take the path below.
+if tr '\0' '\n' </sys/firmware/devicetree/base/compatible 2>/dev/null | grep -qE '^retroidpocket,(rp5|rpflip2|rpmini|rpminiv2)$'; then
   log "Retroid Pocket card: UCM applied by WirePlumber"
   exit 0
 fi
