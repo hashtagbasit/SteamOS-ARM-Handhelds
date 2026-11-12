@@ -1,0 +1,89 @@
+#!/bin/bash
+# steamos-arm-space-guard: keep a nearly full drive from stopping Game Mode.
+#
+# With almost no free space Steam cannot write its configuration, the session
+# exits at once and starts again, and the device never leaves the boot loop.
+# Before the display manager starts, check the root and home file systems and,
+# when either has less than the minimum free, delete what the system rebuilds
+# on its own: package and journal leftovers, crash dumps, logs, shader caches.
+# Games, saves, settings and installed apps are never touched. A note in the
+# journal says what was freed and whether the drive is still too full.
+#
+#   STEAMOS_ARM_MIN_FREE_MB   minimum free space (default 300)
+#   STEAMOS_ARM_USER_HOME     the desktop user's home (default /home/steamos)
+#   SPACE_GUARD_ROOT          prefix for every path (tests only)
+set -u
+MIN_MB=${STEAMOS_ARM_MIN_FREE_MB:-300}
+UHOME=${STEAMOS_ARM_USER_HOME:-/home/steamos}
+P=${SPACE_GUARD_ROOT:-}
+FLAG=$P/run/steamos-arm/low-space
+log() { echo "space-guard: $*"; }
+
+free_mb() {  # free space in MiB on the file system holding $1
+  local v
+  v=$(df -Pm "$1" 2>/dev/null | awk 'NR == 2 {print $4}')
+  echo "${v:-999999}"
+}
+
+is_low() {
+  [[ $(free_mb "$P/") -lt $MIN_MB || $(free_mb "$P$UHOME") -lt $MIN_MB ]]
+}
+
+# Delete the contents of a directory, not the directory.
+empty_dir() {
+  [[ -d $1 && ! -L $1 ]] || return 0
+  find "$1" -mindepth 1 -delete 2>/dev/null || true
+}
+
+stage1() {
+  empty_dir "$P/var/cache/pacman/pkg"
+  empty_dir "$P/var/lib/systemd/coredump"
+  empty_dir "$P/var/tmp"
+  if [[ -z $P ]]; then
+    journalctl --vacuum-size=32M >/dev/null 2>&1 || true
+  fi
+  empty_dir "$P$UHOME/.cache/mesa_shader_cache"
+  empty_dir "$P$UHOME/.cache/mesa_shader_cache_db"
+  empty_dir "$P$UHOME/.cache/radv_builtin_shaders"
+  empty_dir "$P$UHOME/.cache/thumbnails"
+  empty_dir "$P$UHOME/.local/share/Steam/logs"
+  empty_dir "$P$UHOME/.local/share/Steam/dumps"
+  empty_dir "$P$UHOME/.local/share/Steam/shader_cache_temp_dir"
+  empty_dir "$P$UHOME/.local/share/Steam/steamapps/temp"
+}
+
+stage2() {
+  # Per-game shader caches: Steam builds them again the next time a game runs.
+  local d
+  for d in "$P$UHOME"/.local/share/Steam/steamapps/shadercache/*; do
+    [[ -d $d && ! -L $d ]] && empty_dir "$d"
+  done
+  # Named rebuildable caches only; other apps' data under .cache stays.
+  for d in fontconfig vkd3d-proton dxvk-cache; do
+    empty_dir "$P$UHOME/.cache/$d"
+  done
+}
+
+main() {
+  mkdir -p "$(dirname "$FLAG")" 2>/dev/null || true
+  rm -f "$FLAG" 2>/dev/null || true
+  if ! is_low; then
+    return 0
+  fi
+  log "less than ${MIN_MB} MiB free (root $(free_mb "$P/") MiB, home $(free_mb "$P$UHOME") MiB), cleaning caches"
+  stage1
+  if is_low; then
+    log "still low, clearing shader caches"
+    stage2
+  fi
+  if is_low; then
+    log "storage is still nearly full (root $(free_mb "$P/") MiB, home $(free_mb "$P$UHOME") MiB): remove games or files"
+    echo "root=$(free_mb "$P/") home=$(free_mb "$P$UHOME")" >"$FLAG" 2>/dev/null || true
+  else
+    log "enough space again (root $(free_mb "$P/") MiB, home $(free_mb "$P$UHOME") MiB)"
+  fi
+  return 0
+}
+
+main "$@"
+exit 0

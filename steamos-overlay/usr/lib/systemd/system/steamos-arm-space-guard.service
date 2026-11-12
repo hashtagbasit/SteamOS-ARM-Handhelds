@@ -1,0 +1,17 @@
+[Unit]
+Description=Free cache space when storage is nearly full
+# Runs before the session starts: on a full drive Steam fails at once and the
+# session restarts in a loop.
+RequiresMountsFor=/home
+After=local-fs.target
+Before=sddm.service display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/steamos-arm/steamos-arm-space-guard
+TimeoutStartSec=60
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

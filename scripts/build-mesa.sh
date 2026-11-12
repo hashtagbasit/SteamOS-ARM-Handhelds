@@ -17,8 +17,8 @@ shift
 ARCHES=("${@:-aarch64 x86_64 i386}")
 read -ra ARCHES <<<"${ARCHES[*]}"
 
-MESA_VERSION=26.2.6
-MESA_SHA256=b9436b3e1a8be76fbd4823dc884f90596ab7c6ac5e1867a305e66ffccfb31a92
+MESA_VERSION=26.2.7
+MESA_SHA256=04294f75d22e9f61cd1e050206bc48b3d39366e788f1803a3368e3d5a872ce18
 W="${MESA_WORK:-/work/mesa}"
 G="$R/usr/share/guestos/fex-mesa"
 PATCHES="${ROOT}/external-and-mods/mesa/patches"

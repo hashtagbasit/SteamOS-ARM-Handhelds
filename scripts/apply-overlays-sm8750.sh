@@ -418,7 +418,7 @@ if [[ "$KERNEL_HAS_TRACEFS" == 1 ]]; then
 fi
 
 # Our own Mesa (scripts/build-mesa.sh, MESA_STACK=/work/mesa/out): the same
-# 26.2.6 stack as the 8 Gen 2 image, with the Adreno 830 ids added (patches/
+# 26.2.7 stack as the 8 Gen 2 image, with the Adreno 830 ids added (patches/
 # 0003). Replaces the stock whole Mesa natively, in the FEX guest and for
 # Lepton, so Turnip and zink always match. Goes after the overlay copy above,
 # which may carry a standalone Turnip .so.
@@ -680,6 +680,12 @@ install_file "$OVL/usr/lib/systemd/system/steamos-arm-vpower.service" \
   "$R/usr/lib/systemd/system/steamos-arm-vpower.service" 0644
 mkdir -p "$R/usr/lib/systemd/system/multi-user.target.wants"
 ln -sfn ../steamos-arm-vpower.service "$R/usr/lib/systemd/system/multi-user.target.wants/steamos-arm-vpower.service"
+# Nearly full storage: clear rebuildable caches before the session starts,
+# otherwise Steam fails at once and the session restarts in a loop.
+install_file "$OVL/usr/lib/steamos-arm/steamos-arm-space-guard" "$R/usr/lib/steamos-arm/steamos-arm-space-guard" 0755
+install_file "$OVL/usr/lib/systemd/system/steamos-arm-space-guard.service" \
+  "$R/usr/lib/systemd/system/steamos-arm-space-guard.service" 0644
+ln -sfn ../steamos-arm-space-guard.service "$R/usr/lib/systemd/system/multi-user.target.wants/steamos-arm-space-guard.service"
 # Desktop Mode: restart the portal if it came up before the Desktop's
 # environment (Steam's right-stick mouse needs its KDE back end).
 install_file "$OVL/usr/lib/steamos-arm/desktop-portal-fix" "$R/usr/lib/steamos-arm/desktop-portal-fix" 0755
@@ -718,6 +724,8 @@ install_file "$OVL/usr/share/polkit-1/rules.d/61-steamos-arm-no-plasma-charge-li
   "$R/usr/share/polkit-1/rules.d/61-steamos-arm-no-plasma-charge-limit.rules" 0644
 install_file "$OVL/usr/lib/NetworkManager/conf.d/41-steamos-arm-wifi-scan.conf" \
   "$R/usr/lib/NetworkManager/conf.d/41-steamos-arm-wifi-scan.conf" 0644
+install_file "$OVL/usr/lib/NetworkManager/conf.d/42-steamos-arm-network.conf" \
+  "$R/usr/lib/NetworkManager/conf.d/42-steamos-arm-network.conf" 0644
 install_file "$OVL/usr/share/steamos-arm/update/signing.pub" \
   "$R/usr/share/steamos-arm/update/signing.pub" 0644
 # Settings > System names the installed release (set again on each boot,

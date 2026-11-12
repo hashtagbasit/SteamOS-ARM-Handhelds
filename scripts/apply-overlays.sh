@@ -342,6 +342,8 @@ install_file "$OVL/usr/lib/NetworkManager/conf.d/40-sm8550-wifi.conf" \
   "$R/usr/lib/NetworkManager/conf.d/40-sm8550-wifi.conf" 0644
 install_file "$OVL/usr/lib/NetworkManager/conf.d/41-steamos-arm-wifi-scan.conf" \
   "$R/usr/lib/NetworkManager/conf.d/41-steamos-arm-wifi-scan.conf" 0644
+install_file "$OVL/usr/lib/NetworkManager/conf.d/42-steamos-arm-network.conf" \
+  "$R/usr/lib/NetworkManager/conf.d/42-steamos-arm-network.conf" 0644
 install_file "$OVL/usr/lib/modprobe.d/ath12k.conf" \
   "$R/usr/lib/modprobe.d/ath12k.conf" 0644
 install_file "$OVL/usr/lib/systemd/network/99-sm8550-wlan0.link" \
@@ -372,6 +374,12 @@ install_file "$OVL/usr/lib/systemd/system/steamos-arm-vpower.service" \
   "$R/usr/lib/systemd/system/steamos-arm-vpower.service" 0644
 mkdir -p "$R/usr/lib/systemd/system/multi-user.target.wants"
 ln -sfn ../steamos-arm-vpower.service "$R/usr/lib/systemd/system/multi-user.target.wants/steamos-arm-vpower.service"
+# Nearly full storage: clear rebuildable caches before the session starts,
+# otherwise Steam fails at once and the session restarts in a loop.
+install_file "$OVL/usr/lib/steamos-arm/steamos-arm-space-guard" "$R/usr/lib/steamos-arm/steamos-arm-space-guard" 0755
+install_file "$OVL/usr/lib/systemd/system/steamos-arm-space-guard.service" \
+  "$R/usr/lib/systemd/system/steamos-arm-space-guard.service" 0644
+ln -sfn ../steamos-arm-space-guard.service "$R/usr/lib/systemd/system/multi-user.target.wants/steamos-arm-space-guard.service"
 # Desktop Mode: restart the portal if it came up before the Desktop's
 # environment (Steam's right-stick mouse needs its KDE back end).
 install_file "$OVL/usr/lib/steamos-arm/desktop-portal-fix" "$R/usr/lib/steamos-arm/desktop-portal-fix" 0755
@@ -988,7 +996,7 @@ cat >"$R/usr/share/steamos-sm8650/frame-turnip_icd.aarch64.json" <<'JSON'
 JSON
 chmod 0755 "$R/usr/lib/steamos-sm8650/bin/mangoapp" 2>/dev/null || true
 
-# 8 Gen 2 (Adreno 740): our own Mesa 26.2.6 stack with the A740 fixes
+# 8 Gen 2 (Adreno 740): our own Mesa 26.2.7 stack with the A740 fixes
 # (scripts/build-mesa.sh, external-and-mods/mesa/README.md) replaces the stock
 # whole Mesa, native and in the FEX guest tree. The stock files go by their
 # package file lists so nothing of the two builds mixes.
@@ -1030,7 +1038,7 @@ if [[ -n "${MESA_STACK:-}" ]]; then
   # mangoapp runs on the system Turnip (it matches our zink), no pin.
   rm -rf "$R/usr/lib/steamos-sm8650/frame-turnip" \
     "$R/usr/share/steamos-sm8650/frame-turnip_icd.aarch64.json"
-  # Our 26.2.6 has no msm DRI driver and, unlike the stock 26.3-devel, doesn't
+  # Our 26.2.7 has no msm DRI driver and, unlike the stock 26.3-devel, doesn't
   # fall back to zink on its own: Xwayland got "msm: driver missing", no GBM,
   # and Steam crash-looped behind a black screen (Odin 2 tester, beta 3).
   # environment.d reaches the whole user session (gamescope, Xwayland, Steam,
