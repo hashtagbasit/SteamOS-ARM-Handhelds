@@ -10,6 +10,9 @@ object Config {
     const val ASSET_SUFFIX = ".img.zst"
     const val SUMS_NAME = "SHA256SUMS"
 
+    /** Small manifest on the download server, tried before GitHub. */
+    const val MANIFEST_URL = "https://downloads.zaviyaos.workers.dev/latest.json"
+
     const val RELEASES_URL = "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases?per_page=30"
 
     /** Many "32 GB" cards hold a little under 32 000 000 000 bytes. */

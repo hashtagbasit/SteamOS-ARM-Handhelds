@@ -66,7 +66,7 @@ zero runtime overhead (`CONFIG_ENABLE_DEFAULT_TRACERS=y`).
 
 ## Workflow 2: `build-mesa-sm8750.yml`
 
-**Purpose:** Build the Mesa 26.2.6 graphics stack (Turnip Vulkan + Zink OpenGL)
+**Purpose:** Build the Mesa 26.2.7 graphics stack (Turnip Vulkan + Zink OpenGL)
 for Adreno 830, in four architecture slices.
 
 - **Runner:** `ubuntu-24.04-arm` (aarch64 build runs inside rootfs via bwrap)
@@ -137,7 +137,7 @@ gh run download "$RUN_ID" -n kernel-sm8750 -D ./kernel-out/
 
 ## Future improvements
 - [x] **Automated Steam ARM Seed:** Headlessly bootstrapped from upstream rootfs in CI via `scripts/bootstrap-steam-arm-seed.sh` and cached with `actions/cache`.
-- [x] **Decoupled GitHub Releases:** `release-sm8750.yml` publishes tested artifacts directly as GitHub releases with chunked 7z support.
+- [x] **Decoupled GitHub Releases:** `release-sm8750.yml` publishes tested artifacts as releases.
 - [ ] **Rootfs chunk caching:** Cache casync chunks across runs for even faster rootfs extraction.
 - [ ] **Matrix builds:** Expand workflows to support SM8650/SM8550 targets alongside SM8750.
 - [ ] **Automated smoke testing:** Mount output image in CI to verify partition layout and key binaries.

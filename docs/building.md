@@ -30,7 +30,7 @@ The top-level build scripts assemble the complete flashable `.img` (downloading 
 
 The SM8750 uses Qualcomm's custom ARMv9.2-A **Oryon** CPU cores.
 
-### ⚠️ Critical Toolchain Requirement (GCC 15+ / Binutils 2.45+)
+### Toolchain requirement: GCC 15+ and Binutils 2.45+
 - Linux 7.4 on Oryon cores **requires** modern toolchain support for packed relative relocations (`CONFIG_RELR=y`, `--pack-dyn-relocs=relr`).
 - **Do not compile using older compilers (like GCC 13 on Ubuntu 24.04).** Older toolchains lack RELR support and generate relocation tables that crash immediately during early kernel initialization (`arch/arm64/kernel/head.S`), triggering an instant PMIC watchdog reboot.
 - The build script enforces `gcc >= 15` for SM8750 builds.

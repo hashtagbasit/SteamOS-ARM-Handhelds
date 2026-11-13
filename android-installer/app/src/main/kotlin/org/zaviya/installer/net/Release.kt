@@ -1,10 +1,12 @@
 package org.zaviya.installer.net
 
 import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
 import org.zaviya.installer.Config
 import org.zaviya.installer.device.Chip
 
-/** One file of an image. GitHub caps release files at 2 GiB, so an image is usually several. */
+/** One file of an image. An image is one file, or several parts in older releases. */
 data class ImagePart(val url: String, val bytes: Long)
 
 /** One image Zaviya can write for a chip. [assetName] is the joined file, the name SHA256SUMS lists. */
@@ -81,5 +83,42 @@ object ReleaseParser {
             }
         }
         return ReleaseLookup.NoImage
+    }
+}
+
+object ManifestParser {
+    /** The image for [chip] from the download server's latest.json, or NoImage when it is missing or unusable. */
+    fun pick(json: String, chip: Chip): ReleaseLookup {
+        try {
+            val m = JSONObject(json)
+            val e = m.optJSONObject("images")?.optJSONObject(chip.soc.lowercase()) ?: return ReleaseLookup.NoImage
+            val url = e.optString("url")
+            val name = e.optString("name")
+            val bytes = e.optLong("bytes")
+            val sums = m.optString("sums")
+            if (!url.startsWith("https://") || url.length <= "https://".length) return ReleaseLookup.NoImage
+            if (!sums.startsWith("https://")) return ReleaseLookup.NoImage
+            val version = AssetNames.versionOf(name, chip) ?: return ReleaseLookup.NoImage
+            if (bytes <= 0) return ReleaseLookup.NoImage
+            return ReleaseLookup.Found(ImageRelease(m.optString("tag"), version, name, listOf(ImagePart(url, bytes)), sums))
+        } catch (e: JSONException) {
+            return ReleaseLookup.NoImage
+        }
+    }
+}
+
+object ReleaseSource {
+    /**
+     * Tries the manifest first; on any fetch error or an unusable manifest it
+     * falls back to the GitHub releases lookup, whose errors propagate.
+     */
+    fun find(chip: Chip, fetch: (String) -> String): ReleaseLookup {
+        val fromManifest = try {
+            ManifestParser.pick(fetch(Config.MANIFEST_URL), chip)
+        } catch (e: Exception) {
+            ReleaseLookup.NoImage
+        }
+        if (fromManifest is ReleaseLookup.Found) return fromManifest
+        return ReleaseParser.pick(fetch(Config.RELEASES_URL), chip)
     }
 }

@@ -18,7 +18,7 @@ import org.zaviya.installer.device.DeviceProps
 import org.zaviya.installer.net.ImageRelease
 import org.zaviya.installer.net.Network
 import org.zaviya.installer.net.ReleaseLookup
-import org.zaviya.installer.net.ReleaseParser
+import org.zaviya.installer.net.ReleaseSource
 import org.zaviya.installer.net.Sha256Sums
 import org.zaviya.installer.root.JobStatus
 import org.zaviya.installer.root.RootRunner
@@ -128,10 +128,10 @@ class InstallerViewModel(app: Application) : AndroidViewModel(app) {
     private fun lookup(): Unit = launch {
         val c = chip ?: return@launch
         set(Screen.Looking)
-        val json = try { Network.getText(Config.RELEASES_URL) } catch (e: Exception) {
+        val found = try { ReleaseSource.find(c) { Network.getText(it) } } catch (e: Exception) {
             set(Screen.LookupFailed(e.toString())); return@launch
         }
-        when (val r = ReleaseParser.pick(json, c)) {
+        when (val r = found) {
             is ReleaseLookup.Found -> { release = r.release; set(Screen.ImageReady(r.release.version, r.release.assetBytes)) }
             ReleaseLookup.NoImage -> set(Screen.NoImage(c))
         }

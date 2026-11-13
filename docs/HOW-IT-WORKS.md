@@ -87,7 +87,7 @@ konkr-game compat %command%    # strict TSO / split locks for crashing games
 - Stick RGB rings (MCU link): static / breath / rainbow / off from KONKR
   Control, `konkrctl rgb`, or the front-bottom-right button.
 
-### Quick Access panel: KONKR Control (Decky)
+### Quick Access panel: Zaviya Control (Decky)
 
 Profile, live temperature, fan and GPU clock, stick lighting, MCU link toggle,
 It replaces the SM8550-Power and SM8550-LED plugins,

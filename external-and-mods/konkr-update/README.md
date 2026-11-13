@@ -1,6 +1,6 @@
 # Offline Zaviya updates
 
-This updater is under verification for v1.2. It must not be advertised as release-ready until the boot-hook and hardware gates in `docs/V1.2-VERIFICATION.md` pass.
+The updater that installs signed update packages from Settings > System. It keeps games, saves and settings, and rolls back on the next boot if an update is interrupted.
 
 ## How it works
 

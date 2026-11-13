@@ -3,6 +3,11 @@
 An Android app that puts Zaviya on a microSD card from the handheld itself, with no PC.
 Zaviya is based on SteamOS for ARM and built for handhelds.
 
+The app is in beta. The APK is attached to the
+[v1.5 release](https://github.com/hashtagbasit/Zaviya/releases/tag/v1.5) as
+`zaviya-installer-0.1.0-beta.apk`. Please report problems in the
+[issues](https://github.com/hashtagbasit/Zaviya/issues) with the device model.
+
 The app walks through six steps. Each waits for you.
 
 1. Checks the chip: SM8650, SM8550, SM8750 or SM8250. Any other chip stops here.
@@ -28,10 +33,17 @@ minSdk 30, arm64-v8a only. The unit tests also render every screen on the JVM in
 
 ## Where images come from
 
-`Config.kt` holds the repository owner and name and the asset pattern, `zaviya-<soc>-<version>.img.zst`.
-GitHub release files must be under 2 GiB, so releases carry it as `.img.zst.001`, `.002` and so on, made by
-`scripts/package-release.sh`. The app joins the parts and checks the joined file against its line in `SHA256SUMS`.
-A single unsplit `.img.zst` also works. If the newest releases have no complete image for the chip, the app says so.
+The app first reads `latest.json` from the download server
+(`Config.MANIFEST_URL`, https://downloads.zaviyaos.workers.dev/latest.json). It
+lists the release tag, the `SHA256SUMS` address and, per chip, the image name,
+address and size. The image is checked against its line in `SHA256SUMS` after
+the download.
+
+If the manifest can't be fetched or has no usable entry for the chip, the app
+falls back to the GitHub releases list. There it looks for
+`zaviya-<soc>-<version>.img.zst`, as one file or split into `.001`, `.002` and
+so on (GitHub files must be under 2 GiB), and joins the parts. If no release
+has a complete image for the chip, the app says so.
 
 ## Root
 

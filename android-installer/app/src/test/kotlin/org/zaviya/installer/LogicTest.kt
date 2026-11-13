@@ -7,7 +7,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.zaviya.installer.device.Chip
 import org.zaviya.installer.net.AssetNames
+import org.zaviya.installer.net.ManifestParser
 import org.zaviya.installer.net.ReleaseLookup
+import org.zaviya.installer.net.ReleaseSource
 import org.zaviya.installer.net.ReleaseParser
 import org.zaviya.installer.net.Sha256Sums
 import org.zaviya.installer.root.JobStatus
@@ -162,5 +164,54 @@ class JobStatusTest {
         assertEquals("new", s.values["backup"])
         assertNull(JobStatus.parse(text, "other"))
         assertNotNull(JobStatus.parse("job=abc\nstate=done\n", "abc")!!.takeIf { it.finished })
+    }
+}
+
+class ManifestTest {
+    private fun manifest(url: String = "https://dl.example/1.5/zaviya-sm8650-1.5.0.img.zst", bytes: Long = 5398739729L,
+                         name: String = "zaviya-sm8650-1.5.0.img.zst", sums: String = "https://dl.example/1.5/SHA256SUMS") =
+        """{"tag":"v1.5","version":"1.5.0","sums":"$sums","images":{"sm8650":{"name":"$name","url":"$url","bytes":$bytes}}}"""
+
+    @Test fun foundForChip() {
+        val r = (ManifestParser.pick(manifest(), Chip.SM8650) as ReleaseLookup.Found).release
+        assertEquals("v1.5", r.tag)
+        assertEquals("1.5.0", r.version)
+        assertEquals("zaviya-sm8650-1.5.0.img.zst", r.assetName)
+        assertEquals(5398739729L, r.assetBytes)
+        assertEquals(1, r.parts.size)
+        assertEquals("https://dl.example/1.5/SHA256SUMS", r.sumsUrl)
+    }
+    @Test fun missingChip() = assertEquals(ReleaseLookup.NoImage, ManifestParser.pick(manifest(), Chip.SM8550))
+    @Test fun malformedJson() {
+        assertEquals(ReleaseLookup.NoImage, ManifestParser.pick("not json", Chip.SM8650))
+        assertEquals(ReleaseLookup.NoImage, ManifestParser.pick("", Chip.SM8650))
+    }
+    @Test fun badFields() {
+        assertEquals(ReleaseLookup.NoImage, ManifestParser.pick(manifest(url = "http://dl.example/x"), Chip.SM8650))
+        assertEquals(ReleaseLookup.NoImage, ManifestParser.pick(manifest(url = ""), Chip.SM8650))
+        assertEquals(ReleaseLookup.NoImage, ManifestParser.pick(manifest(bytes = 0), Chip.SM8650))
+        assertEquals(ReleaseLookup.NoImage, ManifestParser.pick(manifest(name = "other.img.zst"), Chip.SM8650))
+        assertEquals(ReleaseLookup.NoImage, ManifestParser.pick(manifest(sums = ""), Chip.SM8650))
+    }
+
+    private val github = """[{"tag_name":"v1.4","assets":[
+        {"name":"SHA256SUMS","size":10,"browser_download_url":"https://gh.example/SHA256SUMS"},
+        {"name":"zaviya-sm8650-1.4.img.zst","size":100,"browser_download_url":"https://gh.example/whole"}]}]"""
+
+    @Test fun manifestWins() {
+        val asked = mutableListOf<String>()
+        val r = ReleaseSource.find(Chip.SM8650) { asked += it; manifest() } as ReleaseLookup.Found
+        assertEquals("1.5.0", r.release.version)
+        assertEquals(listOf(Config.MANIFEST_URL), asked)
+    }
+    @Test fun fallsBackOnNetworkError() {
+        val r = ReleaseSource.find(Chip.SM8650) {
+            if (it == Config.MANIFEST_URL) throw java.io.IOException("HTTP 404") else github
+        } as ReleaseLookup.Found
+        assertEquals("1.4", r.release.version)
+    }
+    @Test fun fallsBackOnUnusableManifest() {
+        val r = ReleaseSource.find(Chip.SM8650) { if (it == Config.MANIFEST_URL) "{}" else github } as ReleaseLookup.Found
+        assertEquals("1.4", r.release.version)
     }
 }
